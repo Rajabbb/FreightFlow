@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Müştəri Paneli - LogiFast</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+            color: #334155;
+        }
+        .navbar {
+            background: #ffffff;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+        }
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+            background: #ffffff;
+            padding: 30px;
+            margin-bottom: 25px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-desc {
+            font-size: 13px;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+        .form-control, .form-select {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            font-size: 14px;
+            background-color: #fcfcfc;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+            border-color: #3b82f6;
+        }
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 5px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.25);
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        }
+        .stats-card {
+            border-radius: 16px;
+            padding: 20px;
+            background: #ffffff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+            border-left: 4px solid #3b82f6;
+        }
+        .optional-box {
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 14px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+        .opt-row {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 15px;
+            margin-bottom: 12px;
+        }
+        .carrier-select-box {
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 15px;
+            background: #fcfcfc;
+        }
+        .carrier-item-row {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .carrier-item-row:hover {
+            background: #f1f5f9;
+        }
+        .truncate-text {
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar navbar-expand-lg navbar-light py-3">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand fw-bold text-primary fs-4" href="#">
+                <i class="bi bi-lightning-charge-fill me-1"></i> LogiFast <span class="text-muted fs-6 fw-normal">| Müştəri Paneli</span>
+            </a>
+            <div class="ms-auto d-flex align-items-center gap-3">
+                <span id="userCompanyName" class="fw-semibold text-secondary small">Şirkət</span>
+                <button onclick="logout()" class="btn btn-outline-danger btn-sm">
+                    <i class="bi bi-box-arrow-right"></i> Çıxış
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-4">
+        
+        <!-- STATS ROW -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <span class="text-muted small">Aktiv RFQ Sorğuları</span>
+                    <h3 id="statActiveRfqs" class="fw-bold text-dark mt-1 mb-0">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card" style="border-left-color: #10b981;">
+                    <span class="text-muted small">Gələn Təkliflər</span>
+                    <h3 id="statIncomingQuotes" class="fw-bold text-dark mt-1 mb-0">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card" style="border-left-color: #8b5cf6;">
+                    <span class="text-muted small">Tamamlanmış Daşımalar</span>
+                    <h3 id="statCompleted" class="fw-bold text-dark mt-1 mb-0">0</h3>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card" style="border-left-color: #f59e0b;">
+                    <span class="text-muted small">Daşıyıcı Bazası</span>
+                    <h3 id="statCarriersCount" class="fw-bold text-dark mt-1 mb-0">0</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
+        <div class="card">
+            <div class="section-title">
+                <i class="bi bi-people-fill text-primary"></i> Daşıyıcı Bazasını İdarə Etmək
+            </div>
+            <div class="section-desc">Mövcud daşıyıcı kontaktlarınızı Excel/CSV faylı vasitəsilə sistemə əlavə edin.</div>
+            
+            <form id="uploadCarrierForm" onsubmit="uploadCarriers(event)">
+                <div class="row align-items-end g-3">
+                    <div class="col-md-8">
+                        <label class="form-label">Excel / CSV Faylı Yüklə</label>
+                        <input type="file" class="form-control" id="carrierFile" accept=".csv, .xlsx, .xls">
+                    </div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-upload me-1"></i> Bazaya Əlavə Et / Yenilə
+                        </button>
+                    </div>
+                </div>
+            </form>
+            <div id="uploadResult" class="mt-3 small"></div>
+        </div>
+
+        <!-- YENİ YÜK SORĞUSU (RFQ) YARAT -->
+        <div class="card">
+            <div class="section-title">
+                <i class="bi bi-box-seam-fill text-primary"></i> Yeni Yük Sorğusu (RFQ) Yarat
+            </div>
+            <div class="section-desc">Logistika parametrlərini daxil edin və sorğunuzu göndərin.</div>
+            
+            <form id="rfqForm" onsubmit="createRfq(event)">
+                <!-- Məcburi Sahələr -->
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Loading Location (Yükləmə yeri) *</label>
+                        <input type="text" class="form-control" id="origin" required placeholder="məs: Bakı, Azərbaycan">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Delivery Location (Boşaltma yeri) *</label>
+                        <input type="text" class="form-control" id="destination" required placeholder="məs: İstanbul, Türkiyə">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Cargo Type (Yükün növü) *</label>
+                        <input type="text" class="form-control" id="cargo_type" required placeholder="məs: Quru yük / Tekstil">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Weight (Çəki - kq) *</label>
+                        <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Truck Type (Maşın növü) *</label>
+                        <input type="text" class="form-control" id="truck_type" required placeholder="məs: Tentli / Refrijerator">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Loading Date (Yükləmə tarixi) *</label>
+                        <input type="date" class="form-control" id="deadline" required>
+                    </div>
+                </div>
+
+                <!-- Optional Seçimlər -->
+                <div class="optional-box">
+                    <label class="form-label fw-bold mb-3 text-dark fs-6">
+                        <i class="bi bi-check2-square text-primary me-1"></i> İxtiyari (Optional) Parametrlər
+                    </label>
+                    
+                    <div class="opt-row">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_volume" onchange="toggleOptField('volume')">
+                            <label class="form-check-label fw-semibold" for="chk_volume">1. Volume (CBM)</label>
+                        </div>
+                        <input type="text" class="form-control opt-input d-none" id="inp_volume" placeholder="məs: 15 m3">
+                    </div>
+
+                    <div class="opt-row">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_incoterm" onchange="toggleOptField('incoterm')">
+                            <label class="form-check-label fw-semibold" for="chk_incoterm">2. Incoterm</label>
+                        </div>
+                        <input type="text" class="form-control opt-input d-none" id="inp_incoterm" placeholder="məs: EXW / FAP">
+                    </div>
+
+                    <div class="opt-row">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_adr" onchange="toggleOptField('adr')">
+                            <label class="form-check-label fw-semibold" for="chk_adr">3. Dangerous Goods (ADR)</label>
+                        </div>
+                        <input type="text" class="form-control opt-input d-none" id="inp_adr" placeholder="məs: Klass 3">
+                    </div>
+
+                    <div class="opt-row">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_temp" onchange="toggleOptField('temp')">
+                            <label class="form-check-label fw-semibold" for="chk_temp">4. Temperature Requirement (Reefer)</label>
+                        </div>
+                        <input type="text" class="form-control opt-input d-none" id="inp_temp" placeholder="məs: +2 to +8 °C">
+                    </div>
+
+                    <div class="opt-row">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_deliv_date" onchange="toggleOptField('deliv_date')">
+                            <label class="form-check-label fw-semibold" for="chk_deliv_date">5. Delivery Deadline</label>
+                        </div>
+                        <input type="date" class="form-control opt-input d-none" id="inp_deliv_date">
+                    </div>
+
+                    <div class="opt-row">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_attachment" onchange="toggleOptField('attachment')">
+                            <label class="form-check-label fw-semibold" for="chk_attachment">6. Attachment (Packing List və s. fayl)</label>
+                        </div>
+                        <input type="file" class="form-control opt-input d-none" id="inp_attachment">
+                    </div>
+
+                    <div class="opt-row">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_info" onchange="toggleOptField('info')">
+                            <label class="form-check-label fw-semibold" for="chk_info">7. Additional Information (Qeyd və ya sənəd əlavəsi)</label>
+                        </div>
+                        <div id="inp_info_container" class="d-none">
+                            <textarea class="form-control opt-input mb-2" id="inp_info_text" rows="2" placeholder="Əlavə xüsusi şərtlər..."></textarea>
+                            <label class="form-label text-muted small">Əlavə fayl yüklə (istəyə bağlı):</label>
+                            <input type="file" class="form-control" id="inp_info_file">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORMUN SONUNDA DAŞIYICI PAYLAŞIM SEÇİMİ -->
+                <div class="card border border-2 mt-4 bg-light shadow-sm">
+                    <label class="form-label fw-bold text-dark fs-6 mb-3">
+                        <i class="bi bi-send-check text-primary me-1"></i> Daşıyıcı Paylaşım Ayarı
+                    </label>
+                    
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="carrierOption" id="sendToAllRadio" checked onchange="toggleCarrierSelection()">
+                        <label class="form-check-label fw-semibold text-dark" for="sendToAllRadio">
+                            Sorğunu bütün daşıyıcılara göndər
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="carrierOption" id="sendToSelectedRadio" onchange="toggleCarrierSelection()">
+                        <label class="form-check-label fw-semibold text-dark" for="sendToSelectedRadio">
+                            Seçilmiş daşıyıcılara göndər
+                        </label>
+                    </div>
+
+                    <!-- Seçilmiş daşıyıcılar siyahısı (Default gizlidir) -->
+                    <div id="carrierSelectionContainer" class="d-none mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <small class="text-muted fw-semibold">Siyahıdan daşıyıcıları seçin:</small>
+                            <div>
+                                <button type="button" class="btn btn-link btn-sm p-0 me-2 text-decoration-none" onclick="selectAllCarriers(true)">Hamısını Seç</button>
+                                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-muted" onclick="selectAllCarriers(false)">Seçimləri Təmizlə</button>
+                            </div>
+                        </div>
+                        <div class="carrier-select-box bg-white" id="carrierCheckboxList">
+                            <span class="text-muted small">Daşıyıcılar yüklənir...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-send-fill me-2"></i> Sorğunu Göndər
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- AKTİV VƏ KEÇMİŞ SORĞULAR -->
+        <div class="card">
+            <div class="section-title">
+                <i class="bi bi-list-check text-primary"></i> RFQ Sorğuları və Gələn Təkliflər
+            </div>
+            <div class="section-desc">Göndərdiyiniz sorğuları izləyin və daşıyıcılardan gələn qiymət təkliflərini müqayisə edin.</div>
+            <div id="requestsContainer">
+                <p class="text-muted">Sorğular yüklənir...</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- DETALLI BAXIŞ MODALI -->
+    <div class="modal fade" id="quoteDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header bg-light border-0">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-file-text text-primary me-2"></i> Təklif Detalları</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4" id="modalQuoteContent"></div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-3" data-bs-dismiss="modal">Bağla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        const user = JSON.parse(localStorage.getItem("user"));
+        if (!user || !user.id) {
+            window.location.replace("/login");
+        } else {
+            document.getElementById("userCompanyName").innerText = user.company_name || user.email;
+            loadStats();
+            loadRequests();
+            loadCarriersList();
+        }
+
+        function logout() {
+            localStorage.removeItem("user");
+            window.location.replace("/login");
+        }
+
+        function toggleCarrierSelection() {
+            const sendToSelected = document.getElementById("sendToSelectedRadio").checked;
+            const container = document.getElementById("carrierSelectionContainer");
+            if (sendToSelected) {
+                container.classList.remove("d-none");
+            } else {
+                container.classList.add("d-none");
+            }
+        }
+
+        function selectAllCarriers(select) {
+            const checkboxes = document.querySelectorAll(".carrier-item-check");
+            checkboxes.forEach(cb => cb.checked = select);
+        }
+
+        async function loadCarriersList() {
+            try {
+                // user.id daxilindəki potensial səhv simvolları (məsələn '1:1') təmizləyib yalnız rəqəmi saxlayırıq
+                const cleanId = typeof user.id === 'string' ? user.id.replace(/[^0-9]/g, '') : user.id;
+
+                const res = await fetch(`/carriers/customer/${cleanId}`);
+                const data = await res.json();
+                const box = document.getElementById("carrierCheckboxList");
+                
+                let carriers = [];
+                if (Array.isArray(data)) {
+                    carriers = data;
+                } else if (data.carriers && Array.isArray(data.carriers)) {
+                    carriers = data.carriers;
+                } else if (data.data && Array.isArray(data.data)) {
+                    carriers = data.data;
+                }
+
+                if (res.ok && carriers.length > 0) {
+                    let html = "";
+                    for (let c of carriers) {
+                        html += `
+                            <div class="carrier-item-row" onclick="document.getElementById('carrier_${c.id}').click(); event.stopPropagation();">
+                                <div class="form-check mb-0 w-100">
+                                    <input class="form-check-input carrier-item-check me-2" type="checkbox" value="${c.id}" id="carrier_${c.id}" onclick="event.stopPropagation();">
+                                    <label class="form-check-label fw-semibold text-dark" for="carrier_${c.id}" style="cursor: pointer;">
+                                        ${c.company_name || c.name || 'Şirkət adı yoxdur'} <span class="text-muted fw-normal small">(${c.email || ''})</span>
+                                    </label>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    box.innerHTML = html;
+                } else {
+                    box.innerHTML = `<span class="text-danger small p-2 d-block">Bazada daşıyıcı tapılmadı. Zəhmət olmasa yuxarıdan daşıyıcı əlavə edin.</span>`;
+                }
+            } catch (err) {
+                console.error("Daşıyıcılar yüklənmədi:", err);
+                document.getElementById("carrierCheckboxList").innerHTML = `<span class="text-danger small p-2 d-block">Daşıyıcıları yükləyərkən şəbəkə xətası baş verdi.</span>`;
+            }
+        }
+
+        function toggleOptField(key) {
+            const chk = document.getElementById(`chk_${key}`);
+            if (key === 'info') {
+                const container = document.getElementById(`inp_info_container`);
+                if (chk.checked) {
+                    container.classList.remove('d-none');
+                } else {
+                    container.classList.add('d-none');
+                    document.getElementById(`inp_info_text`).value = '';
+                    document.getElementById(`inp_info_file`).value = '';
+                }
+            } else {
+                const input = document.getElementById(`inp_${key}`);
+                if (chk.checked) {
+                    input.classList.remove('d-none');
+                } else {
+                    input.classList.add('d-none');
+                    input.value = '';
+                }
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const cleanId = typeof user.id === 'string' ? user.id.replace(/[^0-9]/g, '') : user.id;
+                const res = await fetch(`/customer/stats/${cleanId}`);
+                const data = await res.json();
+                if (res.ok) {
+                    document.getElementById("statActiveRfqs").innerText = data.active_rfqs || 0;
+                    document.getElementById("statIncomingQuotes").innerText = data.incoming_quotes || 0;
+                    document.getElementById("statCompleted").innerText = data.completed_shipments || 0;
+                    document.getElementById("statCarriersCount").innerText = data.carriers_count || 0;
+                }
+            } catch (err) {
+                console.error("Statistika xətası:", err);
+            }
+        }
+
+        async function uploadCarriers(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById("carrierFile");
+            const resultDiv = document.getElementById("uploadResult");
+
+            if (!fileInput.files.length) {
+                alert("Zəhmət olmasa Excel və ya CSV faylı seçin!");
+                return;
+            }
+
+            const cleanId = typeof user.id === 'string' ? user.id.replace(/[^0-9]/g, '') : user.id;
+            const formData = new FormData();
+            formData.append("customer_id", cleanId);
+            formData.append("file", fileInput.files[0]);
+
+            resultDiv.innerHTML = `<span class="text-primary">Fayl yüklənir və emal olunur...</span>`;
+
+            try {
+                const res = await fetch("/carriers/upload-excel", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    resultDiv.innerHTML = `<span class="text-success fw-semibold"><i class="bi bi-check-circle"></i> ${data.message}</span>`;
+                    fileInput.value = "";
+                    loadStats();
+                    loadCarriersList();
+                } else {
+                    resultDiv.innerHTML = `<span class="text-danger">Xəta: ${data.detail}</span>`;
+                }
+            } catch (err) {
+                resultDiv.innerHTML = `<span class="text-danger">Serverlə əlaqə qurulmadı!</span>`;
+            }
+        }
+
+        async function createRfq(e) {
+            e.preventDefault();
+
+            const sendToAll = document.getElementById("sendToAllRadio").checked;
+            let selectedCarriers = [];
+            if (!sendToAll) {
+                const checkboxes = document.querySelectorAll(".carrier-item-check:checked");
+                checkboxes.forEach(cb => selectedCarriers.push(parseInt(cb.value)));
+                if (selectedCarriers.length === 0) {
+                    alert("Zəhmət olmasa siyahıdan ən azı bir daşıyıcı seçin və ya 'Bütün daşıyıcılara göndər' seçin!");
+                    return;
+                }
+            }
+
+            const requiredFieldsList = [
+                `Truck Type: ${document.getElementById("truck_type").value}`
+            ];
+
+            if(document.getElementById("chk_volume").checked) {
+                let val = document.getElementById("inp_volume").value.trim();
+                if(val) requiredFieldsList.push(`Volume (CBM): ${val}`);
+            }
+            if(document.getElementById("chk_incoterm").checked) {
+                let val = document.getElementById("inp_incoterm").value.trim();
+                if(val) requiredFieldsList.push(`Incoterm: ${val}`);
+            }
+            if(document.getElementById("chk_adr").checked) {
+                let val = document.getElementById("inp_adr").value.trim();
+                if(val) requiredFieldsList.push(`Dangerous Goods (ADR): ${val}`);
+            }
+            if(document.getElementById("chk_temp").checked) {
+                let val = document.getElementById("inp_temp").value.trim();
+                if(val) requiredFieldsList.push(`Temperature Requirement: ${val}`);
+            }
+            if(document.getElementById("chk_deliv_date").checked) {
+                let val = document.getElementById("inp_deliv_date").value.trim();
+                if(val) requiredFieldsList.push(`Delivery Deadline: ${val}`);
+            }
+            if(document.getElementById("chk_attachment").checked) {
+                let fileInput = document.getElementById("inp_attachment");
+                if(fileInput.files.length > 0) {
+                    requiredFieldsList.push(`Attachment: ${fileInput.files[0].name}`);
+                }
+            }
+            if(document.getElementById("chk_info").checked) {
+                let textVal = document.getElementById("inp_info_text").value.trim();
+                let fileInput = document.getElementById("inp_info_file");
+                let infoStr = textVal;
+                if(fileInput.files.length > 0) {
+                    infoStr += ` [Fayl: ${fileInput.files[0].name}]`;
+                }
+                if(infoStr) requiredFieldsList.push(`Additional Information: ${infoStr}`);
+            }
+
+            const cleanId = typeof user.id === 'string' ? user.id.replace(/[^0-9]/g, '') : user.id;
+            const payload = {
+                customer_id: parseInt(cleanId),
+                origin: document.getElementById("origin").value,
+                destination: document.getElementById("destination").value,
+                cargo_type: document.getElementById("cargo_type").value,
+                weight_kg: parseFloat(document.getElementById("weight_kg").value),
+                volume_m3: parseFloat(document.getElementById("inp_volume")?.value) || 0,
+                deadline: document.getElementById("deadline").value,
+                required_fields: requiredFieldsList,
+                send_to_all: sendToAll,
+                carrier_ids: selectedCarriers
+            };
+
+            try {
+                const res = await fetch("/requests/create", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message);
+                    document.getElementById("rfqForm").reset();
+                    document.querySelectorAll('.opt-input').forEach(el => el.classList.add('d-none'));
+                    document.getElementById('inp_info_container').classList.add('d-none');
+                    document.getElementById("sendToAllRadio").checked = true;
+                    toggleCarrierSelection();
+                    loadStats();
+                    loadRequests();
+                } else {
+                    alert(data.detail || "Sorğu yaradılarkən xəta baş verdi!");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Server xətası!");
+            }
+        }
+
+        async function loadRequests() {
+            const container = document.getElementById("requestsContainer");
+            try {
+                const cleanId = typeof user.id === 'string' ? user.id.replace(/[^0-9]/g, '') : user.id;
+                const res = await fetch(`/requests/customer/${cleanId}`);
+                const data = await res.json();
+                if (res.ok && data.requests.length > 0) {
+                    let html = "";
+                    for (let req of data.requests) {
+                        html += `
+                            <div class="border rounded-4 p-4 mb-3 bg-light">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h5 class="fw-bold text-dark mb-0">Sorğu #${req.id}: ${req.origin} ➔ ${req.destination}</h5>
+                                    <span class="badge ${req.status === 'open' ? 'bg-primary' : 'bg-success'}">${req.status.toUpperCase()}</span>
+                                </div>
+                                <p class="text-muted small mb-2"><strong>Yük Növü:</strong> ${req.cargo_type} | <strong>Çəki:</strong> ${req.weight_kg} kq | <strong>Yükləmə Tarixi:</strong> ${req.deadline}</p>
+                                <div id="quotes-for-${req.id}" class="mt-3">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="loadQuotes(${req.id})">
+                                        <i class="bi bi-eye"></i> Təklifləri Göstər
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    container.innerHTML = html;
+                } else {
+                    container.innerHTML = `<p class="text-muted small">Hələ heç bir sorğu yaratmamısınız.</p>`;
+                }
+            } catch (err) {
+                container.innerHTML = `<p class="text-danger small">Sorğuları yükləmək mümkün olmadı.</p>`;
+            }
+        }
+
+        window.currentQuotesCache = {};
+
+        async function loadQuotes(requestId) {
+            const quotesDiv = document.getElementById(`quotes-for-${requestId}`);
+            quotesDiv.innerHTML = `<span class="spinner-border spinner-border-sm text-primary"></span> Təkliflər yüklənir...`;
+            
+            try {
+                const res = await fetch(`/quotes/request/${requestId}`);
+                const data = await res.json();
+                if (res.ok && data.quotes.length > 0) {
+                    window.currentQuotesCache[requestId] = data.quotes;
+                    
+                    let html = `<div class="table-responsive mt-2"><table class="table table-bordered bg-white align-middle small">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Daşıyıcı Şirkət</th>
+                                <th>Qiymət</th>
+                                <th>Tranzit Müddəti</th>
+                                <th>Əlavə Detallar / Qeydlər</th>
+                                <th>Əməliyyat</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                    
+                    for (let q of data.quotes) {
+                        let extraStr = "";
+                        if (q.extra_details) {
+                            for (let [k, v] of Object.entries(q.extra_details)) {
+                                extraStr += `<div><strong>${k}:</strong> ${v}</div>`;
+                            }
+                        }
+
+                        html += `
+                            <tr class="${q.is_winner ? 'table-success' : ''}">
+                                <td class="fw-semibold">${q.carrier_company}</td>
+                                <td class="text-success fw-bold">${q.price} ${q.currency || 'AZN'}</td>
+                                <td>${q.transit_time_days} gün</td>
+                                <td>
+                                    <div class="truncate-text">${extraStr || '<span class="text-muted">Yoxdur</span>'}</div>
+                                    <button class="btn btn-link btn-sm p-0 text-primary mt-1" onclick="openQuoteModal(${requestId}, ${q.id})">
+                                        <i class="bi bi-arrows-fullscreen"></i> Detallı Bax
+                                    </button>
+                                </td>
+                                <td>
+                                    ${q.is_winner ? 
+                                        '<span class="badge bg-success">Qalib</span>' : 
+                                        `<button class="btn btn-sm btn-success" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`
+                                    }
+                                </td>
+                            </tr>
+                        `;
+                    }
+                    html += `</tbody></table></div>`;
+                    quotesDiv.innerHTML = html;
+                } else {
+                    quotesDiv.innerHTML = `<p class="text-muted small mt-2">Hələ bu sorğuya heç bir daşıyıcı təklif göndərməyib.</p>`;
+                }
+            } catch (err) {
+                quotesDiv.innerHTML = `<p class="text-danger small mt-2">Təklifləri yükləmək xətası.</p>`;
+            }
+        }
+
+        function openQuoteModal(requestId, quoteId) {
+            const quotes = window.currentQuotesCache[requestId] || [];
+            const q = quotes.find(item => item.id === quoteId);
+            if (!q) return;
+
+            let extraHtml = "";
+            if (q.extra_details) {
+                for (let [k, v] of Object.entries(q.extra_details)) {
+                    extraHtml += `<div class="mb-2 p-3 bg-light rounded-3 border"><strong>${k}:</strong> <p class="mb-0 mt-1 text-dark" style="white-space: pre-wrap;">${v}</p></div>`;
+                }
+            }
+
+            const modalContent = document.getElementById("modalQuoteContent");
+            modalContent.innerHTML = `
+                <div class="mb-3">
+                    <h6 class="text-muted small">Daşıyıcı Şirkət</h6>
+                    <h4 class="fw-bold text-primary">${q.carrier_company}</h4>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3">
+                            <span class="text-muted small">Təklif olunan Qiymət</span>
+                            <h3 class="text-success fw-bold mb-0">${q.price} ${q.currency || 'AZN'}</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="p-3 bg-light rounded-3">
+                            <span class="text-muted small">Tranzit Müddəti</span>
+                            <h3 class="text-dark fw-bold mb-0">${q.transit_time_days} gün</h3>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h6 class="fw-bold text-dark mb-2">Bütün Əlavə Məlumatlar və Cavablar:</h6>
+                    ${extraHtml || '<p class="text-muted">Əlavə detal qeyd olunmayıb.</p>'}
+                </div>
+            `;
+
+            const modal = new bootstrap.Modal(document.getElementById("quoteDetailModal"));
+            modal.show();
+        }
+
+        async function selectWinner(requestId, quoteId) {
+            if (!confirm("Bu təklifi qalib seçmək istədiyinizə əminsiniz?")) return;
+            try {
+                const res = await fetch("/quotes/select-winner", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ request_id: requestId, quote_id: quoteId })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("Qalib təklif uğurla təsdiqləndi!");
+                    loadRequests();
+                    loadStats();
+                } else {
+                    alert("Xəta baş verdi!");
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+    </script>
+</body>
+</html>
