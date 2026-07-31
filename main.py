@@ -118,7 +118,7 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
         })
 
     if not carriers_to_insert:
-        return {"status": "warning", "message": "Daxil edilən bütün e-poçtlar artıq bazada mövcuddur və ya etibarsızdır."}
+        return {"status": "warning", "message": "Bu e-poçt ünvanı artıq bazada mövcuddur."}
 
     supabase.table("carriers").insert(carriers_to_insert).execute()
     return {"status": "success", "message": f"{len(carriers_to_insert)} yeni daşıyıcı uğurla əlavə edildi!"}
@@ -334,8 +334,17 @@ async def add_carriers_manual(request: Request):
             raise HTTPException(status_code=400, detail="customer_id tapılmadı.")
 
         customer_id = int(customer_id)
-        carriers = body.get("carriers", [])
         
+        # Siyahı və ya tək form sahələrindən gələn məlumatları dəstəkləyirik
+        carriers = body.get("carriers")
+        if not carriers:
+            email = body.get("email")
+            name = body.get("name") or body.get("company_name") or "Daşıyıcı"
+            if email:
+                carriers = [{"name": name, "email": email}]
+            else:
+                carriers = []
+
         return filter_and_insert_carriers(customer_id, carriers)
     except Exception as e:
         traceback.print_exc()
