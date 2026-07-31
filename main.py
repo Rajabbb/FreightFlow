@@ -82,16 +82,16 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
     if not raw_carriers:
         raise HTTPException(status_code=400, detail="Əlavə ediləcək daşıyıcı məlumatı tapılmadı.")
 
-    # Bazada həmin müştəriyə aid mövcud e-poçtları həm int, həm də str olaraq yoxlayırıq
+    # Bazada həmin müştəriyə aid mövcud e-poçtları .range(0, 9999) ilə tam çəkirik (100 sətir limitini aradan qaldırır)
     existing_emails = set()
     try:
-        res1 = supabase.table("carriers").select("email").eq("customer_id", customer_id).execute()
+        res1 = supabase.table("carriers").select("email").eq("customer_id", customer_id).range(0, 9999).execute()
         if res1.data:
             for item in res1.data:
                 if item.get("email"):
                     existing_emails.add(item["email"].strip().lower())
         
-        res2 = supabase.table("carriers").select("email").eq("customer_id", str(customer_id)).execute()
+        res2 = supabase.table("carriers").select("email").eq("customer_id", str(customer_id)).range(0, 9999).execute()
         if res2.data:
             for item in res2.data:
                 if item.get("email"):
@@ -101,7 +101,7 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
 
     carriers_to_insert = []
     seen_in_input = set()
-    already_exists_count = 0
+    duplicate_emails = []
 
     for item in raw_carriers:
         if not isinstance(item, dict):
@@ -115,9 +115,9 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
         if not clean_email or clean_email == 'nan' or '@' not in clean_email or '.' not in clean_email:
             continue
 
-        # Əgər bazada artıq varsa və ya bu sorğu daxilində təkrar olunubsa
+        # Əgər bazada artıq varsa və ya bu daxil edilən siyahı daxilində təkrar olunubsa
         if clean_email in existing_emails or clean_email in seen_in_input:
-            already_exists_count += 1
+            duplicate_emails.append(raw_email.strip())
             continue
 
         seen_in_input.add(clean_email)
@@ -132,11 +132,12 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
             "email": raw_email.strip()
         })
 
+    if duplicate_emails:
+        unique_dups = ", ".join(list(set(duplicate_emails)))
+        raise HTTPException(status_code=400, detail=f"Bu e-poçt ünvanı(ləri) artıq bazada mövcuddur: {unique_dups}")
+
     if not carriers_to_insert:
-        if already_exists_count > 0:
-            raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq bazada mövcuddur.")
-        else:
-            raise HTTPException(status_code=400, detail="Daxil edilən e-poçt ünvanı etibarsızdır.")
+        raise HTTPException(status_code=400, detail="Daxil edilən e-poçt ünvanı etibarsızdır.")
 
     supabase.table("carriers").insert(carriers_to_insert).execute()
     return {"status": "success", "message": f"{len(carriers_to_insert)} yeni daşıyıcı uğurla əlavə edildi!"}
@@ -407,10 +408,47 @@ async def upload_carriers_text(request: Request):
             raise HTTPException(status_code=400, detail="customer_id və ya raw_text tələb olunur.")
         
         customer_id = int(customer_id)
-        df = pd.read_csv(io.StringIO(raw_text), sep="\t")
-        if len(df.columns) == 1: 
-            df = pd.read_csv(io.StringIO(raw_text), sep=",")
-        return process_dataframe_and_insert(df, customer_id)
+
+        # Yapışdırılan mətni sətr-sətr oxuyub e-poçtları təyin edən güclü parser
+        lines = raw_text.strip().split("\n")
+        raw_list = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            parts = re.split(r'[\t,;|]', line)
+            parts = [p.strip() for p in parts if p.strip()]
+            
+            email = None
+            name = "Daşıyıcı"
+            
+            for part in parts:
+                if '@' in part and '.' in part:
+                    email = part
+                    break
+            
+            if not email:
+                continue
+            
+            other_parts = [p for p in parts if p != email]
+            if other_parts:
+                name = other_parts[0]
+            
+            raw_list.append({"name": name, "email": email})
+
+        if not raw_list:
+            # Əgər sətr-sətr parser tapmasa, pandas ilə cədvəl kimi oxumağa cəhd edirik
+            try:
+                df = pd.read_csv(io.StringIO(raw_text), sep="\t")
+                if len(df.columns) == 1: 
+                    df = pd.read_csv(io.StringIO(raw_text), sep=",")
+                return process_dataframe_and_insert(df, customer_id)
+            except Exception:
+                raise HTTPException(status_code=400, detail="Məlumat formatı düzgün deyil. E-poçt tapılmadı.")
+
+        return filter_and_insert_carriers(customer_id, raw_list)
     except HTTPException as he:
         raise he
     except Exception as e:
@@ -428,14 +466,14 @@ def delete_customer_carrier(payload: DeleteCarrierRequest):
 @app.get("/carriers/customer/{customer_id}")
 def get_customer_carriers(customer_id: int):
     try:
-        res = supabase.table("carriers").select("*").eq("customer_id", customer_id).execute()
+        res = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute()
         return res.data if res.data is not None else []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/carriers/my-list/{customer_id}")
 def get_customer_carriers_legacy(customer_id: int):
-    res = supabase.table("carriers").select("*").eq("customer_id", customer_id).execute()
+    res = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute()
     return {"carriers": res.data}
 
 @app.post("/requests/upload-attachment")
@@ -511,7 +549,7 @@ async def create_shipment_request(
             c_data = cust_res.data[0]
             sender_company = c_data.get("company_name") or c_data.get("name") or "LogiFast"
 
-        c_query = supabase.table("carriers").select("*").eq("customer_id", payload.customer_id).execute()
+        c_query = supabase.table("carriers").select("*").eq("customer_id", payload.customer_id).range(0, 9999).execute()
         all_customer_carriers = c_query.data or []
 
         if payload.send_to_all:
