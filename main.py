@@ -82,12 +82,26 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
     if not raw_carriers:
         raise HTTPException(status_code=400, detail="Əlavə ediləcək daşıyıcı məlumatı tapılmadı.")
 
-    # Bazada həmin müştəriyə aid mövcud e-poçtları çəkirik
-    existing_carriers = supabase.table("carriers").select("email").eq("customer_id", customer_id).execute()
-    existing_emails = {item["email"].strip().lower() for item in (existing_carriers.data or []) if item.get("email")}
+    # Bazada həmin müştəriyə aid mövcud e-poçtları həm int, həm də str olaraq yoxlayırıq
+    existing_emails = set()
+    try:
+        res1 = supabase.table("carriers").select("email").eq("customer_id", customer_id).execute()
+        if res1.data:
+            for item in res1.data:
+                if item.get("email"):
+                    existing_emails.add(item["email"].strip().lower())
+        
+        res2 = supabase.table("carriers").select("email").eq("customer_id", str(customer_id)).execute()
+        if res2.data:
+            for item in res2.data:
+                if item.get("email"):
+                    existing_emails.add(item["email"].strip().lower())
+    except Exception as e:
+        print("Xəta (existing_emails yoxlanarkən):", e)
 
     carriers_to_insert = []
     seen_in_input = set()
+    already_exists_count = 0
 
     for item in raw_carriers:
         if not isinstance(item, dict):
@@ -101,8 +115,9 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
         if not clean_email or clean_email == 'nan' or '@' not in clean_email or '.' not in clean_email:
             continue
 
-        # Əgər bazada artıq varsa və ya bu sorğu daxilində təkrar olunubsa, keçirik
+        # Əgər bazada artıq varsa və ya bu sorğu daxilində təkrar olunubsa
         if clean_email in existing_emails or clean_email in seen_in_input:
+            already_exists_count += 1
             continue
 
         seen_in_input.add(clean_email)
@@ -118,7 +133,10 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
         })
 
     if not carriers_to_insert:
-        return {"status": "warning", "message": "Bu e-poçt ünvanı artıq bazada mövcuddur."}
+        if already_exists_count > 0:
+            raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq bazada mövcuddur.")
+        else:
+            raise HTTPException(status_code=400, detail="Daxil edilən e-poçt ünvanı etibarsızdır.")
 
     supabase.table("carriers").insert(carriers_to_insert).execute()
     return {"status": "success", "message": f"{len(carriers_to_insert)} yeni daşıyıcı uğurla əlavə edildi!"}
@@ -335,7 +353,6 @@ async def add_carriers_manual(request: Request):
 
         customer_id = int(customer_id)
         
-        # Siyahı və ya tək form sahələrindən gələn məlumatları dəstəkləyirik
         carriers = body.get("carriers")
         if not carriers:
             email = body.get("email")
@@ -346,6 +363,8 @@ async def add_carriers_manual(request: Request):
                 carriers = []
 
         return filter_and_insert_carriers(customer_id, carriers)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
@@ -365,6 +384,8 @@ async def upload_carriers_excel(request: Request):
         filename = getattr(file, "filename", "file.xlsx")
         df = pd.read_csv(io.BytesIO(contents)) if filename.lower().endswith('.csv') else pd.read_excel(io.BytesIO(contents))
         return process_dataframe_and_insert(df, customer_id)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Fayl oxunarkən xəta: {str(e)}")
 
@@ -390,6 +411,8 @@ async def upload_carriers_text(request: Request):
         if len(df.columns) == 1: 
             df = pd.read_csv(io.StringIO(raw_text), sep=",")
         return process_dataframe_and_insert(df, customer_id)
+    except HTTPException as he:
+        raise he
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Xəta: {str(e)}")
 
