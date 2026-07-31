@@ -7,7 +7,7 @@ import re
 import pandas as pd
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, EmailStr
-from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -221,14 +221,6 @@ class DeleteCarrierRequest(BaseModel):
     customer_id: int
     carrier_id: int
 
-class CarrierItem(BaseModel):
-    name: str
-    email: EmailStr
-
-class CarrierBatchRequest(BaseModel):
-    customer_id: int
-    carriers: List[CarrierItem]
-
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -298,38 +290,102 @@ def get_customer_stats(customer_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/carriers/manual")
-async def add_carriers_manual(payload: CarrierBatchRequest):
+async def add_carriers_manual(request: Request):
     try:
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            body = await request.json()
+            customer_id = body.get("customer_id")
+            carriers = body.get("carriers", [])
+        else:
+            form = await request.form()
+            customer_id = form.get("customer_id")
+            carriers_raw = form.get("carriers", "[]")
+            if isinstance(carriers_raw, str):
+                try:
+                    carriers = json.loads(carriers_raw)
+                except:
+                    carriers = []
+            else:
+                carriers = carriers_raw
+
+        if not customer_id:
+            customer_id = request.query_params.get("customer_id")
+
+        if not customer_id:
+            raise HTTPException(status_code=400, detail="customer_id tapılmadı.")
+
+        customer_id = int(customer_id)
         carriers_to_insert = []
-        for item in payload.carriers:
-            carriers_to_insert.append({
-                "customer_id": payload.customer_id,
-                "company_name": item.name,
-                "email": item.email
-            })
+        
+        for item in carriers:
+            if isinstance(item, dict):
+                name = item.get("name") or item.get("company_name") or "Daşıyıcı"
+                email = item.get("email")
+            else:
+                continue
+                
+            if email:
+                carriers_to_insert.append({
+                    "customer_id": customer_id,
+                    "company_name": name,
+                    "email": email
+                })
         
         if carriers_to_insert:
             supabase.table("carriers").insert(carriers_to_insert).execute()
         
-        return {"success": True, "message": f"{len(payload.carriers)} daşıyıcı uğurla əlavə edildi!"}
+        return {"success": True, "message": f"{len(carriers_to_insert)} daşıyıcı uğurla əlavə edildi!"}
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/carriers/upload-excel")
-async def upload_carriers_excel(customer_id: int = Form(...), file: UploadFile = File(...)):
+async def upload_carriers_excel(request: Request):
     try:
+        form = await request.form()
+        customer_id = form.get("customer_id") or request.query_params.get("customer_id")
+        file = form.get("file")
+        
+        if not customer_id or not file:
+            raise HTTPException(status_code=400, detail="customer_id və ya fayl əskikdir.")
+        
+        customer_id = int(customer_id)
         contents = await file.read()
-        df = pd.read_csv(io.BytesIO(contents)) if file.filename.lower().endswith('.csv') else pd.read_excel(io.BytesIO(contents))
+        filename = getattr(file, "filename", "file.xlsx")
+        df = pd.read_csv(io.BytesIO(contents)) if filename.lower().endswith('.csv') else pd.read_excel(io.BytesIO(contents))
         return process_dataframe_and_insert(df, customer_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Fayl oxunarkən xəta: {str(e)}")
 
 @app.post("/carriers/upload-text")
-async def upload_carriers_text(customer_id: int = Form(...), raw_text: str = Form(...)):
+async def upload_carriers_text(request: Request):
     try:
-        if not raw_text.strip(): raise HTTPException(status_code=400, detail="Mətn boşdur.")
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            body = await request.json()
+            customer_id = body.get("customer_id")
+            raw_text = body.get("raw_text") or body.get("text") or ""
+        else:
+            form = await request.form()
+            customer_id = form.get("customer_id")
+            raw_text = form.get("raw_text") or form.get("text") or ""
+        
+        if not customer_id:
+            customer_id = request.query_params.get("customer_id")
+        if not raw_text:
+            raw_text = request.query_params.get("raw_text") or request.query_params.get("text") or ""
+
+        if not customer_id or not raw_text:
+            raise HTTPException(status_code=400, detail="customer_id və ya raw_text tələb olunur.")
+        
+        customer_id = int(customer_id)
+        if not str(raw_text).strip():
+            raise HTTPException(status_code=400, detail="Mətn boşdur.")
+
         df = pd.read_csv(io.StringIO(raw_text), sep="\t")
-        if len(df.columns) == 1: df = pd.read_csv(io.StringIO(raw_text), sep=",")
+        if len(df.columns) == 1: 
+            df = pd.read_csv(io.StringIO(raw_text), sep=",")
         return process_dataframe_and_insert(df, customer_id)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Xəta: {str(e)}")
