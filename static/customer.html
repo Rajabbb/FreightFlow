@@ -725,6 +725,14 @@ Best regards,
         loadCarriersList();
         loadManageCarriersList();
 
+        function getCustomerId() {
+            let u = null;
+            try { u = JSON.parse(localStorage.getItem("user")); } catch(e) {}
+            let rawId = (u && u.id) ? u.id : (typeof currentUserId !== 'undefined' ? currentUserId : 1);
+            let cleaned = parseInt(String(rawId).replace(/[^0-9]/g, ''));
+            return isNaN(cleaned) ? 1 : cleaned;
+        }
+
         function formatErrorDetail(errDetail) {
             if (!errDetail) return "Naməlum xəta";
             if (typeof errDetail === 'string') return errDetail;
@@ -770,8 +778,8 @@ Best regards,
 
         async function loadCarriersList() {
             try {
-                const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
-                const res = await fetch(`/carriers/customer/${cleanId}`);
+                const customerId = getCustomerId();
+                const res = await fetch(`/carriers/customer/${customerId}`);
                 const data = await res.json();
                 const box = document.getElementById("carrierCheckboxList");
                 
@@ -811,8 +819,8 @@ Best regards,
 
         async function loadManageCarriersList() {
             try {
-                const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
-                const res = await fetch(`/carriers/customer/${cleanId}`);
+                const customerId = getCustomerId();
+                const res = await fetch(`/carriers/customer/${customerId}`);
                 const data = await res.json();
                 const box = document.getElementById("manageCarriersContainer");
                 
@@ -854,11 +862,11 @@ Best regards,
         async function deleteCarrier(carrierId) {
             if (!confirm("Bu daşıyıcını bazanızdan silmək istədiyinizə əminsiniz?")) return;
             try {
-                const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
+                const customerId = getCustomerId();
                 const res = await fetch(`/carriers/delete`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ customer_id: parseInt(cleanId), carrier_id: carrierId })
+                    body: JSON.stringify({ customer_id: customerId, carrier_id: carrierId })
                 });
 
                 if (res.ok) {
@@ -884,9 +892,9 @@ Best regards,
                 return;
             }
 
-            const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
+            const customerId = getCustomerId();
             const formData = new FormData();
-            formData.append("customer_id", cleanId);
+            formData.append("customer_id", customerId);
             formData.append("file", fileInput.files[0]);
 
             try {
@@ -920,13 +928,18 @@ Best regards,
                 return;
             }
 
-            const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
+            const customerId = getCustomerId();
 
             try {
                 const res = await fetch("/carriers/manual", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ customer_id: parseInt(cleanId), name: name, email: email })
+                    body: JSON.stringify({ 
+                        customer_id: customerId, 
+                        name: name, 
+                        company_name: name, 
+                        email: email 
+                    })
                 });
                 const data = await res.json();
                 if (res.ok) {
@@ -953,13 +966,17 @@ Best regards,
                 return;
             }
 
-            const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
+            const customerId = getCustomerId();
 
             try {
                 const res = await fetch("/carriers/upload-text", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ customer_id: parseInt(cleanId), raw_text: text })
+                    body: JSON.stringify({ 
+                        customer_id: customerId, 
+                        raw_text: text, 
+                        text: text 
+                    })
                 });
                 const data = await res.json();
                 if (res.ok) {
@@ -1001,8 +1018,8 @@ Best regards,
 
         async function loadStats() {
             try {
-                const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
-                const res = await fetch(`/customer/stats/${cleanId}`);
+                const customerId = getCustomerId();
+                const res = await fetch(`/customer/stats/${customerId}`);
                 const data = await res.json();
                 if (res.ok) {
                     document.getElementById("statActiveRfqs").innerText = data.active_rfqs || 0;
@@ -1120,7 +1137,7 @@ Best regards,
                 if(infoStr) requiredFieldsList.push(`Additional Information: ${infoStr}`);
             }
 
-            const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
+            const customerId = getCustomerId();
             
             const originVal = document.getElementById("origin")?.value.trim();
             const destinationVal = document.getElementById("destination")?.value.trim();
@@ -1141,7 +1158,7 @@ Best regards,
             const customEmailBodyVal = useCustomTemplate ? (document.getElementById("custom_email_body")?.value.trim() || "") : "";
 
             const payload = {
-                customer_id: cleanId ? parseInt(cleanId) : 1,
+                customer_id: customerId,
                 origin: originVal,
                 destination: destinationVal,
                 cargo_type: cargoTypeVal,
@@ -1195,8 +1212,8 @@ Best regards,
         async function loadRequests() {
             const container = document.getElementById("requestsContainer");
             try {
-                const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
-                const res = await fetch(`/requests/customer/${cleanId}`);
+                const customerId = getCustomerId();
+                const res = await fetch(`/requests/customer/${customerId}`);
                 const data = await res.json();
                 
                 let requestsList = [];
