@@ -7,14 +7,18 @@ import re
 import pandas as pd
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, EmailStr
-from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from supabase import create_client, Client
 from dotenv import load_dotenv
-
+from passlib.context import CryptContext
+from pathlib import Path
+from fastapi.responses import FileResponse
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+BASE_DIR = Path(__file__).resolve().parent
 # Mühit dəyişənlərini yükləyirik (.env faylından)
 load_dotenv()
 
@@ -126,7 +130,7 @@ async def send_carrier_email_link(
     custom_body: Optional[str] = None,
     sender_company: str = "LogiFast"
 ):
-    quote_link = f"http://127.0.0.1:8000/carrier/quote?token={token}"
+    quote_link = f"http://162.35.186.229:8000/carrier_quote/quote?token={token}"
 
     if not custom_body or not custom_body.strip():
         text_content = f"""Dear {carrier_name},
@@ -219,6 +223,12 @@ class DeleteCarrierRequest(BaseModel):
     customer_id: int
     carrier_id: int
 
+class CarrierItem(BaseModel):
+    name: str
+    email: EmailStr
+
+class CarrierBatchRequest(BaseModel):
+    carriers: List[CarrierItem]
 # ------------------------------------------------------------------
 # SƏHİFƏ MARŞRUTLARI (HTML PAGES)
 # ------------------------------------------------------------------
@@ -244,9 +254,10 @@ def get_customer_dashboard():
     response.headers["Expires"] = "0"
     return response
 
-@app.get("/carrier/quote")
-def get_carrier_quote_page(): 
-    return FileResponse("static/carrier_quote.html")
+@app.get("/carrier_quote/quote")
+def get_carrier_quote_page(token: str):
+    file_path = BASE_DIR / "static" / "carrier_quote.html"
+    return FileResponse(file_path)
 
 # ------------------------------------------------------------------
 # API ENDPOINT-LƏRİ
@@ -281,6 +292,20 @@ def get_customer_stats(customer_id: int):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/carriers/manual")
+async def add_carriers_manual(data: CarrierBatchRequest, customer_id: int = Form(...)):
+    try:
+        for item in data.carriers:
+            # Supabase və ya digər bazaya yazma məntiqi
+            res = supabase.table("carriers").insert({"name": item.name, "email": item.email, "customer_id": customer_id}).execute()
+        
+        return {"success": True, "message": f"{len(data.carriers)} daşıyıcı uğurla əlavə edildi!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
 
 @app.post("/carriers/upload-excel")
 async def upload_carriers_excel(customer_id: int = Form(...), file: UploadFile = File(...)):
@@ -593,14 +618,32 @@ async def select_winner_body(payload: SelectWinnerRequest):
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
     return {"status": "success", "message": "Qalib təklif uğurla təsdiqləndi!"}
 
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
 @app.post("/auth/login")
 async def login(data: LoginRequest):
+    # 1. Customers cədvəlində yoxla
     customer = supabase.table("customers").select("*").eq("email", data.email).execute()
     if customer.data:
-        return {"status": "success", "role": "customer", "user": customer.data[0]}
+        user = customer.data[0]
+        stored_password = user.get("password")
+        
+        if stored_password and pwd_context.verify(data.password, stored_password):
+            return {"status": "success", "role": "customer", "user": user}
+        else:
+            raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
     
+    # 2. Carriers cədvəlində yoxla
     carrier = supabase.table("carriers").select("*").eq("email", data.email).execute()
     if carrier.data:
-        return {"status": "success", "role": "carrier", "user": carrier.data[0]}
+        user = carrier.data[0]
+        stored_password = user.get("password")
+        
+        if stored_password and pwd_context.verify(data.password, stored_password):
+            return {"status": "success", "role": "carrier", "user": user}
+        else:
+            raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
 
     raise HTTPException(status_code=404, detail="Bu e-poçt ilə qeydiyyatlı hesab tapılmadı.")

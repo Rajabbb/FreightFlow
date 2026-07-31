@@ -369,18 +369,48 @@
             </div>
         </div>
 
-        <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
-        <div class="card">
-            <div class="section-title">
-                <i class="bi bi-people-fill"></i> Daşıyıcı Bazasını İdarə Etmək
-            </div>
-            <div class="section-desc">Mövcud daşıyıcı kontaktlarınızı Excel/CSV vasitəsilə əlavə edin və ya lazım olmadıqda bazadan silin.</div>
-            
-            <form id="uploadCarrierForm" onsubmit="uploadCarriers(event)">
+        
+
+
+   
+
+         <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
+<div class="card shadow-sm border-0 mb-4 p-4">
+    <div class="section-title mb-1">
+        <i class="bi bi-people-fill text-primary"></i> Daşıyıcı Bazasını İdarə Etmək
+    </div>
+    <div class="section-desc mb-4 text-muted">Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.</div>
+
+    <!-- Tab Keçid Düymələri (Bootstrap 5 Tabs) -->
+    <ul class="nav nav-pills mb-4 gap-2" id="carrierTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active px-3 py-2 fw-semibold" id="file-tab" data-bs-toggle="pill" data-bs-target="#file-content" type="button" role="tab">
+                <i class="bi bi-file-earmark-excel me-1"></i> Fayl Yüklə
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2 fw-semibold" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-content" type="button" role="tab">
+                <i class="bi bi-person-plus me-1"></i> Əllə Daxil Et
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link px-3 py-2 fw-semibold" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-content" type="button" role="tab">
+                <i class="bi bi-clipboard-text me-1"></i> Cədvəldən Yapışdır
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Məzmunları -->
+    <div class="tab-content mb-4" id="carrierTabsContent">
+        
+        <!-- 1. Fayl Yüklə Bölməsi -->
+        <div class="tab-pane fade show active" id="file-content" role="tabpanel">
+            <form action="/carriers/upload-excel" method="POST" enctype="multipart/form-data" class="p-3 border rounded bg-light">
+                <input type="hidden" name="customer_id" value="{{ customer_id }}">
                 <div class="row align-items-end g-3">
                     <div class="col-md-8">
                         <label class="form-label text-muted">Excel / CSV Faylı Yüklə</label>
-                        <input type="file" class="form-control" id="carrierFile" accept=".csv, .xlsx, .xls">
+                        <input type="file" class="form-control" name="file" accept=".csv, .xlsx, .xls" required>
                     </div>
                     <div class="col-md-4">
                         <button type="submit" class="btn btn-primary w-100">
@@ -389,20 +419,63 @@
                     </div>
                 </div>
             </form>
-            <div id="uploadResult" class="mt-2 fw-medium small"></div>
-
-            <hr class="my-4 text-muted opacity-25">
-
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <span class="fw-bold text-dark small text-uppercase tracking-wider"><i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar</span>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="loadManageCarriersList()" style="font-size: 11.5px;">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
-                </button>
-            </div>
-            <div class="carrier-select-box" id="manageCarriersContainer">
-                <span class="text-muted small">Daşıyıcılar yüklənir...</span>
-            </div>
         </div>
+
+        <!-- 2. Əllə Daxil Et Bölməsi -->
+        <div class="tab-pane fade" id="manual-content" role="tabpanel">
+            <form action="/carriers/manual" method="POST" class="p-3 border rounded bg-light">
+                <input type="hidden" name="customer_id" value="{{ customer_id }}">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Şirkət / Daşıyıcı Adı</label>
+                    <input type="text" class="form-control" name="name" placeholder="Məsələn: LogiTrans MMC" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label text-muted">E-poçt Ünvanı</label>
+                    <input type="email" class="form-control" name="email" placeholder="info@logitrans.az" required>
+                </div>
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="bi bi-person-plus-fill me-2"></i> Daşıyıcıyı Əlavə Et
+                </button>
+            </form>
+        </div>
+
+        <!-- 3. Cədvəldən Yapışdır Bölməsi -->
+        <div class="tab-pane fade" id="paste-content" role="tabpanel">
+            <form action="/carriers/upload-text" method="POST" class="p-3 border rounded bg-light">
+                <input type="hidden" name="customer_id" value="{{ customer_id }}">
+                <div class="mb-3">
+                    <label class="form-label text-muted">Excel-dən sütunları kopyalayıb bura yapışdırın:</label>
+                    <textarea class="form-control" name="raw_text" rows="4" placeholder="Şirkət A&#10;a@example.com&#10;Şirkət B&#10;b@example.com" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-warning text-dark w-100 fw-semibold">
+                    <i class="bi bi-file-earmark-text-fill me-2"></i> Cədvəldən Əlavə Et
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+    <hr class="my-4 text-muted opacity-25">
+
+    <!-- Bazadakı Mövcud Daşıyıcılar Bölməsi -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="fw-bold text-dark small text-uppercase tracking-wider">
+            <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
+        </span>
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="loadManageCarriersList()" style="font-size: 11px;">
+            <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
+        </button>
+    </div>
+    <div class="carrier-select-box" id="manageCarriersContainer">
+        <span class="text-muted small">Daşıyıcılar yüklənir...</span>
+    </div>
+
+
+
+
+
+
+
 
         <!-- YENİ YÜK SORĞUSU (RFQ) YARAT -->
         <div class="card">
@@ -645,6 +718,91 @@ Best regards,
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
+
+
+
+<script>
+    // Tabları dəyişmək üçün funksiya
+    function switchTab(tab) {
+        ['file', 'manual', 'paste'].forEach(t => {
+            document.getElementById(`section_${t}`).classList.add('hidden');
+            document.getElementById(`tab_${t}`).className = "px-4 py-2 rounded-lg text-slate-400 hover:text-white transition";
+        });
+        document.getElementById(`section_${tab}`).classList.remove('hidden');
+        document.getElementById(`tab_${tab}`).className = "px-4 py-2 rounded-lg bg-indigo-600 text-white transition";
+    }
+
+    // Əllə tək daşıyıcı əlavə etmək
+    async function addSingleManual() {
+        const name = document.getElementById('manual_name').value.trim();
+        const email = document.getElementById('manual_email').value.trim();
+
+        if (!name || !email) {
+            alert("Zəhmət olmasa bütün xanaları doldurun!");
+            return;
+        }
+
+        sendCarriersToBackend([{ name, email }]);
+    }
+
+    // Kopyalanmış cədvəli oxuyub göndərmək
+    async function addPastedTable() {
+        const text = document.getElementById('paste_area').value.trim();
+        if (!text) {
+            alert("Zəhmət olmasa cədvəl məlumatlarını yapışdırın!");
+            return;
+        }
+
+        const rows = text.split('\n');
+        const carriers = [];
+
+        for (let row of rows) {
+            // Tab və ya vergüllə ayrılmış sütunları bölürük
+            const cols = row.split(/\t|,/);
+            if (cols.length >= 2) {
+                const name = cols[0].trim();
+                const email = cols[1].trim();
+                if (name && email.includes('@')) {
+                    carriers.push({ name, email });
+                }
+            }
+        }
+
+        if (carriers.length === 0) {
+            alert("Format səhvdir! Zəhmət olmasa Ad və E-poçt sütunlarını düzgün kopyaladığınızdan əmin olun.");
+            return;
+        }
+
+        sendCarriersToBackend(carriers);
+    }
+
+    // Ümumi göndərmə funksiyası
+    async function sendCarriersToBackend(carriersList) {
+        try {
+            const response = await fetch('/customer/carriers/manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ carriers: carriersList })
+            });
+
+            const result = await response.json();
+            if (response.ok) {
+                alert("Daşıyıcı(lar) uğurla əlavə edildi!");
+                location.reload();
+            } else {
+                alert("Xəta: " + (result.detail || "Naməlum xəta"));
+            }
+        } catch (err) {
+            console.error("Sorğu xətası:", err);
+            catchError = true;
+        }
+    }
+</script>
+
+
 
     <script>
         let user = null;

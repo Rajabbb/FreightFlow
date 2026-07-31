@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+supabase
+pandas
+pydantic
+fastapi-mail
+python-dotenv
+openpyxl
+python-multipart
