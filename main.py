@@ -78,24 +78,42 @@ def normalize_text(text: Any) -> str:
         text = text.replace(old, new)
     return text
 
+def extract_clean_email(val: Any) -> Optional[str]:
+    if val is None or pd.isna(val):
+        return None
+    val_str = str(val).strip()
+    if not val_str or val_str.lower() == 'nan':
+        return None
+        
+    # Excel düsturlarını və ya hiperlinkləri təmizləmək üçün regex ilə əsl e-poçt strukturunu tapırıq
+    match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', val_str)
+    if match:
+        clean = match.group(0).strip().lower()
+        if '@' in clean and '.' in clean:
+            return clean
+            
+    return None
+
 def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, Any]]) -> Dict[str, Any]:
     if not raw_carriers:
         raise HTTPException(status_code=400, detail="Əlavə ediləcək daşıyıcı məlumatı tapılmadı.")
 
-    # Bazada həmin müştəriyə aid mövcud e-poçtları .range(0, 9999) ilə tam çəkirik (100 sətir limitini aradan qaldırır)
+    # Bazadan mövcud e-poçtları tam çəkirik (.range(0, 9999) limiti qaldırır)
     existing_emails = set()
     try:
         res1 = supabase.table("carriers").select("email").eq("customer_id", customer_id).range(0, 9999).execute()
         if res1.data:
             for item in res1.data:
-                if item.get("email"):
-                    existing_emails.add(item["email"].strip().lower())
+                em = extract_clean_email(item.get("email"))
+                if em:
+                    existing_emails.add(em)
         
         res2 = supabase.table("carriers").select("email").eq("customer_id", str(customer_id)).range(0, 9999).execute()
         if res2.data:
             for item in res2.data:
-                if item.get("email"):
-                    existing_emails.add(item["email"].strip().lower())
+                em = extract_clean_email(item.get("email"))
+                if em:
+                    existing_emails.add(em)
     except Exception as e:
         print("Xəta (existing_emails yoxlanarkən):", e)
 
@@ -108,16 +126,14 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
             continue
         
         raw_email = item.get("email")
-        if not raw_email or not isinstance(raw_email, str):
-            continue
-            
-        clean_email = raw_email.strip().lower()
-        if not clean_email or clean_email == 'nan' or '@' not in clean_email or '.' not in clean_email:
+        clean_email = extract_clean_email(raw_email)
+        
+        if not clean_email:
             continue
 
-        # Əgər bazada artıq varsa və ya bu daxil edilən siyahı daxilində təkrar olunubsa
+        # Bazada və ya daxil edilən siyahının özündə təkrar olub-olmadığını yoxlayırıq
         if clean_email in existing_emails or clean_email in seen_in_input:
-            duplicate_emails.append(raw_email.strip())
+            duplicate_emails.append(clean_email)
             continue
 
         seen_in_input.add(clean_email)
@@ -129,15 +145,15 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
         carriers_to_insert.append({
             "customer_id": customer_id,
             "company_name": str(company).strip(),
-            "email": raw_email.strip()
+            "email": clean_email
         })
 
     if duplicate_emails:
         unique_dups = ", ".join(list(set(duplicate_emails)))
-        raise HTTPException(status_code=400, detail=f"Bu e-poçt ünvanı(ləri) artıq bazada mövcuddur: {unique_dups}")
+        raise HTTPException(status_code=400, detail=f"Bu e-poçt ünvanı artıq bazada və ya siyahıda mövcuddur: {unique_dups}")
 
     if not carriers_to_insert:
-        raise HTTPException(status_code=400, detail="Daxil edilən e-poçt ünvanı etibarsızdır.")
+        raise HTTPException(status_code=400, detail="Daxil edilən e-poçt ünvanı etibarsızdır və ya artıq mövcuddur.")
 
     supabase.table("carriers").insert(carriers_to_insert).execute()
     return {"status": "success", "message": f"{len(carriers_to_insert)} yeni daşıyıcı uğurla əlavə edildi!"}
@@ -159,9 +175,13 @@ def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int):
 
     raw_list = []
     for _, row in df.iterrows():
-        raw_email = str(row[email_col]).strip() if pd.notna(row[email_col]) else ""
+        raw_email_val = row[email_col] if pd.notna(row[email_col]) else ""
+        clean_email = extract_clean_email(raw_email_val)
+        if not clean_email:
+            continue
+            
         company = str(row[comp_col]).strip() if comp_col and pd.notna(row[comp_col]) else "Daşıyıcı"
-        raw_list.append({"name": company, "email": raw_email})
+        raw_list.append({"name": company, "email": clean_email})
 
     return filter_and_insert_carriers(customer_id, raw_list)
 
@@ -409,7 +429,6 @@ async def upload_carriers_text(request: Request):
         
         customer_id = int(customer_id)
 
-        # Yapışdırılan mətni sətr-sətr oxuyub e-poçtları təyin edən güclü parser
         lines = raw_text.strip().split("\n")
         raw_list = []
         
@@ -425,21 +444,21 @@ async def upload_carriers_text(request: Request):
             name = "Daşıyıcı"
             
             for part in parts:
-                if '@' in part and '.' in part:
-                    email = part
+                extracted = extract_clean_email(part)
+                if extracted:
+                    email = extracted
                     break
             
             if not email:
                 continue
             
-            other_parts = [p for p in parts if p != email]
+            other_parts = [p for p in parts if extract_clean_email(p) != email]
             if other_parts:
                 name = other_parts[0]
             
             raw_list.append({"name": name, "email": email})
 
         if not raw_list:
-            # Əgər sətr-sətr parser tapmasa, pandas ilə cədvəl kimi oxumağa cəhd edirik
             try:
                 df = pd.read_csv(io.StringIO(raw_text), sep="\t")
                 if len(df.columns) == 1: 
