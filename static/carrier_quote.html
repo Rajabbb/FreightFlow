@@ -125,22 +125,34 @@
                     fieldsList.innerHTML = "";
                     let hasItems = false;
 
-                    if (customerNote.trim() !== "") {
+                    // Əgər customerNote yalnız Volume/CBM və ya Loading Date-dirsə, aşağı düşməsin
+                    let displayCustomerNote = customerNote;
+                    const lowNote = customerNote.toLowerCase();
+                    if (lowNote.includes("volume") || lowNote.includes("cbm") || lowNote.includes("loading date")) {
+                        displayCustomerNote = ""; 
+                    }
+
+                    if (displayCustomerNote.trim() !== "") {
                         hasItems = true;
                         const noteDiv = document.createElement("div");
                         noteDiv.innerHTML = `
                             <span class="block text-xs text-slate-400 mb-1">Müştəri Qeydi:</span>
                             <div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed">
-                                ${customerNote}
+                                ${displayCustomerNote}
                             </div>
                         `;
                         fieldsList.appendChild(noteDiv);
                     }
 
+                    // Tələb olunan xüsusi sahələr (required_fields)
                     if (req.required_fields && req.required_fields.length > 0) {
                         req.required_fields.forEach(field => {
-                            if (typeof field === 'string' && (field.toLowerCase().includes("fayl") || field.toLowerCase().includes("attachment") || field.includes("http") || field.includes("Fayl:"))) {
-                                return;
+                            if (typeof field === 'string') {
+                                const lowField = field.toLowerCase();
+                                // Fayl, link, volume, cbm və ya loading sözləri keçənləri aşağı siyahıdan çıxarırıq
+                                if (lowField.includes("fayl") || lowField.includes("attachment") || field.includes("http") || field.includes("Fayl:") || lowField.includes("volume") || lowField.includes("cbm") || lowField.includes("loading")) {
+                                    return;
+                                }
                             }
                             
                             if (customerNote && (field === customerNote || field.includes(customerNote) || customerNote.includes(field))) {
