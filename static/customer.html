@@ -369,98 +369,99 @@
             </div>
         </div>
 
-         <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
-<div class="card shadow-sm border-0 mb-4 p-4">
-    <div class="section-title mb-1">
-        <i class="bi bi-people-fill text-primary"></i> Daşıyıcı Bazasını İdarə Etmək
-    </div>
-    <div class="section-desc mb-4 text-muted">Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.</div>
+        <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
+        <div class="card shadow-sm border-0 mb-4 p-4">
+            <div class="section-title mb-1">
+                <i class="bi bi-people-fill text-primary"></i> Daşıyıcı Bazasını İdarə Etmək
+            </div>
+            <div class="section-desc mb-4 text-muted">Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.</div>
 
-    <!-- Tab Keçid Düymələri (Bootstrap 5 Tabs) -->
-    <ul class="nav nav-pills mb-4 gap-2" id="carrierTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link active px-3 py-2 fw-semibold" id="file-tab" data-bs-toggle="pill" data-bs-target="#file-content" type="button" role="tab">
-                <i class="bi bi-file-earmark-excel me-1"></i> Fayl Yüklə
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link px-3 py-2 fw-semibold" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-content" type="button" role="tab">
-                <i class="bi bi-person-plus me-1"></i> Əllə Daxil Et
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link px-3 py-2 fw-semibold" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-content" type="button" role="tab">
-                <i class="bi bi-clipboard-text me-1"></i> Cədvəldən Yapışdır
-            </button>
-        </li>
-    </ul>
+            <!-- Tab Keçid Düymələri (Bootstrap 5 Tabs) -->
+            <ul class="nav nav-pills mb-4 gap-2" id="carrierTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active px-3 py-2 fw-semibold" id="file-tab" data-bs-toggle="pill" data-bs-target="#file-content" type="button" role="tab">
+                        <i class="bi bi-file-earmark-excel me-1"></i> Fayl Yüklə
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link px-3 py-2 fw-semibold" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-content" type="button" role="tab">
+                        <i class="bi bi-person-plus me-1"></i> Əllə Daxil Et
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link px-3 py-2 fw-semibold" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-content" type="button" role="tab">
+                        <i class="bi bi-clipboard-text me-1"></i> Cədvəldən Yapışdır
+                    </button>
+                </li>
+            </ul>
 
-    <!-- Tab Məzmunları -->
-    <div class="tab-content mb-4" id="carrierTabsContent">
-        
-        <!-- 1. Fayl Yüklə Bölməsi -->
-        <div class="tab-pane fade show active" id="file-content" role="tabpanel">
-            <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
-                <div class="row align-items-end g-3">
-                    <div class="col-md-8">
-                        <label class="form-label text-muted">Excel / CSV Faylı Yüklə</label>
-                        <input type="file" class="form-control" name="file" accept=".csv, .xlsx, .xls" required>
-                    </div>
-                    <div class="col-md-4">
-                        <button type="submit" class="btn btn-primary w-100">
-                            <i class="bi bi-cloud-arrow-up-fill me-2"></i> Bazaya Əlavə Et
+            <!-- Tab Məzmunları -->
+            <div class="tab-content mb-4" id="carrierTabsContent">
+                
+                <!-- 1. Fayl Yüklə Bölməsi -->
+                <div class="tab-pane fade show active" id="file-content" role="tabpanel">
+                    <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
+                        <div class="row align-items-end g-3">
+                            <div class="col-md-8">
+                                <label class="form-label text-muted">Excel / CSV Faylı Yüklə</label>
+                                <input type="file" class="form-control" name="file" accept=".csv, .xlsx, .xls" required>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-cloud-arrow-up-fill me-2"></i> Bazaya Əlavə Et
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- 2. Əllə Daxil Et Bölməsi -->
+                <div class="tab-pane fade" id="manual-content" role="tabpanel">
+                    <form onsubmit="addManualCarrier(event)" class="p-3 border rounded bg-light">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Şirkət / Daşıyıcı Adı</label>
+                            <input type="text" class="form-control" id="manual_company_name" placeholder="Məsələn: LogiTrans MMC" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">E-poçt Ünvanı</label>
+                            <input type="email" class="form-control" id="manual_email" placeholder="info@logitrans.az" required>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-person-plus-fill me-2"></i> Daşıyıcıyı Əlavə Et
                         </button>
-                    </div>
+                    </form>
                 </div>
-            </form>
-        </div>
 
-        <!-- 2. Əllə Daxil Et Bölməsi -->
-        <div class="tab-pane fade" id="manual-content" role="tabpanel">
-            <form onsubmit="addManualCarrier(event)" class="p-3 border rounded bg-light">
-                <div class="mb-3">
-                    <label class="form-label text-muted">Şirkət / Daşıyıcı Adı</label>
-                    <input type="text" class="form-control" id="manual_company_name" placeholder="Məsələn: LogiTrans MMC" required>
+                <!-- 3. Cədvəldən Yapışdır Bölməsi -->
+                <div class="tab-pane fade" id="paste-content" role="tabpanel">
+                    <form onsubmit="addPasteCarrier(event)" class="p-3 border rounded bg-light">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Excel-dən sütunları kopyalayıb bura yapışdırın:</label>
+                            <textarea class="form-control" id="paste_raw_text" rows="4" placeholder="Şirkət A&#10;a@example.com&#10;Şirkət B&#10;b@example.com" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-warning text-dark w-100 fw-semibold">
+                            <i class="bi bi-file-earmark-text-fill me-2"></i> Cədvəldən Əlavə Et
+                        </button>
+                    </form>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label text-muted">E-poçt Ünvanı</label>
-                    <input type="email" class="form-control" id="manual_email" placeholder="info@logitrans.az" required>
-                </div>
-                <button type="submit" class="btn btn-success w-100">
-                    <i class="bi bi-person-plus-fill me-2"></i> Daşıyıcıyı Əlavə Et
+
+            </div>
+
+            <hr class="my-4 text-muted opacity-25">
+
+            <!-- Bazadakı Mövcud Daşıyıcılar Bölməsi -->
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="fw-bold text-dark small text-uppercase tracking-wider">
+                    <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
+                </span>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="loadManageCarriersList()" style="font-size: 11px;">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
                 </button>
-            </form>
+            </div>
+            <div class="carrier-select-box" id="manageCarriersContainer">
+                <span class="text-muted small">Daşıyıcılar yüklənir...</span>
+            </div>
         </div>
-
-        <!-- 3. Cədvəldən Yapışdır Bölməsi -->
-        <div class="tab-pane fade" id="paste-content" role="tabpanel">
-            <form onsubmit="addPasteCarrier(event)" class="p-3 border rounded bg-light">
-                <div class="mb-3">
-                    <label class="form-label text-muted">Excel-dən sütunları kopyalayıb bura yapışdırın:</label>
-                    <textarea class="form-control" id="paste_raw_text" rows="4" placeholder="Şirkət A&#10;a@example.com&#10;Şirkət B&#10;b@example.com" required></textarea>
-                </div>
-                <button type="submit" class="btn btn-warning text-dark w-100 fw-semibold">
-                    <i class="bi bi-file-earmark-text-fill me-2"></i> Cədvəldən Əlavə Et
-                </button>
-            </form>
-        </div>
-
-    </div>
-
-    <hr class="my-4 text-muted opacity-25">
-
-    <!-- Bazadakı Mövcud Daşıyıcılar Bölməsi -->
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <span class="fw-bold text-dark small text-uppercase tracking-wider">
-            <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
-        </span>
-        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="loadManageCarriersList()" style="font-size: 11px;">
-            <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
-        </button>
-    </div>
-    <div class="carrier-select-box" id="manageCarriersContainer">
-        <span class="text-muted small">Daşıyıcılar yüklənir...</span>
-    </div>
 
         <!-- YENİ YÜK SORĞUSU (RFQ) YARAT -->
         <div class="card">
@@ -606,7 +607,6 @@
                         </label>
                     </div>
 
-                    <!-- Standart Şablonun Görünüşü (Önizləmə) -->
                     <div class="p-3 mb-3 bg-white border rounded-3 text-muted small shadow-sm" style="font-family: monospace; white-space: pre-wrap; font-size: 12.5px;">Dear {{company_name}},
 
 Please review the shipment details below and kindly complete the quotation form using the link provided.
@@ -938,6 +938,7 @@ Best regards,
                         customer_id: customerId, 
                         name: name, 
                         company_name: name, 
+                        carrier_name: name,
                         email: email 
                     })
                 });
@@ -975,7 +976,8 @@ Best regards,
                     body: JSON.stringify({ 
                         customer_id: customerId, 
                         raw_text: text, 
-                        text: text 
+                        text: text,
+                        content: text
                     })
                 });
                 const data = await res.json();
@@ -1160,11 +1162,17 @@ Best regards,
             const payload = {
                 customer_id: customerId,
                 origin: originVal,
+                loading_location: originVal,
                 destination: destinationVal,
+                delivery_location: destinationVal,
                 cargo_type: cargoTypeVal,
+                cargo: cargoTypeVal,
                 weight_kg: parseFloat(weightVal) || 0,
+                weight: parseFloat(weightVal) || 0,
                 volume_m3: document.getElementById("chk_volume")?.checked ? (parseFloat(document.getElementById("inp_volume")?.value) || 0) : 0,
+                volume: document.getElementById("chk_volume")?.checked ? (parseFloat(document.getElementById("inp_volume")?.value) || 0) : 0,
                 deadline: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
+                loading_date: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
                 truck_type: document.getElementById("chk_truck_type")?.checked ? (document.getElementById("inp_truck_type")?.value || "") : "",
                 hs_code: document.getElementById("chk_hs_code")?.checked ? (document.getElementById("inp_hs_code")?.value || "") : "",
                 stackable: document.getElementById("chk_stackable")?.checked ? (document.getElementById("inp_stackable")?.value || "") : "",
@@ -1243,7 +1251,7 @@ Best regards,
                                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
                                     <h6 class="fw-bold text-dark mb-2 mb-md-0 d-flex align-items-center fs-6">
                                         <span class="badge bg-light text-secondary border me-2 shadow-sm">ID: ${req.id}</span> 
-                                        ${req.origin} <i class="bi bi-arrow-right-short mx-2 text-primary fs-5"></i> ${req.destination}
+                                        ${req.origin || req.loading_location || ''} <i class="bi bi-arrow-right-short mx-2 text-primary fs-5"></i> ${req.destination || req.delivery_location || ''}
                                     </h6>
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="badge ${qCount > 0 ? 'bg-info text-dark' : 'bg-secondary'} shadow-sm">${qCount} təklif</span>
@@ -1252,8 +1260,8 @@ Best regards,
                                 </div>
                                 <div class="request-meta-box mb-3">
                                     <div class="row text-muted small fw-medium g-2">
-                                        <div class="col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type}</strong></div>
-                                        <div class="col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg} kq</strong></div>
+                                        <div class="col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type || req.cargo || ''}</strong></div>
+                                        <div class="col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg || req.weight || 0} kq</strong></div>
                                         ${deadlineField}
                                     </div>
                                 </div>
@@ -1358,8 +1366,6 @@ Best regards,
                 quotesDiv.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`;
             }
         }
-
-        window.currentQuotesCache = {};
 
         function openQuoteModal(requestId, quoteId) {
             const quotes = window.currentQuotesCache[requestId] || [];
