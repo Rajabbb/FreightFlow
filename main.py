@@ -525,8 +525,12 @@ async def create_shipment_request(
             else:
                 parsed_required.append(str(item))
 
+        final_note = payload.additional_notes or payload.note or ""
+
         deadline_val = payload.deadline
         if deadline_val == "" or deadline_val is None:
+            deadline_val = None
+        elif deadline_val and deadline_val in final_note and ("loading" in final_note.lower() or "tarix" in final_note.lower()):
             deadline_val = None
 
         stackable_val = payload.stackable
@@ -535,8 +539,6 @@ async def create_shipment_request(
                 stackable_val = None
             else:
                 stackable_val = stackable_val.lower() in ["true", "1", "yes", "on"]
-
-        final_note = payload.additional_notes or payload.note or ""
 
         response = supabase.table("shipment_requests").insert({
             "customer_id": payload.customer_id,
@@ -634,15 +636,15 @@ def get_request_details(target_id: str):
             shipment["additional_notes"] = note_val
             shipment["note"] = note_val
             
-            # Həcm 0 və ya boşdursa None edirik ki, 0 m³ kimi görünməsin
-            if shipment.get("volume_m3") in [0, 0.0, "0", "0.0"]:
-                shipment["volume_m3"] = None
+            # Həcm yoxdursa və ya 0-dırsa "Qeyd edilməyib" yazırıq
+            vol = shipment.get("volume_m3")
+            if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]:
+                shipment["volume_m3"] = "Qeyd edilməyib"
 
-            # Əgər deadline yoxdursa, amma qeydlərdə Loading Date olaraq daxil edilibsə deadline-ı təmizləyirik
+            # Deadline Loading Date-dirsə təmizləyirik
             deadline = shipment.get("deadline")
-            if deadline and ("Loading Date:" in note_val or "loading date" in note_val.lower()):
-                if str(deadline) in note_val:
-                    shipment["deadline"] = None
+            if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
+                shipment["deadline"] = None
 
         return {
             "already_submitted": quote.get("price") is not None,
@@ -659,13 +661,13 @@ def get_request_details(target_id: str):
                 shipment["additional_notes"] = note_val
                 shipment["note"] = note_val
                 
-                if shipment.get("volume_m3") in [0, 0.0, "0", "0.0"]:
-                    shipment["volume_m3"] = None
+                vol = shipment.get("volume_m3")
+                if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]:
+                    shipment["volume_m3"] = "Qeyd edilməyib"
                     
                 deadline = shipment.get("deadline")
-                if deadline and ("Loading Date:" in note_val or "loading date" in note_val.lower()):
-                    if str(deadline) in note_val:
-                        shipment["deadline"] = None
+                if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
+                    shipment["deadline"] = None
 
             return {"request": shipment, "already_submitted": False}
 
@@ -681,13 +683,14 @@ def get_quote_form_details(token: str):
     shipment = quote.get("shipment_requests")
     if isinstance(shipment, dict):
         note_val = shipment.get("additional_notes") or shipment.get("note") or ""
-        if shipment.get("volume_m3") in [0, 0.0, "0", "0.0"]:
-            shipment["volume_m3"] = None
+        
+        vol = shipment.get("volume_m3")
+        if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]:
+            shipment["volume_m3"] = "Qeyd edilməyib"
             
         deadline = shipment.get("deadline")
-        if deadline and ("Loading Date:" in note_val or "loading date" in note_val.lower()):
-            if str(deadline) in note_val:
-                shipment["deadline"] = None
+        if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
+            shipment["deadline"] = None
 
     return {"already_submitted": quote.get("price") is not None, "quote": quote}
 
