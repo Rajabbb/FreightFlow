@@ -93,13 +93,29 @@
 
                     const req = data.request;
                     document.getElementById("route_text").innerText = `${req.origin} ➔ ${req.destination}`;
-                    document.getElementById("weight_volume_text").innerText = `${req.weight_kg || 0} kg / ${req.volume_m3 || 0} m³`;
+                    
+                    // Həcm (Volume) yoxlaması: 0 və ya boşdursa "Qeyd edilməyib" yazılır
+                    let volumeText = req.volume_m3;
+                    if (!volumeText || volumeText === 0 || volumeText === "0" || volumeText === 0.0 || volumeText === "Qeyd edilməyib") {
+                        volumeText = "Qeyd edilməyib";
+                    } else {
+                        volumeText = `${volumeText} m³`;
+                    }
+                    document.getElementById("weight_volume_text").innerText = `${req.weight_kg || 0} kg / ${volumeText}`;
+                    
                     document.getElementById("cargo_type_text").innerText = req.cargo_type || "Qeyd olunmayıb";
 
-                    // Deadline yalnız seçilibsə göstər, yoxdursa gizlət
+                    const customerNote = req.additional_notes || req.note || req.customer_note || "";
+
+                    // Deadline yoxlaması: Əgər loading date kimi qeyd edilibsə deadline kimi göstərilmir
                     const deadlineBox = document.getElementById("deadline_box");
-                    if (req.deadline && req.deadline.trim() !== "") {
-                        document.getElementById("deadline_text").innerText = req.deadline.split('T')[0];
+                    let deadlineVal = req.deadline;
+                    if (deadlineVal && customerNote.includes(deadlineVal) && (customerNote.toLowerCase().includes("loading") || customerNote.toLowerCase().includes("tarix"))) {
+                        deadlineVal = null;
+                    }
+
+                    if (deadlineVal && deadlineVal.trim() !== "") {
+                        document.getElementById("deadline_text").innerText = deadlineVal.split('T')[0];
                         deadlineBox.classList.remove("hidden");
                     } else {
                         deadlineBox.classList.add("hidden");
@@ -109,9 +125,7 @@
                     fieldsList.innerHTML = "";
                     let hasItems = false;
 
-                    // Müştəri Qeydi (additional_notes, note və ya customer_note yoxlanılır)
-                    const customerNote = req.additional_notes || req.note || req.customer_note;
-                    if (customerNote && customerNote.trim() !== "") {
+                    if (customerNote.trim() !== "") {
                         hasItems = true;
                         const noteDiv = document.createElement("div");
                         noteDiv.innerHTML = `
@@ -123,14 +137,12 @@
                         fieldsList.appendChild(noteDiv);
                     }
 
-                    // Tələb olunan xüsusi sahələr (required_fields)
                     if (req.required_fields && req.required_fields.length > 0) {
                         req.required_fields.forEach(field => {
                             if (typeof field === 'string' && (field.toLowerCase().includes("fayl") || field.toLowerCase().includes("attachment") || field.includes("http") || field.includes("Fayl:"))) {
                                 return;
                             }
                             
-                            // Eyni mətnin "Müştəri Qeydi / Tələb" olaraq təkrar düşməsinin qarşısını alır
                             if (customerNote && (field === customerNote || field.includes(customerNote) || customerNote.includes(field))) {
                                 return;
                             }
@@ -147,9 +159,7 @@
                         });
                     }
 
-                    // Faylın yoxlanılması və əlavə edilməsi
                     let fileUrl = req.attachment_url;
-                    
                     if (!fileUrl && req.required_fields) {
                         const foundField = req.required_fields.find(f => typeof f === 'string' && (f.includes("Fayl:") || f.includes("http") || f.includes("uploads")));
                         if (foundField) {
@@ -182,7 +192,6 @@
                         fieldsList.appendChild(fileDiv);
                     }
 
-                    // Əgər nə yazı, nə də fayl yoxdursa, bütün bölməni gizlət
                     if (!hasItems) {
                         document.getElementById("dynamic_fields_container").style.display = "none";
                     }
