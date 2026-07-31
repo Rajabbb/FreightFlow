@@ -28,9 +28,9 @@
                     <span class="text-slate-400 block text-xs">Yük Növü</span>
                     <span id="cargo_type_text" class="font-bold text-white text-base">-</span>
                 </div>
-                <!-- Deadline (Yalnız seçilibsə görünəcək) -->
+                <!-- Deadline / Loading Date (Yalnız seçilibsə görünəcək) -->
                 <div id="deadline_box" class="hidden">
-                    <span class="text-slate-400 block text-xs">Son Tarix (Deadline)</span>
+                    <span id="deadline_label" class="text-slate-400 block text-xs">Son Tarix (Deadline)</span>
                     <span id="deadline_text" class="font-bold text-white text-base">-</span>
                 </div>
             </div>
@@ -94,7 +94,7 @@
                     const req = data.request;
                     document.getElementById("route_text").innerText = `${req.origin} ➔ ${req.destination}`;
                     
-                    // Həcm (Volume) yoxlaması: 0 və ya boşdursa "Qeyd edilməyib" yazılır
+                    // Həcm (Volume) yoxlaması
                     let volumeText = req.volume_m3;
                     if (!volumeText || volumeText === 0 || volumeText === "0" || volumeText === 0.0 || volumeText === "Qeyd edilməyib") {
                         volumeText = "Qeyd edilməyib";
@@ -105,17 +105,27 @@
                     
                     document.getElementById("cargo_type_text").innerText = req.cargo_type || "Qeyd olunmayıb";
 
-                    const customerNote = req.additional_notes || req.note || req.customer_note || "";
-
-                    // Deadline yoxlaması: Əgər loading date kimi qeyd edilibsə deadline kimi göstərilmir
+                    // Deadline və ya Loading Date yoxlaması
                     const deadlineBox = document.getElementById("deadline_box");
+                    const deadlineLabel = document.getElementById("deadline_label");
                     let deadlineVal = req.deadline;
-                    if (deadlineVal && customerNote.includes(deadlineVal) && (customerNote.toLowerCase().includes("loading") || customerNote.toLowerCase().includes("tarix"))) {
-                        deadlineVal = null;
+                    let customerNote = req.additional_notes || req.note || req.customer_note || "";
+
+                    // Əgər deadline yoxdursa, amma customerNote içində tarix/loading keçirsə onu tapıb yuxarı çıxara bilərik
+                    if (!deadlineVal && customerNote) {
+                        const dateMatch = customerNote.match(/\d{4}-\d{2}-\d{2}/);
+                        if (dateMatch) {
+                            deadlineVal = dateMatch[0];
+                        }
                     }
 
                     if (deadlineVal && deadlineVal.trim() !== "") {
                         document.getElementById("deadline_text").innerText = deadlineVal.split('T')[0];
+                        if (customerNote.toLowerCase().includes("loading")) {
+                            deadlineLabel.innerText = "Yükləmə Tarixi (Loading Date)";
+                        } else {
+                            deadlineLabel.innerText = "Son Tarix (Deadline)";
+                        }
                         deadlineBox.classList.remove("hidden");
                     } else {
                         deadlineBox.classList.add("hidden");
@@ -125,38 +135,58 @@
                     fieldsList.innerHTML = "";
                     let hasItems = false;
 
-                    // Əgər customerNote yalnız Volume/CBM və ya Loading Date-dirsə, aşağı düşməsin
-                    let displayCustomerNote = customerNote;
-                    const lowNote = customerNote.toLowerCase();
-                    if (lowNote.includes("volume") || lowNote.includes("cbm") || lowNote.includes("loading date")) {
-                        displayCustomerNote = ""; 
+                    // Əgər customerNote yalnız sistem məlumatlarından (volume, cbm, loading date, tarix) ibarətdirsə, aşağıdakı qutuya salmırıq
+                    let cleanNoteLines = [];
+                    if (customerNote) {
+                        const lines = customerNote.split('\n');
+                        lines.forEach(line => {
+                            const lowLine = line.toLowerCase();
+                            // Sistem tərəfindən yuxarıda göstərilən heç bir açar söz aşağı düşməməlidir
+                            if (
+                                lowLine.includes("volume") || 
+                                lowLine.includes("cbm") || 
+                                lowLine.includes("loading") || 
+                                lowLine.includes("deadline") || 
+                                lowLine.includes("tarix") ||
+                                lowLine.includes(deadlineVal)
+                            ) {
+                                return; // Bu sətri ötürürük
+                            }
+                            cleanNoteLines.push(line);
+                        });
                     }
+                    let finalCleanNote = cleanNoteLines.join('\n').trim();
 
-                    if (displayCustomerNote.trim() !== "") {
+                    if (finalCleanNote !== "") {
                         hasItems = true;
                         const noteDiv = document.createElement("div");
                         noteDiv.innerHTML = `
                             <span class="block text-xs text-slate-400 mb-1">Müştəri Qeydi:</span>
-                            <div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed">
-                                ${displayCustomerNote}
+                            <div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed whitespace-pre-line">
+                                ${finalCleanNote}
                             </div>
                         `;
                         fieldsList.appendChild(noteDiv);
                     }
 
-                    // Tələb olunan xüsusi sahələr (required_fields)
+                    // Tələb olunan xüsusi sahələr (required_fields) - Bütün təkrar sistem açar sözləri sərt şəkildə filtrlənir
                     if (req.required_fields && req.required_fields.length > 0) {
                         req.required_fields.forEach(field => {
                             if (typeof field === 'string') {
                                 const lowField = field.toLowerCase();
-                                // Fayl, link, volume, cbm və ya loading sözləri keçənləri aşağı siyahıdan çıxarırıq
-                                if (lowField.includes("fayl") || lowField.includes("attachment") || field.includes("http") || field.includes("Fayl:") || lowField.includes("volume") || lowField.includes("cbm") || lowField.includes("loading")) {
+                                if (
+                                    lowField.includes("fayl") || 
+                                    lowField.includes("attachment") || 
+                                    field.includes("http") || 
+                                    field.includes("Fayl:") || 
+                                    lowField.includes("volume") || 
+                                    lowField.includes("cbm") || 
+                                    lowField.includes("loading") || 
+                                    lowField.includes("deadline") || 
+                                    lowField.includes("tarix")
+                                ) {
                                     return;
                                 }
-                            }
-                            
-                            if (customerNote && (field === customerNote || field.includes(customerNote) || customerNote.includes(field))) {
-                                return;
                             }
 
                             hasItems = true;
