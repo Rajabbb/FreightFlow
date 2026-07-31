@@ -369,11 +369,6 @@
             </div>
         </div>
 
-        
-
-
-   
-
          <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
 <div class="card shadow-sm border-0 mb-4 p-4">
     <div class="section-title mb-1">
@@ -405,8 +400,7 @@
         
         <!-- 1. Fayl Yüklə Bölməsi -->
         <div class="tab-pane fade show active" id="file-content" role="tabpanel">
-            <form action="/carriers/upload-excel" method="POST" enctype="multipart/form-data" class="p-3 border rounded bg-light">
-                <input type="hidden" name="customer_id" value="{{ customer_id }}">
+            <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
                 <div class="row align-items-end g-3">
                     <div class="col-md-8">
                         <label class="form-label text-muted">Excel / CSV Faylı Yüklə</label>
@@ -423,15 +417,14 @@
 
         <!-- 2. Əllə Daxil Et Bölməsi -->
         <div class="tab-pane fade" id="manual-content" role="tabpanel">
-            <form action="/carriers/manual" method="POST" class="p-3 border rounded bg-light">
-                <input type="hidden" name="customer_id" value="{{ customer_id }}">
+            <form onsubmit="addManualCarrier(event)" class="p-3 border rounded bg-light">
                 <div class="mb-3">
                     <label class="form-label text-muted">Şirkət / Daşıyıcı Adı</label>
-                    <input type="text" class="form-control" name="name" placeholder="Məsələn: LogiTrans MMC" required>
+                    <input type="text" class="form-control" id="manual_company_name" placeholder="Məsələn: LogiTrans MMC" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label text-muted">E-poçt Ünvanı</label>
-                    <input type="email" class="form-control" name="email" placeholder="info@logitrans.az" required>
+                    <input type="email" class="form-control" id="manual_email" placeholder="info@logitrans.az" required>
                 </div>
                 <button type="submit" class="btn btn-success w-100">
                     <i class="bi bi-person-plus-fill me-2"></i> Daşıyıcıyı Əlavə Et
@@ -441,11 +434,10 @@
 
         <!-- 3. Cədvəldən Yapışdır Bölməsi -->
         <div class="tab-pane fade" id="paste-content" role="tabpanel">
-            <form action="/carriers/upload-text" method="POST" class="p-3 border rounded bg-light">
-                <input type="hidden" name="customer_id" value="{{ customer_id }}">
+            <form onsubmit="addPasteCarrier(event)" class="p-3 border rounded bg-light">
                 <div class="mb-3">
                     <label class="form-label text-muted">Excel-dən sütunları kopyalayıb bura yapışdırın:</label>
-                    <textarea class="form-control" name="raw_text" rows="4" placeholder="Şirkət A&#10;a@example.com&#10;Şirkət B&#10;b@example.com" required></textarea>
+                    <textarea class="form-control" id="paste_raw_text" rows="4" placeholder="Şirkət A&#10;a@example.com&#10;Şirkət B&#10;b@example.com" required></textarea>
                 </div>
                 <button type="submit" class="btn btn-warning text-dark w-100 fw-semibold">
                     <i class="bi bi-file-earmark-text-fill me-2"></i> Cədvəldən Əlavə Et
@@ -469,13 +461,6 @@
     <div class="carrier-select-box" id="manageCarriersContainer">
         <span class="text-muted small">Daşıyıcılar yüklənir...</span>
     </div>
-
-
-
-
-
-
-
 
         <!-- YENİ YÜK SORĞUSU (RFQ) YARAT -->
         <div class="card">
@@ -719,91 +704,6 @@ Best regards,
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-
-
-
-
-
-<script>
-    // Tabları dəyişmək üçün funksiya
-    function switchTab(tab) {
-        ['file', 'manual', 'paste'].forEach(t => {
-            document.getElementById(`section_${t}`).classList.add('hidden');
-            document.getElementById(`tab_${t}`).className = "px-4 py-2 rounded-lg text-slate-400 hover:text-white transition";
-        });
-        document.getElementById(`section_${tab}`).classList.remove('hidden');
-        document.getElementById(`tab_${tab}`).className = "px-4 py-2 rounded-lg bg-indigo-600 text-white transition";
-    }
-
-    // Əllə tək daşıyıcı əlavə etmək
-    async function addSingleManual() {
-        const name = document.getElementById('manual_name').value.trim();
-        const email = document.getElementById('manual_email').value.trim();
-
-        if (!name || !email) {
-            alert("Zəhmət olmasa bütün xanaları doldurun!");
-            return;
-        }
-
-        sendCarriersToBackend([{ name, email }]);
-    }
-
-    // Kopyalanmış cədvəli oxuyub göndərmək
-    async function addPastedTable() {
-        const text = document.getElementById('paste_area').value.trim();
-        if (!text) {
-            alert("Zəhmət olmasa cədvəl məlumatlarını yapışdırın!");
-            return;
-        }
-
-        const rows = text.split('\n');
-        const carriers = [];
-
-        for (let row of rows) {
-            // Tab və ya vergüllə ayrılmış sütunları bölürük
-            const cols = row.split(/\t|,/);
-            if (cols.length >= 2) {
-                const name = cols[0].trim();
-                const email = cols[1].trim();
-                if (name && email.includes('@')) {
-                    carriers.push({ name, email });
-                }
-            }
-        }
-
-        if (carriers.length === 0) {
-            alert("Format səhvdir! Zəhmət olmasa Ad və E-poçt sütunlarını düzgün kopyaladığınızdan əmin olun.");
-            return;
-        }
-
-        sendCarriersToBackend(carriers);
-    }
-
-    // Ümumi göndərmə funksiyası
-    async function sendCarriersToBackend(carriersList) {
-        try {
-            const response = await fetch('/customer/carriers/manual', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ carriers: carriersList })
-            });
-
-            const result = await response.json();
-            if (response.ok) {
-                alert("Daşıyıcı(lar) uğurla əlavə edildi!");
-                location.reload();
-            } else {
-                alert("Xəta: " + (result.detail || "Naməlum xəta"));
-            }
-        } catch (err) {
-            console.error("Sorğu xətası:", err);
-            catchError = true;
-        }
-    }
-</script>
-
-
-
     <script>
         let user = null;
         try {
@@ -964,6 +864,107 @@ Best regards,
             }
         }
 
+        async function uploadCarriers(e) {
+            e.preventDefault();
+            const fileInput = document.querySelector("#file-content input[name='file']");
+            if (!fileInput || !fileInput.files.length) {
+                alert("Zəhmət olmasa Excel və ya CSV faylı seçin!");
+                return;
+            }
+
+            const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
+            const formData = new FormData();
+            formData.append("customer_id", cleanId);
+            formData.append("file", fileInput.files[0]);
+
+            try {
+                const res = await fetch("/carriers/upload-excel", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Fayl uğurla yükləndi!");
+                    fileInput.value = "";
+                    loadStats();
+                    loadCarriersList();
+                    loadManageCarriersList();
+                } else {
+                    alert("Xəta: " + (data.detail || "Naməlum xəta"));
+                }
+            } catch (err) {
+                console.error("Yükləmə xətası:", err);
+                alert("Serverlə əlaqə qurulmadı!");
+            }
+        }
+
+        async function addManualCarrier(e) {
+            e.preventDefault();
+            const name = document.getElementById("manual_company_name").value.trim();
+            const email = document.getElementById("manual_email").value.trim();
+
+            if (!name || !email) {
+                alert("Zəhmət olmasa bütün xanaları doldurun!");
+                return;
+            }
+
+            const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
+
+            try {
+                const res = await fetch("/carriers/manual", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ customer_id: parseInt(cleanId), name: name, email: email })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("Daşıyıcı uğurla əlavə edildi!");
+                    document.getElementById("manual_company_name").value = "";
+                    document.getElementById("manual_email").value = "";
+                    loadStats();
+                    loadCarriersList();
+                    loadManageCarriersList();
+                } else {
+                    alert("Xəta: " + (data.detail || "Naməlum xəta"));
+                }
+            } catch (err) {
+                console.error("Daşıyıcı əlavə etmə xətası:", err);
+                alert("Serverlə əlaqə qurulmadı!");
+            }
+        }
+
+        async function addPasteCarrier(e) {
+            e.preventDefault();
+            const text = document.getElementById("paste_raw_text").value.trim();
+            if (!text) {
+                alert("Zəhmət olmasa cədvəl məlumatlarını yapışdırın!");
+                return;
+            }
+
+            const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
+
+            try {
+                const res = await fetch("/carriers/upload-text", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ customer_id: parseInt(cleanId), raw_text: text })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert("Daşıyıcılar uğurla əlavə edildi!");
+                    document.getElementById("paste_raw_text").value = "";
+                    loadStats();
+                    loadCarriersList();
+                    loadManageCarriersList();
+                } else {
+                    alert("Xəta: " + (data.detail || "Naməlum xəta"));
+                }
+            } catch (err) {
+                console.error("Cədvəldən əlavə etmə xətası:", err);
+                alert("Serverlə əlaqə qurulmadı!");
+            }
+        }
+
         function toggleOptField(key) {
             const chk = document.getElementById(`chk_${key}`);
             if (key === 'info') {
@@ -998,43 +999,6 @@ Best regards,
                 }
             } catch (err) {
                 console.error("Statistika xətası:", err);
-            }
-        }
-
-        async function uploadCarriers(e) {
-            e.preventDefault();
-            const fileInput = document.getElementById("carrierFile");
-            const resultDiv = document.getElementById("uploadResult");
-
-            if (!fileInput.files.length) {
-                alert("Zəhmət olmasa Excel və ya CSV faylı seçin!");
-                return;
-            }
-
-            const cleanId = typeof currentUserId === 'string' ? currentUserId.replace(/[^0-9]/g, '') : currentUserId;
-            const formData = new FormData();
-            formData.append("customer_id", cleanId);
-            formData.append("file", fileInput.files[0]);
-
-            resultDiv.innerHTML = `<span class="text-primary"><i class="bi bi-hourglass-split"></i> Fayl yüklənir və emal olunur...</span>`;
-
-            try {
-                const res = await fetch("/carriers/upload-excel", {
-                    method: "POST",
-                    body: formData
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    resultDiv.innerHTML = `<span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i> ${data.message}</span>`;
-                    fileInput.value = "";
-                    loadStats();
-                    loadCarriersList();
-                    loadManageCarriersList();
-                } else {
-                    resultDiv.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-1"></i> Xəta: ${data.detail}</span>`;
-                }
-            } catch (err) {
-                resultDiv.innerHTML = `<span class="text-danger fw-bold"><i class="bi bi-x-circle-fill me-1"></i> Serverlə əlaqə qurulmadı!</span>`;
             }
         }
 
@@ -1161,7 +1125,6 @@ Best regards,
                 additionalNotesCombined = document.getElementById("inp_info_text")?.value.trim() || "";
             }
 
-            // Email template seçimləri
             const useCustomTemplate = document.getElementById("customTemplateRadio").checked;
             const customEmailBodyVal = useCustomTemplate ? (document.getElementById("custom_email_body")?.value.trim() || "") : "";
 
