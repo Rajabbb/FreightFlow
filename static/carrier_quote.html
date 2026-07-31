@@ -105,13 +105,14 @@
                     
                     document.getElementById("cargo_type_text").innerText = req.cargo_type || "Qeyd olunmayıb";
 
-                    // Deadline / Loading Date yoxlaması
+                    // Bütün mümkün deadline və ya loading date sahələrinin yoxlanılması
                     const deadlineBox = document.getElementById("deadline_box");
                     const deadlineLabel = document.getElementById("deadline_label");
-                    let deadlineVal = req.deadline || req.loading_date;
+                    
+                    let deadlineVal = req.deadline || req.due_date || req.end_date || req.expiry_date || req.target_date || req.loading_date;
                     let customerNote = req.additional_notes || req.note || req.customer_note || "";
 
-                    // Əgər birbaşa deadline sahəsi yoxdursa, amma qeydlərdə tarix varsa onu tapırıq
+                    // Əgər birbaşa field yoxdursa, qeydlərdən və ya tələblərdən tarixi tapmağa çalışırıq
                     if (!deadlineVal && customerNote) {
                         const dateMatch = customerNote.match(/\d{4}-\d{2}-\d{2}/);
                         if (dateMatch) {
@@ -119,10 +120,22 @@
                         }
                     }
 
+                    if (!deadlineVal && req.required_fields) {
+                        for (const field of req.required_fields) {
+                            if (typeof field === 'string') {
+                                const dateMatch = field.match(/\d{4}-\d{2}-\d{2}/);
+                                if (dateMatch) {
+                                    deadlineVal = dateMatch[0];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
                     if (deadlineVal && String(deadlineVal).trim() !== "") {
                         document.getElementById("deadline_text").innerText = String(deadlineVal).split('T')[0];
                         
-                        // Etiket yoxlaması: Loading / Yükləmə sözü keçirsə Loading Date yazılır
+                        // Etiket yoxlaması: Loading / Yükləmə sözü keçirsə Loading Date, əks halda Deadline yazılır
                         const fullContext = (customerNote + " " + JSON.stringify(req.required_fields || [])).toLowerCase();
                         if (fullContext.includes("loading") || fullContext.includes("yükləmə") || fullContext.includes("yüklenme")) {
                             deadlineLabel.innerText = "Yükləmə Tarixi (Loading Date)";
@@ -138,7 +151,7 @@
                     fieldsList.innerHTML = "";
                     let hasItems = false;
 
-                    // Qeydlərdən sistem məlumatlarının (Volume, CBM, Loading Date, Deadline və s.) təmizlənməsi
+                    // Qeydlərdən sistem məlumatlarının təmizlənməsi
                     let cleanNoteLines = [];
                     if (customerNote) {
                         const lines = customerNote.split('\n');
@@ -151,10 +164,11 @@
                                 lowLine.includes("yükləmə") ||
                                 lowLine.includes("yüklenme") ||
                                 lowLine.includes("deadline") || 
+                                lowLine.includes("due date") ||
                                 lowLine.includes("tarix") ||
                                 (deadlineVal && line.includes(String(deadlineVal).split('T')[0]))
                             ) {
-                                return; // Bu sətri atırıq
+                                return; 
                             }
                             cleanNoteLines.push(line);
                         });
@@ -189,7 +203,9 @@
                                     lowField.includes("yükləmə") ||
                                     lowField.includes("yüklenme") ||
                                     lowField.includes("deadline") || 
-                                    lowField.includes("tarix")
+                                    lowField.includes("due date") ||
+                                    lowField.includes("tarix") ||
+                                    (deadlineVal && field.includes(String(deadlineVal).split('T')[0]))
                                 ) {
                                     return;
                                 }
