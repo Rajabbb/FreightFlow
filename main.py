@@ -16,9 +16,10 @@ from supabase import create_client, Client
 from dotenv import load_dotenv
 from passlib.context import CryptContext
 from pathlib import Path
-from fastapi.responses import FileResponse
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 BASE_DIR = Path(__file__).resolve().parent
+
 # Mühit dəyişənlərini yükləyirik (.env faylından)
 load_dotenv()
 
@@ -216,9 +217,6 @@ class SelectWinnerRequest(BaseModel):
     request_id: int
     quote_id: int
 
-class LoginRequest(BaseModel):
-    email: EmailStr
-
 class DeleteCarrierRequest(BaseModel):
     customer_id: int
     carrier_id: int
@@ -228,7 +226,13 @@ class CarrierItem(BaseModel):
     email: EmailStr
 
 class CarrierBatchRequest(BaseModel):
+    customer_id: int
     carriers: List[CarrierItem]
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
 # ------------------------------------------------------------------
 # SƏHİFƏ MARŞRUTLARI (HTML PAGES)
 # ------------------------------------------------------------------
@@ -293,19 +297,23 @@ def get_customer_stats(customer_id: int):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @app.post("/carriers/manual")
-async def add_carriers_manual(data: CarrierBatchRequest, customer_id: int = Form(...)):
+async def add_carriers_manual(payload: CarrierBatchRequest):
     try:
-        for item in data.carriers:
-            # Supabase və ya digər bazaya yazma məntiqi
-            res = supabase.table("carriers").insert({"name": item.name, "email": item.email, "customer_id": customer_id}).execute()
+        carriers_to_insert = []
+        for item in payload.carriers:
+            carriers_to_insert.append({
+                "customer_id": payload.customer_id,
+                "company_name": item.name,
+                "email": item.email
+            })
         
-        return {"success": True, "message": f"{len(data.carriers)} daşıyıcı uğurla əlavə edildi!"}
+        if carriers_to_insert:
+            supabase.table("carriers").insert(carriers_to_insert).execute()
+        
+        return {"success": True, "message": f"{len(payload.carriers)} daşıyıcı uğurla əlavə edildi!"}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-
-
 
 @app.post("/carriers/upload-excel")
 async def upload_carriers_excel(customer_id: int = Form(...), file: UploadFile = File(...)):
@@ -329,7 +337,7 @@ async def upload_carriers_text(customer_id: int = Form(...), raw_text: str = For
 @app.post("/carriers/delete")
 def delete_customer_carrier(payload: DeleteCarrierRequest):
     try:
-        res = supabase.table("carriers").delete().eq("id", payload.carrier_id).eq("customer_id", payload.customer_id).execute()
+        supabase.table("carriers").delete().eq("id", payload.carrier_id).eq("customer_id", payload.customer_id).execute()
         return {"status": "success", "message": "Daşıyıcı bazadan uğurla silindi!"}
     except Exception as e:
         traceback.print_exc()
@@ -618,13 +626,8 @@ async def select_winner_body(payload: SelectWinnerRequest):
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
     return {"status": "success", "message": "Qalib təklif uğurla təsdiqləndi!"}
 
-class LoginRequest(BaseModel):
-    email: EmailStr
-    password: str
-
 @app.post("/auth/login")
 async def login(data: LoginRequest):
-    # 1. Customers cədvəlində yoxla
     customer = supabase.table("customers").select("*").eq("email", data.email).execute()
     if customer.data:
         user = customer.data[0]
@@ -635,7 +638,6 @@ async def login(data: LoginRequest):
         else:
             raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
     
-    # 2. Carriers cədvəlində yoxla
     carrier = supabase.table("carriers").select("*").eq("email", data.email).execute()
     if carrier.data:
         user = carrier.data[0]
