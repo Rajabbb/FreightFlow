@@ -78,6 +78,51 @@ def normalize_text(text: Any) -> str:
         text = text.replace(old, new)
     return text
 
+def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if not raw_carriers:
+        raise HTTPException(status_code=400, detail="Əlavə ediləcək daşıyıcı məlumatı tapılmadı.")
+
+    # Bazada həmin müştəriyə aid mövcud e-poçtları çəkirik
+    existing_carriers = supabase.table("carriers").select("email").eq("customer_id", customer_id).execute()
+    existing_emails = {item["email"].strip().lower() for item in (existing_carriers.data or []) if item.get("email")}
+
+    carriers_to_insert = []
+    seen_in_input = set()
+
+    for item in raw_carriers:
+        if not isinstance(item, dict):
+            continue
+        
+        raw_email = item.get("email")
+        if not raw_email or not isinstance(raw_email, str):
+            continue
+            
+        clean_email = raw_email.strip().lower()
+        if not clean_email or clean_email == 'nan' or '@' not in clean_email or '.' not in clean_email:
+            continue
+
+        # Əgər bazada artıq varsa və ya bu sorğu daxilində təkrar olunubsa, keçirik
+        if clean_email in existing_emails or clean_email in seen_in_input:
+            continue
+
+        seen_in_input.add(clean_email)
+
+        company = item.get("name") or item.get("company_name") or "Daşıyıcı"
+        if not company or str(company).lower() == 'nan' or not str(company).strip():
+            company = "Daşıyıcı"
+
+        carriers_to_insert.append({
+            "customer_id": customer_id,
+            "company_name": str(company).strip(),
+            "email": raw_email.strip()
+        })
+
+    if not carriers_to_insert:
+        return {"status": "warning", "message": "Daxil edilən bütün e-poçtlar artıq bazada mövcuddur və ya etibarsızdır."}
+
+    supabase.table("carriers").insert(carriers_to_insert).execute()
+    return {"status": "success", "message": f"{len(carriers_to_insert)} yeni daşıyıcı uğurla əlavə edildi!"}
+
 def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int):
     if df.empty:
         raise HTTPException(status_code=400, detail="Məlumat tapılmadı və ya cədvəl boşdur.")
@@ -93,34 +138,13 @@ def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int):
     company_keywords = ['company', 'sirket', 'firma', 'ad', 'name', 'carrier', 'dasiyici']
     comp_col = next((orig for orig, norm in normalized_columns.items() if any(kw in norm for kw in company_keywords)), None)
 
-    existing_carriers = supabase.table("carriers").select("email").eq("customer_id", customer_id).execute()
-    existing_emails = {item["email"].strip().lower() for item in existing_carriers.data if item.get("email")}
-
-    carriers_to_insert = []
-    seen_in_input = set()
-
+    raw_list = []
     for _, row in df.iterrows():
         raw_email = str(row[email_col]).strip() if pd.notna(row[email_col]) else ""
-        if raw_email and raw_email.lower() != 'nan' and '@' in raw_email and '.' in raw_email:
-            clean_email = raw_email.lower()
-            if clean_email in existing_emails or clean_email in seen_in_input:
-                continue
-            seen_in_input.add(clean_email)
-            company = str(row[comp_col]).strip() if comp_col and pd.notna(row[comp_col]) else "Daşıyıcı"
-            if company.lower() == 'nan' or not company:
-                company = "Daşıyıcı"
+        company = str(row[comp_col]).strip() if comp_col and pd.notna(row[comp_col]) else "Daşıyıcı"
+        raw_list.append({"name": company, "email": raw_email})
 
-            carriers_to_insert.append({
-                "customer_id": customer_id,
-                "company_name": company,
-                "email": raw_email
-            })
-
-    if not carriers_to_insert:
-        return {"status": "warning", "message": "Daxil edilən bütün e-poçtlar artıq bazada mövcuddur."}
-
-    supabase.table("carriers").insert(carriers_to_insert).execute()
-    return {"status": "success", "message": f"{len(carriers_to_insert)} yeni daşıyıcı uğurla əlavə edildi!"}
+    return filter_and_insert_carriers(customer_id, raw_list)
 
 async def send_carrier_email_link(
     carrier_email: str, 
@@ -311,27 +335,8 @@ async def add_carriers_manual(request: Request):
 
         customer_id = int(customer_id)
         carriers = body.get("carriers", [])
-        carriers_to_insert = []
         
-        for item in carriers:
-            if isinstance(item, dict):
-                name = item.get("name") or item.get("company_name") or "Daşıyıcı"
-                email = item.get("email")
-            else:
-                continue
-                
-            if email:
-                carriers_to_insert.append({
-                    "customer_id": customer_id,
-                    "company_name": name,
-                    "email": email
-                })
-        
-        if not carriers_to_insert:
-            raise HTTPException(status_code=400, detail="Əlavə ediləcək etibarlı daşıyıcı tapılmadı.")
-
-        supabase.table("carriers").insert(carriers_to_insert).execute()
-        return {"success": True, "message": f"{len(carriers_to_insert)} daşıyıcı uğurla əlavə edildi!"}
+        return filter_and_insert_carriers(customer_id, carriers)
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
