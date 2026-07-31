@@ -105,13 +105,13 @@
                     
                     document.getElementById("cargo_type_text").innerText = req.cargo_type || "Qeyd olunmayıb";
 
-                    // Deadline və ya Loading Date yoxlaması
+                    // Deadline / Loading Date yoxlaması
                     const deadlineBox = document.getElementById("deadline_box");
                     const deadlineLabel = document.getElementById("deadline_label");
-                    let deadlineVal = req.deadline;
+                    let deadlineVal = req.deadline || req.loading_date;
                     let customerNote = req.additional_notes || req.note || req.customer_note || "";
 
-                    // Əgər deadline yoxdursa, amma customerNote içində tarix/loading keçirsə onu tapıb yuxarı çıxara bilərik
+                    // Əgər birbaşa deadline sahəsi yoxdursa, amma qeydlərdə tarix varsa onu tapırıq
                     if (!deadlineVal && customerNote) {
                         const dateMatch = customerNote.match(/\d{4}-\d{2}-\d{2}/);
                         if (dateMatch) {
@@ -119,9 +119,12 @@
                         }
                     }
 
-                    if (deadlineVal && deadlineVal.trim() !== "") {
-                        document.getElementById("deadline_text").innerText = deadlineVal.split('T')[0];
-                        if (customerNote.toLowerCase().includes("loading")) {
+                    if (deadlineVal && String(deadlineVal).trim() !== "") {
+                        document.getElementById("deadline_text").innerText = String(deadlineVal).split('T')[0];
+                        
+                        // Etiket yoxlaması: Loading / Yükləmə sözü keçirsə Loading Date yazılır
+                        const fullContext = (customerNote + " " + JSON.stringify(req.required_fields || [])).toLowerCase();
+                        if (fullContext.includes("loading") || fullContext.includes("yükləmə") || fullContext.includes("yüklenme")) {
                             deadlineLabel.innerText = "Yükləmə Tarixi (Loading Date)";
                         } else {
                             deadlineLabel.innerText = "Son Tarix (Deadline)";
@@ -135,22 +138,23 @@
                     fieldsList.innerHTML = "";
                     let hasItems = false;
 
-                    // Əgər customerNote yalnız sistem məlumatlarından (volume, cbm, loading date, tarix) ibarətdirsə, aşağıdakı qutuya salmırıq
+                    // Qeydlərdən sistem məlumatlarının (Volume, CBM, Loading Date, Deadline və s.) təmizlənməsi
                     let cleanNoteLines = [];
                     if (customerNote) {
                         const lines = customerNote.split('\n');
                         lines.forEach(line => {
                             const lowLine = line.toLowerCase();
-                            // Sistem tərəfindən yuxarıda göstərilən heç bir açar söz aşağı düşməməlidir
                             if (
                                 lowLine.includes("volume") || 
                                 lowLine.includes("cbm") || 
                                 lowLine.includes("loading") || 
+                                lowLine.includes("yükləmə") ||
+                                lowLine.includes("yüklenme") ||
                                 lowLine.includes("deadline") || 
                                 lowLine.includes("tarix") ||
-                                lowLine.includes(deadlineVal)
+                                (deadlineVal && line.includes(String(deadlineVal).split('T')[0]))
                             ) {
-                                return; // Bu sətri ötürürük
+                                return; // Bu sətri atırıq
                             }
                             cleanNoteLines.push(line);
                         });
@@ -169,7 +173,7 @@
                         fieldsList.appendChild(noteDiv);
                     }
 
-                    // Tələb olunan xüsusi sahələr (required_fields) - Bütün təkrar sistem açar sözləri sərt şəkildə filtrlənir
+                    // Tələb olunan xüsusi sahələr (required_fields)
                     if (req.required_fields && req.required_fields.length > 0) {
                         req.required_fields.forEach(field => {
                             if (typeof field === 'string') {
@@ -182,6 +186,8 @@
                                     lowField.includes("volume") || 
                                     lowField.includes("cbm") || 
                                     lowField.includes("loading") || 
+                                    lowField.includes("yükləmə") ||
+                                    lowField.includes("yüklenme") ||
                                     lowField.includes("deadline") || 
                                     lowField.includes("tarix")
                                 ) {
