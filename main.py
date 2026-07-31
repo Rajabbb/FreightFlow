@@ -85,7 +85,6 @@ def extract_clean_email(val: Any) -> Optional[str]:
     if not val_str or val_str.lower() == 'nan':
         return None
         
-    # Excel düsturlarını və ya hiperlinkləri təmizləmək üçün regex ilə əsl e-poçt strukturunu tapırıq
     match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', val_str)
     if match:
         clean = match.group(0).strip().lower()
@@ -98,7 +97,6 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
     if not raw_carriers:
         raise HTTPException(status_code=400, detail="Əlavə ediləcək daşıyıcı məlumatı tapılmadı.")
 
-    # Bazadan mövcud e-poçtları tam çəkirik (.range(0, 9999) limiti qaldırır)
     existing_emails = set()
     try:
         res1 = supabase.table("carriers").select("email").eq("customer_id", customer_id).range(0, 9999).execute()
@@ -131,7 +129,6 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
         if not clean_email:
             continue
 
-        # Bazada və ya daxil edilən siyahının özündə təkrar olub-olmadığını yoxlayırıq
         if clean_email in existing_emails or clean_email in seen_in_input:
             duplicate_emails.append(clean_email)
             continue
@@ -636,6 +633,16 @@ def get_request_details(target_id: str):
             note_val = shipment.get("additional_notes") or shipment.get("note") or shipment.get("customer_note") or ""
             shipment["additional_notes"] = note_val
             shipment["note"] = note_val
+            
+            # Həcm 0 və ya boşdursa None edirik ki, 0 m³ kimi görünməsin
+            if shipment.get("volume_m3") in [0, 0.0, "0", "0.0"]:
+                shipment["volume_m3"] = None
+
+            # Əgər deadline yoxdursa, amma qeydlərdə Loading Date olaraq daxil edilibsə deadline-ı təmizləyirik
+            deadline = shipment.get("deadline")
+            if deadline and ("Loading Date:" in note_val or "loading date" in note_val.lower()):
+                if str(deadline) in note_val:
+                    shipment["deadline"] = None
 
         return {
             "already_submitted": quote.get("price") is not None,
@@ -651,6 +658,15 @@ def get_request_details(target_id: str):
                 note_val = shipment.get("additional_notes") or shipment.get("note") or shipment.get("customer_note") or ""
                 shipment["additional_notes"] = note_val
                 shipment["note"] = note_val
+                
+                if shipment.get("volume_m3") in [0, 0.0, "0", "0.0"]:
+                    shipment["volume_m3"] = None
+                    
+                deadline = shipment.get("deadline")
+                if deadline and ("Loading Date:" in note_val or "loading date" in note_val.lower()):
+                    if str(deadline) in note_val:
+                        shipment["deadline"] = None
+
             return {"request": shipment, "already_submitted": False}
 
     raise HTTPException(status_code=404, detail="Sorğu və ya keçərli Token tapılmadı.")
@@ -658,8 +674,22 @@ def get_request_details(target_id: str):
 @app.get("/quotes/form/{token}")
 def get_quote_form_details(token: str):
     res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", token).execute()
-    if not res.data: raise HTTPException(status_code=404, detail="Keçərsiz link!")
-    return {"already_submitted": res.data[0].get("price") is not None, "quote": res.data[0]}
+    if not res.data: 
+        raise HTTPException(status_code=404, detail="Keçərsiz link!")
+    
+    quote = res.data[0]
+    shipment = quote.get("shipment_requests")
+    if isinstance(shipment, dict):
+        note_val = shipment.get("additional_notes") or shipment.get("note") or ""
+        if shipment.get("volume_m3") in [0, 0.0, "0", "0.0"]:
+            shipment["volume_m3"] = None
+            
+        deadline = shipment.get("deadline")
+        if deadline and ("Loading Date:" in note_val or "loading date" in note_val.lower()):
+            if str(deadline) in note_val:
+                shipment["deadline"] = None
+
+    return {"already_submitted": quote.get("price") is not None, "quote": quote}
 
 @app.post("/quotes/create")
 def create_quote_direct(payload: DynamicQuoteSubmit):
