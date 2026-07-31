@@ -725,6 +725,18 @@ Best regards,
         loadCarriersList();
         loadManageCarriersList();
 
+        function formatErrorDetail(errDetail) {
+            if (!errDetail) return "Naməlum xəta";
+            if (typeof errDetail === 'string') return errDetail;
+            if (Array.isArray(errDetail)) {
+                return errDetail.map(err => err.msg || JSON.stringify(err)).join(", ");
+            }
+            if (typeof errDetail === 'object') {
+                return JSON.stringify(errDetail);
+            }
+            return String(errDetail);
+        }
+
         function logout() {
             localStorage.removeItem("user");
             window.location.replace("/login");
@@ -856,7 +868,7 @@ Best regards,
                     loadStats();
                 } else {
                     const errData = await res.json().catch(() => ({}));
-                    alert("Silinmə zamanı xəta baş verdi: " + (errData.detail || "Naməlum xəta"));
+                    alert("Silinmə zamanı xəta baş verdi: " + formatErrorDetail(errData.detail));
                 }
             } catch (err) {
                 console.error("Silmə xətası:", err);
@@ -890,7 +902,7 @@ Best regards,
                     loadCarriersList();
                     loadManageCarriersList();
                 } else {
-                    alert("Xəta: " + (data.detail || "Naməlum xəta"));
+                    alert("Xəta: " + formatErrorDetail(data.detail));
                 }
             } catch (err) {
                 console.error("Yükləmə xətası:", err);
@@ -925,7 +937,7 @@ Best regards,
                     loadCarriersList();
                     loadManageCarriersList();
                 } else {
-                    alert("Xəta: " + (data.detail || "Naməlum xəta"));
+                    alert("Xəta: " + formatErrorDetail(data.detail));
                 }
             } catch (err) {
                 console.error("Daşıyıcı əlavə etmə xətası:", err);
@@ -957,7 +969,7 @@ Best regards,
                     loadCarriersList();
                     loadManageCarriersList();
                 } else {
-                    alert("Xəta: " + (data.detail || "Naməlum xəta"));
+                    alert("Xəta: " + formatErrorDetail(data.detail));
                 }
             } catch (err) {
                 console.error("Cədvəldən əlavə etmə xətası:", err);
@@ -1046,7 +1058,7 @@ Best regards,
                     if (uploadRes.ok) {
                         uploadedAttachmentUrl = uploadResult.attachment_url;
                     } else {
-                        alert("Fayl yüklənərkən xəta baş verdi: " + (uploadResult.detail || ""));
+                        alert("Fayl yüklənərkən xəta baş verdi: " + formatErrorDetail(uploadResult.detail));
                         return;
                     }
                 } catch (fileErr) {
@@ -1172,8 +1184,7 @@ Best regards,
                     loadStats();
                     loadRequests();
                 } else {
-                    let errDetail = typeof data.detail === 'object' ? JSON.stringify(data.detail) : (data.detail || "Sorğu yaradılarkən xəta baş verdi!");
-                    alert(typeof errDetail === 'string' ? errDetail : JSON.stringify(errDetail));
+                    alert("Xəta: " + formatErrorDetail(data.detail));
                 }
             } catch (err) {
                 console.error(err);
@@ -1409,7 +1420,7 @@ Best regards,
                     loadRequests();
                     loadStats();
                 } else {
-                    alert("Xəta baş verdi!");
+                    alert("Xəta: " + formatErrorDetail(data.detail));
                 }
             } catch (err) {
                 alert("Server xətası!");
