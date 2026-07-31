@@ -292,30 +292,25 @@ def get_customer_stats(customer_id: int):
 @app.post("/carriers/manual")
 async def add_carriers_manual(request: Request):
     try:
+        body = {}
         content_type = request.headers.get("content-type", "")
         if "application/json" in content_type:
             body = await request.json()
-            customer_id = body.get("customer_id")
-            carriers = body.get("carriers", [])
         else:
             form = await request.form()
-            customer_id = form.get("customer_id")
-            carriers_raw = form.get("carriers", "[]")
-            if isinstance(carriers_raw, str):
+            body = dict(form)
+            if "carriers" in body and isinstance(body["carriers"], str):
                 try:
-                    carriers = json.loads(carriers_raw)
+                    body["carriers"] = json.loads(body["carriers"])
                 except:
-                    carriers = []
-            else:
-                carriers = carriers_raw
+                    body["carriers"] = []
 
-        if not customer_id:
-            customer_id = request.query_params.get("customer_id")
-
+        customer_id = body.get("customer_id") or request.query_params.get("customer_id")
         if not customer_id:
             raise HTTPException(status_code=400, detail="customer_id tapılmadı.")
 
         customer_id = int(customer_id)
+        carriers = body.get("carriers", [])
         carriers_to_insert = []
         
         for item in carriers:
@@ -332,9 +327,10 @@ async def add_carriers_manual(request: Request):
                     "email": email
                 })
         
-        if carriers_to_insert:
-            supabase.table("carriers").insert(carriers_to_insert).execute()
-        
+        if not carriers_to_insert:
+            raise HTTPException(status_code=400, detail="Əlavə ediləcək etibarlı daşıyıcı tapılmadı.")
+
+        supabase.table("carriers").insert(carriers_to_insert).execute()
         return {"success": True, "message": f"{len(carriers_to_insert)} daşıyıcı uğurla əlavə edildi!"}
     except Exception as e:
         traceback.print_exc()
@@ -361,28 +357,21 @@ async def upload_carriers_excel(request: Request):
 @app.post("/carriers/upload-text")
 async def upload_carriers_text(request: Request):
     try:
+        body = {}
         content_type = request.headers.get("content-type", "")
         if "application/json" in content_type:
             body = await request.json()
-            customer_id = body.get("customer_id")
-            raw_text = body.get("raw_text") or body.get("text") or ""
         else:
             form = await request.form()
-            customer_id = form.get("customer_id")
-            raw_text = form.get("raw_text") or form.get("text") or ""
+            body = dict(form)
         
-        if not customer_id:
-            customer_id = request.query_params.get("customer_id")
-        if not raw_text:
-            raw_text = request.query_params.get("raw_text") or request.query_params.get("text") or ""
+        customer_id = body.get("customer_id") or request.query_params.get("customer_id")
+        raw_text = body.get("raw_text") or body.get("text") or request.query_params.get("raw_text") or request.query_params.get("text") or ""
 
-        if not customer_id or not raw_text:
+        if not customer_id or not str(raw_text).strip():
             raise HTTPException(status_code=400, detail="customer_id və ya raw_text tələb olunur.")
         
         customer_id = int(customer_id)
-        if not str(raw_text).strip():
-            raise HTTPException(status_code=400, detail="Mətn boşdur.")
-
         df = pd.read_csv(io.StringIO(raw_text), sep="\t")
         if len(df.columns) == 1: 
             df = pd.read_csv(io.StringIO(raw_text), sep=",")
