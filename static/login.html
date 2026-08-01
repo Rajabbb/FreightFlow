@@ -66,7 +66,18 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    // Uğurlu giriş zamanı birbaşa customer səhifəsinə yönləndir
+                    // Köhnə sessiya qalıntılarını təmizləyirik
+                    localStorage.clear();
+
+                    // Yeni istifadəçi məlumatlarını localStorage-ə yazırıq
+                    localStorage.setItem('user', JSON.stringify(result.user));
+                    localStorage.setItem('role', result.role);
+                    
+                    if (result.user && result.user.id) {
+                        localStorage.setItem('customer_id', result.user.id);
+                    }
+
+                    // Uğurlu giriş zamanı customer səhifəsinə yönləndiririk
                     window.location.href = '/customer';
                 } else {
                     // Backend-dən gələn xəta mesajını göstər
