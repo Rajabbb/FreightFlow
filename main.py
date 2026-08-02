@@ -758,7 +758,7 @@ async def submit_quote(
 
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int):
-    quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).not_.is_("price", "null").execute()
+    quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
     quotes_list = []
     for item in quotes_res.data or []:
         carrier_info = item.get("carriers") or {}
