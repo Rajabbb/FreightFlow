@@ -646,9 +646,14 @@ def get_request_details(target_id: str):
             if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
                 shipment["deadline"] = None
 
-        # BURA DƏYİŞDİRİLDİ: Qiymət olsun və ya olmasın, extra_details içində submitted: true olduqda already_submitted true qayıtsın
+        # Qiymət olsun və ya olmasın, extra_details içində submitted: true olduqda already_submitted true qayıtsın
         extra = quote.get("extra_details") or {}
         is_already_submitted = (quote.get("price") is not None) or (extra.get("submitted") == True)
+
+        # "submitted" açarını təmizləyirik ki, müştəri panelində (detallarda) görünməsin
+        cleaned_extra = dict(extra)
+        cleaned_extra.pop("submitted", None)
+        quote["extra_details"] = cleaned_extra
 
         return {
             "already_submitted": is_already_submitted,
@@ -676,7 +681,6 @@ def get_request_details(target_id: str):
             return {"request": shipment, "already_submitted": False}
 
     raise HTTPException(status_code=404, detail="Sorğu və ya keçərli Token tapılmadı.")
-
 @app.get("/quotes/form/{token}")
 def get_quote_form_details(token: str):
     res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", token).execute()
