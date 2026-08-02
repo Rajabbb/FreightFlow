@@ -267,11 +267,11 @@
             const priceEl = document.getElementById("price");
             const transitEl = document.getElementById("transit_time_days");
             
-            // Qiymət boşdursa serverə göndərilmir və ya göndərilsə də Optional olduğu üçün problem yaratmır
-            if (priceEl && priceEl.value !== "") {
+            // Qiymət və müddət yalnız dolu olduğu halda formData-ya əlavə olunur (boş string xətasının qarşısını alır)
+            if (priceEl && priceEl.value.trim() !== "") {
                 formData.append("price", priceEl.value);
             }
-            if (transitEl && transitEl.value !== "") {
+            if (transitEl && transitEl.value.trim() !== "") {
                 formData.append("transit_time_days", transitEl.value);
             }
 
