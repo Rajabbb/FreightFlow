@@ -37,7 +37,7 @@
                     <span id="loading_date_text" class="font-bold text-white text-base">-</span>
                 </div>
                 <div id="deadline_box" class="hidden">
-                    <span class="text-slate-400 block text-xs">Son Tarix (Deadline)</span>
+                    <span class="text-slate-400 block text-xs">Son Tariq (Deadline)</span>
                     <span id="deadline_text" class="font-bold text-white text-base">-</span>
                 </div>
             </div>
@@ -116,6 +116,7 @@
                     const cargoTypeEl = document.getElementById("cargo_type_text");
                     if (cargoTypeEl) cargoTypeEl.innerText = req.cargo_type || "Qeyd olunmayıb";
 
+                    // Hər iki tarixi ayrı-ayrı oxuyuruq
                     let loadingDateVal = req.loading_date || req.load_date;
                     let deadlineVal = req.deadline || req.due_date || req.end_date || req.expiry_date || req.target_date;
                     let customerNote = req.additional_notes || req.note || req.customer_note || "";
@@ -132,12 +133,7 @@
                         }
                     }
 
-                    // Əgər loading_date ilə deadline eynidirsə, yalnız deadline qalsın
-                    if (loadingDateVal && deadlineVal && String(loadingDateVal).trim() === String(deadlineVal).trim()) {
-                        loadingDateVal = null;
-                    }
-
-                    // 1. Loading Date göstərilməsi
+                    // 1. Loading Date göstərilməsi (Artıq deadline ilə eyni olub-olmamasından asılı olmayaraq, mövcuddursa göstərilir)
                     const loadingDateBox = document.getElementById("loading_date_box");
                     const loadingDateText = document.getElementById("loading_date_text");
                     if (loadingDateVal && String(loadingDateVal).trim() !== "") {
