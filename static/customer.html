@@ -1373,23 +1373,26 @@ Best regards,
             if (!q) return;
 
             let extraHtml = "";
-            if (q.extra_details) {
-                for (let [k, v] of Object.entries(q.extra_details)) {
-                    if (v !== null && v !== undefined && v !== "" && v !== "null") {
-                        if (k === 'carrier_attachment_url') {
-                            extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm d-flex justify-content-between align-items-center">
-                                <strong class="text-dark small">Qoşulmuş Fayl:</strong> 
-                                <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Faylı Yüklə</a>
-                            </div>`;
-                        } else {
-                            extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm">
-                                <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 11px;">${k}</strong> 
-                                <p class="mb-0 text-dark fw-medium small" style="white-space: pre-wrap;">${v}</p>
-                            </div>`;
-                        }
-                    }
+    if (q.extra_details) {
+        for (let [k, v] of Object.entries(q.extra_details)) {
+            // Əgər açar 'submitted'-dirsə, bunu ekrana yazdırmırıq:
+            if (k === 'submitted') continue;
+
+            if (v !== null && v !== undefined && v !== "" && v !== "null") {
+                if (k === 'carrier_attachment_url') {
+                    extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm d-flex justify-content-between align-items-center">
+                        <strong class="text-dark small">Qoşulmuş Fayl:</strong>
+                        <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Faylı Yüklə</a>
+                    </div>`;
+                } else {
+                    extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm">
+                        <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 11px;">${k}</strong>
+                        <p class="mb-0 text-dark fw-medium small" style="white-space: pre-wrap;">${v}</p>
+                    </div>`;
                 }
             }
+        }
+    }
 
             let modalTransitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null")
                 ? `${q.transit_time_days} <span class="fs-6 text-muted">gün</span>`
