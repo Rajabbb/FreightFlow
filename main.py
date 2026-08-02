@@ -636,12 +636,10 @@ def get_request_details(target_id: str):
             shipment["additional_notes"] = note_val
             shipment["note"] = note_val
             
-            # Həcm yoxdursa və ya 0-dırsa "Qeyd edilməyib" yazırıq
             vol = shipment.get("volume_m3")
             if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]:
                 shipment["volume_m3"] = "Qeyd edilməyib"
 
-            # Deadline Loading Date-dirsə təmizləyirik
             deadline = shipment.get("deadline")
             if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
                 shipment["deadline"] = None
@@ -723,6 +721,10 @@ async def submit_quote(
     quote = res.data[0]
     if quote.get("price") is not None:
         raise HTTPException(status_code=400, detail="Artıq təklif göndərilib!")
+
+    # QİYMƏTİN BOŞ VƏ YA 0 OLMASINI YOXLAYIRIQ
+    if price is None or str(price).strip() == "" or str(price).strip() == "0" or str(price).strip() == "0.00":
+        raise HTTPException(status_code=400, detail="Zəhmət olmasa təklif olunan qiyməti daxil edin!")
 
     try:
         parsed_extra = json.loads(extra_details) if extra_details else {}
