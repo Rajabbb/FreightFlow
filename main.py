@@ -724,9 +724,6 @@ async def submit_quote(
     if quote.get("price") is not None:
         raise HTTPException(status_code=400, detail="Artıq təklif göndərilib!")
 
-    if price is None or str(price).strip() == "" or str(price).strip() == "0" or str(price).strip() == "0.00":
-        raise HTTPException(status_code=400, detail="Zəhmət olmasa təklif olunan qiyməti daxil edin!")
-
     try:
         parsed_extra = json.loads(extra_details) if extra_details else {}
     except:
