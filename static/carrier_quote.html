@@ -263,19 +263,13 @@
         async function submitQuote(event) {
             event.preventDefault();
 
-            const priceEl = document.getElementById("price");
-            
-            // Qiymət daxil edilməyibsə və ya 0-dan kiçikdirsə, xəbərdarlıq ver və dayan
-            if (!priceEl || !priceEl.value || parseFloat(priceEl.value) <= 0) {
-                alert("Zəhmət olmasa, təklif olunan qiyməti qeyd edin!");
-                if (priceEl) priceEl.focus();
-                return;
-            }
-
             const formData = new FormData();
+            const priceEl = document.getElementById("price");
             const transitEl = document.getElementById("transit_time_days");
             
-            formData.append("price", priceEl.value);
+            if (priceEl && priceEl.value) {
+                formData.append("price", priceEl.value);
+            }
             if (transitEl && transitEl.value) {
                 formData.append("transit_time_days", transitEl.value);
             }
