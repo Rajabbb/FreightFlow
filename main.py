@@ -740,9 +740,12 @@ async def submit_quote(
         parsed_extra["carrier_attachment_url"] = f"/uploads/{unique_filename}"
         parsed_extra["carrier_attachment_name"] = carrier_file.filename
 
+    final_price = price if (price is not None and str(price).strip() != "") else None
+    final_transit = transit_time_days if (transit_time_days is not None and str(transit_time_days).strip() != "") else None
+
     update_res = supabase.table("quotes").update({
-        "price": price,
-        "transit_time_days": transit_time_days,
+        "price": final_price,
+        "transit_time_days": final_transit,
         "extra_details": parsed_extra,
         "currency": "AZN"
     }).eq("token", token).execute()
