@@ -816,6 +816,36 @@ async def select_winner_body(payload: SelectWinnerRequest):
 
 @app.post("/auth/login")
 async def login(data: LoginRequest):
-    customer = supabase.table("customers").select("*").eq("email", data.email).execute()
-    if data.email in [item.get("email") for item in customer.data or []]:
-        pass
+    try:
+        customer = supabase.table("customers").select("*").eq("email", data.email).execute()
+        if not customer.data:
+            raise HTTPException(status_code=400, detail="İstifadəçi tapılmadı və ya şifrə səhvdir.")
+        
+        user = customer.data[0]
+        stored_password = user.get("password")
+        
+        # Əgər şifrə birbaşa yoxlanılırsa və ya hash-lənibsə
+        is_valid = False
+        if stored_password:
+            if stored_password.startswith("$2b$") or stored_password.startswith("$2a$"):
+                is_valid = pwd_context.verify(data.password, stored_password)
+            else:
+                is_valid = (data.password == stored_password)
+
+        if not is_valid:
+            raise HTTPException(status_code=400, detail="E-poçt və ya şifrə yanlışdır.")
+
+        return {
+            "status": "success",
+            "message": "Uğurla daxil oldunuz!",
+            "customer": {
+                "id": user.get("id"),
+                "email": user.get("email"),
+                "company_name": user.get("company_name") or user.get("name")
+            }
+        }
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
