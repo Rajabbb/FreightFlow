@@ -261,61 +261,68 @@
         }
 
         async function submitQuote(event) {
-            event.preventDefault();
+    event.preventDefault();
 
-            const formData = new FormData();
-            const priceEl = document.getElementById("price");
-            const transitEl = document.getElementById("transit_time_days");
-            
-            // Qiymət və müddət yalnız dolu olduğu halda formData-ya əlavə olunur (boş string xətasının qarşısını alır)
-            if (priceEl && priceEl.value.trim() !== "") {
-                formData.append("price", priceEl.value);
-            }
-            if (transitEl && transitEl.value.trim() !== "") {
-                formData.append("transit_time_days", transitEl.value);
-            }
+    const formData = new FormData();
+    const priceEl = document.getElementById("price");
+    const transitEl = document.getElementById("transit_time_days");
+    
+    // Qiymət və müddət yalnız dolu olduğu halda formData-ya əlavə olunur (boş string xətasının qarşısını alır)
+    if (priceEl && priceEl.value.trim() !== "") {
+        formData.append("price", priceEl.value);
+    }
+    if (transitEl && transitEl.value.trim() !== "") {
+        formData.append("transit_time_days", transitEl.value);
+    }
 
-            const fileInput = document.getElementById("carrier_file");
-            if (fileInput && fileInput.files && fileInput.files[0]) {
-                formData.append("carrier_file", fileInput.files[0]);
-            }
+    const fileInput = document.getElementById("carrier_file");
+    if (fileInput && fileInput.files && fileInput.files[0]) {
+        formData.append("carrier_file", fileInput.files[0]);
+    }
 
-            const extraDetails = {};
-            const carrierNoteEl = document.getElementById("carrier_note");
-            if (carrierNoteEl && carrierNoteEl.value.trim()) {
-                extraDetails["Daşıyıcı Qeydi"] = carrierNoteEl.value.trim();
-            }
+    const extraDetails = {};
+    const carrierNoteEl = document.getElementById("carrier_note");
+    if (carrierNoteEl && carrierNoteEl.value.trim()) {
+        extraDetails["Daşıyıcı Qeydi"] = carrierNoteEl.value.trim();
+    }
 
-            document.querySelectorAll("#fields_list input[type='text']").forEach(input => {
-                const key = input.previousElementSibling ? input.previousElementSibling.innerText : "sahə";
-                extraDetails[key] = input.value;
-            });
-            formData.append("extra_details", JSON.stringify(extraDetails));
+    document.querySelectorAll("#fields_list input[type='text']").forEach(input => {
+        const key = input.previousElementSibling ? input.previousElementSibling.innerText : "sahə";
+        extraDetails[key] = input.value;
+    });
+    formData.append("extra_details", JSON.stringify(extraDetails));
 
-            try {
-                const response = await fetch(`/quotes/submit/${token}`, {
-                    method: "POST",
-                    body: formData
-                });
+    try {
+        const response = await fetch(`/quotes/submit/${token}`, {
+            method: "POST",
+            body: formData
+        });
 
-                let result = {};
-                try {
-                    result = await response.json();
-                } catch (e) {}
+        let result = {};
+        try {
+            result = await response.json();
+        } catch (e) {}
 
-                if (response.ok) {
-                    alert("Təklifiniz uğurla göndərildi!");
-                    window.location.href = window.location.href.split('?')[0] + "?token=" + token + "&submitted=true";
-                } else {
-                    alert("Xəta: " + (result.detail || "Naməlum xəta baş verdi."));
-                }
-            } catch (err) {
-                console.error("Göndərmə xətası:", err);
-                alert("Serverə qoşulmaq mümkün olmadı. İnternet bağlantınızı yoxlayın.");
-            }
+        if (response.ok) {
+            document.body.innerHTML = `
+                <div class="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md text-center shadow-2xl mx-auto">
+                        <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
+                        <h2 class="text-xl font-bold text-white mb-2">Təklifiniz uğurla göndərildi!</h2>
+                        <p class="text-slate-400 text-sm">Məlumatlarınız sistemə qeyd olundu. Təşəkkür edirik!</p>
+                    </div>
+                </div>
+            `;
+        } else {
+            alert("Xəta: " + (result.detail || "Naməlum xəta baş verdi."));
         }
+    } catch (err) {
+        console.error("Göndərmə xətası:", err);
+        alert("Serverə qoşulmaq mümkün olmadı. İnternet bağlantınızı yoxlayın.");
+    }
+}
 
-        loadRequestDetails();
+loadRequestDetails();
     </script>
 </body>
 </html>
