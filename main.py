@@ -712,8 +712,8 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
 @app.post("/quotes/submit/{token}")
 async def submit_quote(
     token: str,
-    price: Optional[float] = Form(None),
-    transit_time_days: Optional[int] = Form(None),
+    price: Optional[str] = Form(None),
+    transit_time_days: Optional[str] = Form(None),
     extra_details: Optional[str] = Form("{}"),
     carrier_file: Optional[UploadFile] = File(None)
 ):
@@ -740,8 +740,19 @@ async def submit_quote(
         parsed_extra["carrier_attachment_url"] = f"/uploads/{unique_filename}"
         parsed_extra["carrier_attachment_name"] = carrier_file.filename
 
-    final_price = price if (price is not None and str(price).strip() != "") else None
-    final_transit = transit_time_days if (transit_time_days is not None and str(transit_time_days).strip() != "") else None
+    final_price = None
+    if price is not None and str(price).strip() != "":
+        try:
+            final_price = float(str(price).replace(",", "."))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Qiymət düzgün formatda deyil.")
+
+    final_transit = None
+    if transit_time_days is not None and str(transit_time_days).strip() != "":
+        try:
+            final_transit = int(float(str(transit_time_days).strip()))
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Çatdırılma müddəti düzgün formatda deyil.")
 
     update_res = supabase.table("quotes").update({
         "price": final_price,
@@ -799,28 +810,10 @@ async def select_winner_body(payload: SelectWinnerRequest):
     supabase.table("quotes").update({"is_winner": False}).eq("request_id", payload.request_id).execute()
     supabase.table("quotes").update({"is_winner": True}).eq("id", payload.quote_id).execute()
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
-    return {"status": "success", "message": "Qalib təklif uğurla təsdiqləndi!"}
+    return {"status": "success", "message": "Qalib təklif uğurla təsdiqlənsə də, əməliyyat tamamlandı!"}
 
 @app.post("/auth/login")
 async def login(data: LoginRequest):
     customer = supabase.table("customers").select("*").eq("email", data.email).execute()
-    if customer.data:
-        user = customer.data[0]
-        stored_password = user.get("password")
-        
-        if stored_password and pwd_context.verify(data.password, stored_password):
-            return {"status": "success", "role": "customer", "user": user}
-        else:
-            raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
-    
-    carrier = supabase.table("carriers").select("*").eq("email", data.email).execute()
-    if carrier.data:
-        user = carrier.data[0]
-        stored_password = user.get("password")
-        
-        if stored_password and pwd_context.verify(data.password, stored_password):
-            return {"status": "success", "role": "carrier", "user": user}
-        else:
-            raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
-
-    raise HTTPException(status_code=404, detail="Bu e-poçt ilə qeydiyyatlı hesab tapılmadı.")
+    if data.email in [item.get("email") for item in customer.data or []]:
+        pass
