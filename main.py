@@ -636,10 +636,12 @@ def get_request_details(target_id: str):
             shipment["additional_notes"] = note_val
             shipment["note"] = note_val
             
+            # Həcm yoxdursa və ya 0-dırsa "Qeyd edilməyib" yazırıq
             vol = shipment.get("volume_m3")
             if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]:
                 shipment["volume_m3"] = "Qeyd edilməyib"
 
+            # Deadline Loading Date-dirsə təmizləyirik
             deadline = shipment.get("deadline")
             if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
                 shipment["deadline"] = None
@@ -710,8 +712,8 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
 @app.post("/quotes/submit/{token}")
 async def submit_quote(
     token: str,
-    price: Optional[str] = Form(None),
-    transit_time_days: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    transit_time_days: Optional[int] = Form(None),
     extra_details: Optional[str] = Form("{}"),
     carrier_file: Optional[UploadFile] = File(None)
 ):
@@ -721,9 +723,6 @@ async def submit_quote(
     quote = res.data[0]
     if quote.get("price") is not None:
         raise HTTPException(status_code=400, detail="Artıq təklif göndərilib!")
-
-    if price is None or str(price).strip() == "" or str(price).strip() == "0" or str(price).strip() == "0.00":
-        raise HTTPException(status_code=400, detail="Zəhmət olmasa təklif olunan qiyməti daxil edin!")
 
     try:
         parsed_extra = json.loads(extra_details) if extra_details else {}
@@ -741,23 +740,9 @@ async def submit_quote(
         parsed_extra["carrier_attachment_url"] = f"/uploads/{unique_filename}"
         parsed_extra["carrier_attachment_name"] = carrier_file.filename
 
-    final_price = None
-    if price is not None and str(price).strip() != "":
-        try:
-            final_price = float(str(price).replace(",", "."))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Qiymət düzgün formatda deyil.")
-
-    final_transit = None
-    if transit_time_days is not None and str(transit_time_days).strip() != "":
-        try:
-            final_transit = int(float(str(transit_time_days).strip()))
-        except ValueError:
-            raise HTTPException(status_code=400, detail="Çatdırılma müddəti düzgün formatda deyil.")
-
     update_res = supabase.table("quotes").update({
-        "price": final_price,
-        "transit_time_days": final_transit,
+        "price": price,
+        "transit_time_days": transit_time_days,
         "extra_details": parsed_extra,
         "currency": "AZN"
     }).eq("token", token).execute()
@@ -815,35 +800,24 @@ async def select_winner_body(payload: SelectWinnerRequest):
 
 @app.post("/auth/login")
 async def login(data: LoginRequest):
-    try:
-        customer = supabase.table("customers").select("*").eq("email", data.email).execute()
-        if not customer.data:
-            raise HTTPException(status_code=400, detail="İstifadəçi tapılmadı və ya şifrə səhvdir.")
-        
+    customer = supabase.table("customers").select("*").eq("email", data.email).execute()
+    if customer.data:
         user = customer.data[0]
+        stored_password = usear.get("password")
+        
+        if stored_password and pwd_context.verify(data.password, stored_password):
+            return {"status": "success", "role": "customer", "user": user}
+        else:
+            raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
+    
+    carrier = supabase.table("carriers").select("*").eq("email", data.email).execute()
+    if carrier.data:
+        user = carrier.data[0]
         stored_password = user.get("password")
         
-        is_valid = False
-        if stored_password:
-            if stored_password.startswith("$2b$") or stored_password.startswith("$2a$"):
-                is_valid = pwd_context.verify(data.password, stored_password)
-            else:
-                is_valid = (data.password == stored_password)
+        if stored_password and pwd_context.verify(data.password, stored_password):
+            return {"status": "success", "role": "carrier", "user": user}
+        else:
+            raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
 
-        if not is_valid:
-            raise HTTPException(status_code=400, detail="E-poçt və ya şifrə yanlışdır.")
-
-        return {
-            "status": "success",
-            "message": "Uğurla daxil oldunuz!",
-            "customer": {
-                "id": user.get("id"),
-                "email": user.get("email"),
-                "company_name": user.get("company_name") or user.get("name")
-            }
-        }
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+    raise HTTPException(status_code=404, detail="Bu e-poçt ilə qeydiyyatlı hesab tapılmadı.")
