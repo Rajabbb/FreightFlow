@@ -718,10 +718,13 @@ async def submit_quote(
     carrier_file: Optional[UploadFile] = File(None)
 ):
     res = supabase.table("quotes").select("*").eq("token", token).execute()
-    if not res.data: raise HTTPException(status_code=404, detail="Xətalı link!")
+    if not res.data: 
+        raise HTTPException(status_code=404, detail="Xətalı link!")
     
     quote = res.data[0]
-    if quote.get("price") is not None:
+    
+    # ARTIQ BURADA PRICE ƏVƏZİNƏ is_submitted YOXLAYIRIQ:
+    if quote.get("is_submitted") is True:
         raise HTTPException(status_code=400, detail="Artıq təklif göndərilib!")
 
     parsed_price = None
@@ -747,15 +750,16 @@ async def submit_quote(
         parsed_extra["carrier_attachment_url"] = f"/uploads/{unique_filename}"
         parsed_extra["carrier_attachment_name"] = carrier_file.filename
 
+    # Bazanı yeniləyərkən is_submitted dəyərini True edirik
     update_res = supabase.table("quotes").update({
         "price": parsed_price,
         "transit_time_days": transit_time_days,
         "extra_details": parsed_extra,
-        "currency": "AZN"
+        "currency": "AZN",
+        "is_submitted": True  # <--- BURANI ƏLAVƏ EDİRİK
     }).eq("token", token).execute()
 
     return {"status": "success", "message": "Təklif qəbul edildi!", "data": update_res.data}
-
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int):
     quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
