@@ -803,7 +803,7 @@ async def login(data: LoginRequest):
     customer = supabase.table("customers").select("*").eq("email", data.email).execute()
     if customer.data:
         user = customer.data[0]
-        stored_password = usear.get("password")
+        stored_password = user.get("password")
         
         if stored_password and pwd_context.verify(data.password, stored_password):
             return {"status": "success", "role": "customer", "user": user}
