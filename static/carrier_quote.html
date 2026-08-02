@@ -116,24 +116,27 @@
                     const cargoTypeEl = document.getElementById("cargo_type_text");
                     if (cargoTypeEl) cargoTypeEl.innerText = req.cargo_type || "Qeyd olunmayıb";
 
-                    // Hər iki tarixi ayrı-ayrı oxuyuruq
-                    let loadingDateVal = req.loading_date || req.load_date;
+                    let loadingDateVal = null;
                     let deadlineVal = req.deadline || req.due_date || req.end_date || req.expiry_date || req.target_date;
                     let customerNote = req.additional_notes || req.note || req.customer_note || "";
 
-                    if (!deadlineVal && !loadingDateVal && customerNote) {
-                        const dateMatches = customerNote.match(/\d{4}-\d{2}-\d{2}/g);
-                        if (dateMatches) {
-                            if (dateMatches.length === 1) {
-                                deadlineVal = dateMatches[0];
-                            } else if (dateMatches.length > 1) {
-                                loadingDateVal = dateMatches[0];
-                                deadlineVal = dateMatches[1];
+                    // required_fields içindən Loading Date və Deadline məlumatlarını oxumaq
+                    if (req.required_fields && req.required_fields.length > 0) {
+                        req.required_fields.forEach(field => {
+                            if (typeof field === 'string') {
+                                if (field.toLowerCase().includes("loading date") || field.toLowerCase().includes("yükləmə")) {
+                                    const parts = field.split(":");
+                                    if (parts[1]) loadingDateVal = parts[1].trim();
+                                }
+                                if (field.toLowerCase().includes("deadline") || field.toLowerCase().includes("delivery deadl")) {
+                                    const parts = field.split(":");
+                                    if (parts[1]) deadlineVal = parts[1].trim();
+                                }
                             }
-                        }
+                        });
                     }
 
-                    // 1. Loading Date göstərilməsi (Artıq deadline ilə eyni olub-olmamasından asılı olmayaraq, mövcuddursa göstərilir)
+                    // 1. Loading Date göstərilməsi
                     const loadingDateBox = document.getElementById("loading_date_box");
                     const loadingDateText = document.getElementById("loading_date_text");
                     if (loadingDateVal && String(loadingDateVal).trim() !== "") {
@@ -162,21 +165,6 @@
                         if (customerNote) {
                             const lines = customerNote.split('\n');
                             lines.forEach(line => {
-                                const lowLine = line.toLowerCase();
-                                if (
-                                    lowLine.includes("volume") || 
-                                    lowLine.includes("cbm") || 
-                                    lowLine.includes("loading") || 
-                                    lowLine.includes("yükləmə") ||
-                                    lowLine.includes("yüklenme") ||
-                                    lowLine.includes("deadline") || 
-                                    lowLine.includes("due date") ||
-                                    lowLine.includes("tarix") ||
-                                    (deadlineVal && line.includes(String(deadlineVal).split('T')[0])) ||
-                                    (loadingDateVal && line.includes(String(loadingDateVal).split('T')[0]))
-                                ) {
-                                    return; 
-                                }
                                 cleanNoteLines.push(line);
                             });
                         }
@@ -199,20 +187,13 @@
                                 if (typeof field === 'string') {
                                     const lowField = field.toLowerCase();
                                     if (
+                                        lowField.includes("loading date") || 
+                                        lowField.includes("deadline") || 
+                                        lowField.includes("delivery deadl") ||
                                         lowField.includes("fayl") || 
                                         lowField.includes("attachment") || 
                                         field.includes("http") || 
-                                        field.includes("Fayl:") || 
-                                        lowField.includes("volume") || 
-                                        lowField.includes("cbm") || 
-                                        lowField.includes("loading") || 
-                                        lowField.includes("yükləmə") ||
-                                        lowField.includes("yüklenme") ||
-                                        lowField.includes("deadline") || 
-                                        lowField.includes("due date") ||
-                                        lowField.includes("tarix") ||
-                                        (deadlineVal && field.includes(String(deadlineVal).split('T')[0])) ||
-                                        (loadingDateVal && field.includes(String(loadingDateVal).split('T')[0]))
+                                        field.includes("Fayl:")
                                     ) {
                                         return;
                                     }
