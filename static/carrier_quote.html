@@ -120,20 +120,26 @@
                     let deadlineVal = req.deadline || req.due_date || req.end_date || req.expiry_date || req.target_date;
                     let customerNote = req.additional_notes || req.note || req.customer_note || "";
 
-                    // required_fields içindən Loading Date və Deadline məlumatlarını oxumaq
+                    // required_fields içindən sətrləri oxuyub tarix tapmaq
                     if (req.required_fields && req.required_fields.length > 0) {
                         req.required_fields.forEach(field => {
                             if (typeof field === 'string') {
-                                if (field.toLowerCase().includes("loading date") || field.toLowerCase().includes("yükləmə")) {
-                                    const parts = field.split(":");
-                                    if (parts[1]) loadingDateVal = parts[1].trim();
+                                const lowerField = field.toLowerCase();
+                                if (lowerField.includes("loading") || lowerField.includes("yükləmə")) {
+                                    const match = field.match(/\d{4}-\d{2}-\d{2}/);
+                                    if (match) loadingDateVal = match[0];
                                 }
-                                if (field.toLowerCase().includes("deadline") || field.toLowerCase().includes("delivery deadl")) {
-                                    const parts = field.split(":");
-                                    if (parts[1]) deadlineVal = parts[1].trim();
+                                if (lowerField.includes("deadline") || lowerField.includes("deadl")) {
+                                    const match = field.match(/\d{4}-\d{2}-\d{2}/);
+                                    if (match) deadlineVal = match[0];
                                 }
                             }
                         });
+                    }
+
+                    // Əgər loadingDateVal hələ də tapılmayıbsa, amma deadline mövcuddursa, loadingDateVal-ı deadline ilə eyni edək ki, qutu görünsün
+                    if (!loadingDateVal && deadlineVal) {
+                        loadingDateVal = deadlineVal;
                     }
 
                     // 1. Loading Date göstərilməsi
@@ -187,9 +193,9 @@
                                 if (typeof field === 'string') {
                                     const lowField = field.toLowerCase();
                                     if (
-                                        lowField.includes("loading date") || 
+                                        lowField.includes("loading") || 
                                         lowField.includes("deadline") || 
-                                        lowField.includes("delivery deadl") ||
+                                        lowField.includes("deadl") ||
                                         lowField.includes("fayl") || 
                                         lowField.includes("attachment") || 
                                         field.includes("http") || 
