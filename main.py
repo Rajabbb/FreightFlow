@@ -712,7 +712,7 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
 @app.post("/quotes/submit/{token}")
 async def submit_quote(
     token: str,
-    price: Optional[float] = Form(None),
+    price: Optional[str] = Form(None),
     transit_time_days: Optional[int] = Form(None),
     extra_details: Optional[str] = Form("{}"),
     carrier_file: Optional[UploadFile] = File(None)
@@ -723,6 +723,13 @@ async def submit_quote(
     quote = res.data[0]
     if quote.get("price") is not None:
         raise HTTPException(status_code=400, detail="Artıq təklif göndərilib!")
+
+    parsed_price = None
+    if price is not None and str(price).strip() != "":
+        try:
+            parsed_price = float(price)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Qiymət düzgün formatda deyil!")
 
     try:
         parsed_extra = json.loads(extra_details) if extra_details else {}
@@ -741,7 +748,7 @@ async def submit_quote(
         parsed_extra["carrier_attachment_name"] = carrier_file.filename
 
     update_res = supabase.table("quotes").update({
-        "price": price,
+        "price": parsed_price,
         "transit_time_days": transit_time_days,
         "extra_details": parsed_extra,
         "currency": "AZN"
