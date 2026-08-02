@@ -646,8 +646,12 @@ def get_request_details(target_id: str):
             if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
                 shipment["deadline"] = None
 
+        # BURA DƏYİŞDİRİLDİ: Qiymət olsun və ya olmasın, extra_details içində submitted: true olduqda already_submitted true qayıtsın
+        extra = quote.get("extra_details") or {}
+        is_already_submitted = (quote.get("price") is not None) or (extra.get("submitted") == True)
+
         return {
-            "already_submitted": quote.get("price") is not None,
+            "already_submitted": is_already_submitted,
             "request": shipment,
             "quote": quote
         }
@@ -723,8 +727,9 @@ async def submit_quote(
     
     quote = res.data[0]
     
-    # ARTIQ BURADA PRICE ƏVƏZİNƏ is_submitted YOXLAYIRIQ:
-    if quote.get("is_submitted") is True:
+    # Qiymət yazılıbsa VƏ YA əvvəlcədən extra_details içində submitted: true qeyd olunubsa:
+    existing_extra = quote.get("extra_details") or {}
+    if quote.get("price") is not None or existing_extra.get("submitted") == True:
         raise HTTPException(status_code=400, detail="Artıq təklif göndərilib!")
 
     parsed_price = None
@@ -739,6 +744,9 @@ async def submit_quote(
     except:
         parsed_extra = {}
 
+    # Qiymət yazılsın və ya yazılmasın, formun göndərildiyini qeyd edirik
+    parsed_extra["submitted"] = True
+
     if carrier_file and carrier_file.filename:
         file_ext = os.path.splitext(carrier_file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_ext}"
@@ -750,16 +758,15 @@ async def submit_quote(
         parsed_extra["carrier_attachment_url"] = f"/uploads/{unique_filename}"
         parsed_extra["carrier_attachment_name"] = carrier_file.filename
 
-    # Bazanı yeniləyərkən is_submitted dəyərini True edirik
     update_res = supabase.table("quotes").update({
         "price": parsed_price,
         "transit_time_days": transit_time_days,
         "extra_details": parsed_extra,
-        "currency": "AZN",
-        "is_submitted": True  # <--- BURANI ƏLAVƏ EDİRİK
+        "currency": "AZN"
     }).eq("token", token).execute()
 
     return {"status": "success", "message": "Təklif qəbul edildi!", "data": update_res.data}
+
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int):
     quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
