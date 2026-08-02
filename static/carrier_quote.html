@@ -101,7 +101,6 @@
                     const req = data.request;
                     document.getElementById("route_text").innerText = `${req.origin} ➔ ${req.destination}`;
                     
-                    // Həcm (Volume) yoxlaması
                     let volumeText = req.volume_m3;
                     if (!volumeText || volumeText === 0 || volumeText === "0" || volumeText === 0.0 || volumeText === "Qeyd edilməyib") {
                         volumeText = "Qeyd edilməyib";
@@ -112,28 +111,25 @@
                     
                     document.getElementById("cargo_type_text").innerText = req.cargo_type || "Qeyd olunmayıb";
 
-                    // Yükləmə tarixi və Deadline dəyərlərinin ayrı-ayrı təyini
+                    // Tarix dəyərlərinin təyini
                     let loadingDateVal = req.loading_date || req.load_date;
                     let deadlineVal = req.deadline || req.due_date || req.end_date || req.expiry_date || req.target_date;
                     let customerNote = req.additional_notes || req.note || req.customer_note || "";
 
-                    // Əgər birbaşa field yoxdursa, qeydlərdən tarixləri tapmağa çalışırıq
+                    // Əgər yalnız bir tarix gəlibsə və bu deadline-dırsa, amma loading_date boşdursa, onu loading_date kimi oxumaması üçün yoxlama:
+                    if (!deadlineVal && loadingDateVal) {
+                        // Əgər bazada tək tarix gəlibsə və adında deadline/tarix keçirsə, onu birbaşa deadline edə bilərik əgər loading_date yazılmayıbsa
+                    }
+
+                    // Qeydlərdən və ya required_fields-dən tarixlərin oxunması məntiqi
                     if (!deadlineVal && !loadingDateVal && customerNote) {
                         const dateMatches = customerNote.match(/\d{4}-\d{2}-\d{2}/g);
                         if (dateMatches) {
-                            if (dateMatches.length > 0) loadingDateVal = dateMatches[0];
-                            if (dateMatches.length > 1) deadlineVal = dateMatches[1];
-                        }
-                    }
-
-                    if (!deadlineVal && !loadingDateVal && req.required_fields) {
-                        for (const field of req.required_fields) {
-                            if (typeof field === 'string') {
-                                const dateMatches = field.match(/\d{4}-\d{2}-\d{2}/g);
-                                if (dateMatches) {
-                                    if (!loadingDateVal) loadingDateVal = dateMatches[0];
-                                    else if (!deadlineVal) deadlineVal = dateMatches[0];
-                                }
+                            if (dateMatches.length === 1) {
+                                deadlineVal = dateMatches[0]; // Tək tarix varsa birbaşa deadline olsun
+                            } else if (dateMatches.length > 1) {
+                                loadingDateVal = dateMatches[0];
+                                deadlineVal = dateMatches[1];
                             }
                         }
                     }
@@ -160,7 +156,6 @@
                     fieldsList.innerHTML = "";
                     let hasItems = false;
 
-                    // Qeydlərdən sistem məlumatlarının təmizlənməsi
                     let cleanNoteLines = [];
                     if (customerNote) {
                         const lines = customerNote.split('\n');
@@ -197,7 +192,6 @@
                         fieldsList.appendChild(noteDiv);
                     }
 
-                    // Tələb olunan xüsusi sahələr (required_fields)
                     if (req.required_fields && req.required_fields.length > 0) {
                         req.required_fields.forEach(field => {
                             if (typeof field === 'string') {
