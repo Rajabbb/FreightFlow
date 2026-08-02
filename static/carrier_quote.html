@@ -1,4 +1,84 @@
-<script>
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogiFast - Təklif Təqdim Et</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-8 shadow-2xl">
+        <h2 class="text-2xl font-bold text-center mb-6 text-indigo-400">Daşıyıcı Təklif Formu</h2>
+
+        <!-- Yükün Təfərrüatları -->
+        <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 mb-6">
+            <h3 class="text-sm font-semibold text-indigo-300 uppercase tracking-wider mb-4">📦 Yükün Təfərrüatları</h3>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                <div>
+                    <span class="text-slate-400 block text-xs">Marşrut</span>
+                    <span id="route_text" class="font-bold text-white text-base">-</span>
+                </div>
+                <div>
+                    <span class="text-slate-400 block text-xs">Çəki / Həcm</span>
+                    <span id="weight_volume_text" class="font-bold text-white text-base">-</span>
+                </div>
+                <div class="col-span-2">
+                    <span class="text-slate-400 block text-xs">Yük Növü</span>
+                    <span id="cargo_type_text" class="font-bold text-white text-base">-</span>
+                </div>
+            </div>
+
+            <!-- Yükləmə Tarixi və Son Tariq üçün sətr -->
+            <div class="grid grid-cols-2 gap-4 text-sm pt-3 border-t border-slate-700/40">
+                <div id="loading_date_box" class="hidden">
+                    <span class="text-slate-400 block text-xs">Yükləmə Tarixi (Loading Date)</span>
+                    <span id="loading_date_text" class="font-bold text-white text-base">-</span>
+                </div>
+                <div id="deadline_box" class="hidden">
+                    <span class="text-slate-400 block text-xs">Son Tarix (Deadline)</span>
+                    <span id="deadline_text" class="font-bold text-white text-base">-</span>
+                </div>
+            </div>
+
+            <!-- Müştərinin Tələbləri və Qeydləri -->
+            <div id="dynamic_fields_container" class="mt-4 pt-4 border-t border-slate-700/50 space-y-3">
+                <h4 id="container_title" class="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Müştərinin Tələbləri və Qeydləri</h4>
+                <div id="fields_list" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Təklif Formu -->
+        <form id="quote_form" onsubmit="submitQuote(event)" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Təklif Olunan Qiymət (AZN)</label>
+                <input type="number" step="0.01" id="price" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500" placeholder="0.00">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Çatdırılma Müddəti (Gün)</label>
+                <input type="number" id="transit_time_days" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500" placeholder="Məsələn: 5">
+            </div>
+
+            <!-- Daşıyıcı Qeydi -->
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Əlavə Qeyd və ya Şərtlər (Daşıyıcı tərəfdən)</label>
+                <textarea id="carrier_note" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500" placeholder="Ödəniş şərtləri, xüsusi qeydlər və ya təklif detalları..."></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-1">Əlavə Sənəd / Fayl (Daşıyıcı tərəfdən)</label>
+                <input type="file" id="carrier_file" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700">
+            </div>
+
+            <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition duration-200 mt-2">
+                🚀 Təklifi Göndər
+            </button>
+        </form>
+    </div>
+
+    <script>
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
 
@@ -19,7 +99,9 @@
                     }
 
                     const req = data.request;
-                    document.getElementById("route_text").innerText = `${req.origin} ➔ ${req.destination}`;
+                    
+                    const routeEl = document.getElementById("route_text");
+                    if (routeEl) routeEl.innerText = `${req.origin} ➔ ${req.destination}`;
                     
                     let volumeText = req.volume_m3;
                     if (!volumeText || volumeText === 0 || volumeText === "0" || volumeText === 0.0 || volumeText === "Qeyd edilməyib") {
@@ -27,16 +109,17 @@
                     } else {
                         volumeText = `${volumeText} m³`;
                     }
-                    document.getElementById("weight_volume_text").innerText = `${req.weight_kg || 0} kg / ${volumeText}`;
                     
-                    document.getElementById("cargo_type_text").innerText = req.cargo_type || "Qeyd olunmayıb";
+                    const weightVolEl = document.getElementById("weight_volume_text");
+                    if (weightVolEl) weightVolEl.innerText = `${req.weight_kg || 0} kg / ${volumeText}`;
+                    
+                    const cargoTypeEl = document.getElementById("cargo_type_text");
+                    if (cargoTypeEl) cargoTypeEl.innerText = req.cargo_type || "Qeyd olunmayıb";
 
-                    // Dəqiq dəyərlər
                     let loadingDateVal = req.loading_date || req.load_date;
                     let deadlineVal = req.deadline || req.due_date || req.end_date || req.expiry_date || req.target_date;
                     let customerNote = req.additional_notes || req.note || req.customer_note || "";
 
-                    // Əgər loading_date yoxdursa, amma qeydlərdən tarix tapılırsa
                     if (!deadlineVal && !loadingDateVal && customerNote) {
                         const dateMatches = customerNote.match(/\d{4}-\d{2}-\d{2}/g);
                         if (dateMatches) {
@@ -49,140 +132,145 @@
                         }
                     }
 
-                    // ƏMƏLİYYAT: Əgər loading_date ilə deadline eynidirsə və ya yalnız deadline gəlibsə, loading_date-i ləğv et
+                    // Əgər loading_date ilə deadline eynidirsə, yalnız deadline qalsın
                     if (loadingDateVal && deadlineVal && String(loadingDateVal).trim() === String(deadlineVal).trim()) {
-                        loadingDateVal = null; // Təkrarın qarşısını alırıq
+                        loadingDateVal = null;
                     }
 
-                    // 1. Loading Date göstərilməsi (Yalnız real fərqli yükləmə tarixi varsa göstər)
+                    // 1. Loading Date göstərilməsi
                     const loadingDateBox = document.getElementById("loading_date_box");
+                    const loadingDateText = document.getElementById("loading_date_text");
                     if (loadingDateVal && String(loadingDateVal).trim() !== "") {
-                        document.getElementById("loading_date_text").innerText = String(loadingDateVal).split('T')[0];
-                        loadingDateBox.classList.remove("hidden");
+                        if (loadingDateText) loadingDateText.innerText = String(loadingDateVal).split('T')[0];
+                        if (loadingDateBox) loadingDateBox.classList.remove("hidden");
                     } else {
-                        loadingDateBox.classList.add("hidden");
+                        if (loadingDateBox) loadingDateBox.classList.add("hidden");
                     }
 
                     // 2. Deadline göstərilməsi
                     const deadlineBox = document.getElementById("deadline_box");
+                    const deadlineText = document.getElementById("deadline_text");
                     if (deadlineVal && String(deadlineVal).trim() !== "") {
-                        document.getElementById("deadline_text").innerText = String(deadlineVal).split('T')[0];
-                        deadlineBox.classList.remove("hidden");
+                        if (deadlineText) deadlineText.innerText = String(deadlineVal).split('T')[0];
+                        if (deadlineBox) deadlineBox.classList.remove("hidden");
                     } else {
-                        deadlineBox.classList.add("hidden");
+                        if (deadlineBox) deadlineBox.classList.add("hidden");
                     }
 
                     const fieldsList = document.getElementById("fields_list");
-                    fieldsList.innerHTML = "";
-                    let hasItems = false;
+                    if (fieldsList) {
+                        fieldsList.innerHTML = "";
+                        let hasItems = false;
 
-                    let cleanNoteLines = [];
-                    if (customerNote) {
-                        const lines = customerNote.split('\n');
-                        lines.forEach(line => {
-                            const lowLine = line.toLowerCase();
-                            if (
-                                lowLine.includes("volume") || 
-                                lowLine.includes("cbm") || 
-                                lowLine.includes("loading") || 
-                                lowLine.includes("yükləmə") ||
-                                lowLine.includes("yüklenme") ||
-                                lowLine.includes("deadline") || 
-                                lowLine.includes("due date") ||
-                                lowLine.includes("tarix") ||
-                                (deadlineVal && line.includes(String(deadlineVal).split('T')[0])) ||
-                                (loadingDateVal && line.includes(String(loadingDateVal).split('T')[0]))
-                            ) {
-                                return; 
-                            }
-                            cleanNoteLines.push(line);
-                        });
-                    }
-                    let finalCleanNote = cleanNoteLines.join('\n').trim();
-
-                    if (finalCleanNote !== "") {
-                        hasItems = true;
-                        const noteDiv = document.createElement("div");
-                        noteDiv.innerHTML = `
-                            <span class="block text-xs text-slate-400 mb-1">Müştəri Qeydi:</span>
-                            <div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed whitespace-pre-line">
-                                ${finalCleanNote}
-                            </div>
-                        `;
-                        fieldsList.appendChild(noteDiv);
-                    }
-
-                    if (req.required_fields && req.required_fields.length > 0) {
-                        req.required_fields.forEach(field => {
-                            if (typeof field === 'string') {
-                                const lowField = field.toLowerCase();
+                        let cleanNoteLines = [];
+                        if (customerNote) {
+                            const lines = customerNote.split('\n');
+                            lines.forEach(line => {
+                                const lowLine = line.toLowerCase();
                                 if (
-                                    lowField.includes("fayl") || 
-                                    lowField.includes("attachment") || 
-                                    field.includes("http") || 
-                                    field.includes("Fayl:") || 
-                                    lowField.includes("volume") || 
-                                    lowField.includes("cbm") || 
-                                    lowField.includes("loading") || 
-                                    lowField.includes("yükləmə") ||
-                                    lowField.includes("yüklenme") ||
-                                    lowField.includes("deadline") || 
-                                    lowField.includes("due date") ||
-                                    lowField.includes("tarix") ||
-                                    (deadlineVal && field.includes(String(deadlineVal).split('T')[0])) ||
-                                    (loadingDateVal && field.includes(String(loadingDateVal).split('T')[0]))
+                                    lowLine.includes("volume") || 
+                                    lowLine.includes("cbm") || 
+                                    lowLine.includes("loading") || 
+                                    lowLine.includes("yükləmə") ||
+                                    lowLine.includes("yüklenme") ||
+                                    lowLine.includes("deadline") || 
+                                    lowLine.includes("due date") ||
+                                    lowLine.includes("tarix") ||
+                                    (deadlineVal && line.includes(String(deadlineVal).split('T')[0])) ||
+                                    (loadingDateVal && line.includes(String(loadingDateVal).split('T')[0]))
                                 ) {
-                                    return;
+                                    return; 
                                 }
-                            }
+                                cleanNoteLines.push(line);
+                            });
+                        }
+                        let finalCleanNote = cleanNoteLines.join('\n').trim();
 
+                        if (finalCleanNote !== "") {
                             hasItems = true;
                             const noteDiv = document.createElement("div");
                             noteDiv.innerHTML = `
-                                <span class="block text-xs text-slate-400 mb-1">Müştəri Qeydi / Tələb:</span>
-                                <div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed">
-                                    ${field}
+                                <span class="block text-xs text-slate-400 mb-1">Müştəri Qeydi:</span>
+                                <div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed whitespace-pre-line">
+                                    ${finalCleanNote}
                                 </div>
                             `;
                             fieldsList.appendChild(noteDiv);
-                        });
-                    }
-
-                    let fileUrl = req.attachment_url;
-                    if (!fileUrl && req.required_fields) {
-                        const foundField = req.required_fields.find(f => typeof f === 'string' && (f.includes("Fayl:") || f.includes("http") || f.includes("uploads")));
-                        if (foundField) {
-                            fileUrl = foundField;
-                        }
-                    }
-
-                    if (fileUrl) {
-                        hasItems = true;
-                        let fileName = "Əlavə Sənəd";
-                        if (fileUrl.includes("Fayl:")) {
-                            const parts = fileUrl.split("Fayl:");
-                            if (parts[1]) fileName = parts[1].replace("]", "").trim();
-                        } else if (fileUrl.includes("/")) {
-                            fileName = fileUrl.split('/').pop();
                         }
 
-                        let realHref = fileUrl.includes("http") ? fileUrl.match(/https?:\/\/[^\s]+/)[0] : `/uploads/${fileName}`;
+                        if (req.required_fields && req.required_fields.length > 0) {
+                            req.required_fields.forEach(field => {
+                                if (typeof field === 'string') {
+                                    const lowField = field.toLowerCase();
+                                    if (
+                                        lowField.includes("fayl") || 
+                                        lowField.includes("attachment") || 
+                                        field.includes("http") || 
+                                        field.includes("Fayl:") || 
+                                        lowField.includes("volume") || 
+                                        lowField.includes("cbm") || 
+                                        lowField.includes("loading") || 
+                                        lowField.includes("yükləmə") ||
+                                        lowField.includes("yüklenme") ||
+                                        lowField.includes("deadline") || 
+                                        lowField.includes("due date") ||
+                                        lowField.includes("tarix") ||
+                                        (deadlineVal && field.includes(String(deadlineVal).split('T')[0])) ||
+                                        (loadingDateVal && field.includes(String(loadingDateVal).split('T')[0]))
+                                    ) {
+                                        return;
+                                    }
+                                }
 
-                        const fileDiv = document.createElement("div");
-                        fileDiv.innerHTML = `
-                            <span class="block text-xs text-slate-400 mb-1">Müştəri Faylı:</span>
-                            <div class="flex justify-between items-center bg-slate-950 px-3 py-2.5 rounded-lg border border-slate-800 text-sm">
-                                <span class="text-slate-300 truncate">Sənəd / Spesifikasiya</span>
-                                <a href="${realHref}" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline font-medium flex items-center gap-1 text-xs">
-                                    📎 <span>${fileName}</span>
-                                </a>
-                            </div>
-                        `;
-                        fieldsList.appendChild(fileDiv);
-                    }
+                                hasItems = true;
+                                const noteDiv = document.createElement("div");
+                                noteDiv.innerHTML = `
+                                    <span class="block text-xs text-slate-400 mb-1">Müştəri Qeydi / Tələb:</span>
+                                    <div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed">
+                                        ${field}
+                                    </div>
+                                `;
+                                fieldsList.appendChild(noteDiv);
+                            });
+                        }
 
-                    if (!hasItems) {
-                        document.getElementById("dynamic_fields_container").style.display = "none";
+                        let fileUrl = req.attachment_url;
+                        if (!fileUrl && req.required_fields) {
+                            const foundField = req.required_fields.find(f => typeof f === 'string' && (f.includes("Fayl:") || f.includes("http") || f.includes("uploads")));
+                            if (foundField) {
+                                fileUrl = foundField;
+                            }
+                        }
+
+                        if (fileUrl) {
+                            hasItems = true;
+                            let fileName = "Əlavə Sənəd";
+                            if (fileUrl.includes("Fayl:")) {
+                                const parts = fileUrl.split("Fayl:");
+                                if (parts[1]) fileName = parts[1].replace("]", "").trim();
+                            } else if (fileUrl.includes("/")) {
+                                fileName = fileUrl.split('/').pop();
+                            }
+
+                            let realHref = fileUrl.includes("http") ? fileUrl.match(/https?:\/\/[^\s]+/)[0] : `/uploads/${fileName}`;
+
+                            const fileDiv = document.createElement("div");
+                            fileDiv.innerHTML = `
+                                <span class="block text-xs text-slate-400 mb-1">Müştəri Faylı:</span>
+                                <div class="flex justify-between items-center bg-slate-950 px-3 py-2.5 rounded-lg border border-slate-800 text-sm">
+                                    <span class="text-slate-300 truncate">Sənəd / Spesifikasiya</span>
+                                    <a href="${realHref}" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline font-medium flex items-center gap-1 text-xs">
+                                        📎 <span>${fileName}</span>
+                                    </a>
+                                </div>
+                            `;
+                            fieldsList.appendChild(fileDiv);
+                        }
+
+                        if (!hasItems) {
+                            const container = document.getElementById("dynamic_fields_container");
+                            if (container) container.style.display = "none";
+                        }
                     }
 
                 } else {
@@ -197,18 +285,21 @@
             event.preventDefault();
 
             const formData = new FormData();
-            formData.append("price", document.getElementById("price").value);
-            formData.append("transit_time_days", document.getElementById("transit_time_days").value);
+            const priceEl = document.getElementById("price");
+            const transitEl = document.getElementById("transit_time_days");
+            
+            if (priceEl) formData.append("price", priceEl.value);
+            if (transitEl) formData.append("transit_time_days", transitEl.value);
 
             const fileInput = document.getElementById("carrier_file");
-            if (fileInput.files[0]) {
+            if (fileInput && fileInput.files[0]) {
                 formData.append("carrier_file", fileInput.files[0]);
             }
 
             const extraDetails = {};
-            const carrierNoteVal = document.getElementById("carrier_note").value.trim();
-            if (carrierNoteVal) {
-                extraDetails["Daşıyıcı Qeydi"] = carrierNoteVal;
+            const carrierNoteEl = document.getElementById("carrier_note");
+            if (carrierNoteEl && carrierNoteEl.value.trim()) {
+                extraDetails["Daşıyıcı Qeydi"] = carrierNoteEl.value.trim();
             }
 
             document.querySelectorAll("#fields_list input[type='text']").forEach(input => {
@@ -237,3 +328,5 @@
 
         loadRequestDetails();
     </script>
+</body>
+</html>
