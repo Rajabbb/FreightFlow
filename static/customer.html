@@ -1204,7 +1204,7 @@ Best regards,
                 additional_notes: additionalNotesCombined,
                 note: additionalNotesCombined,
                 email_template_type: useCustomTemplate ? "custom" : "standard",
-                custom_email_body: customEmailBodyVal
+                custom_email_body: customEmailBodyVal,
                 transportation_mode: transportModeVal,
             };
 
@@ -1477,6 +1477,27 @@ Best regards,
                 alert("Server xətası!");
             }
         }
+
+    function toggleCarrierSelection(show) {
+    const container = document.getElementById("carrierSelectionContainer");
+    if (container) {
+        container.style.display = show ? "block" : "none";
+    }
+}
+
+function toggleEmailTemplateFields(isCustom) {
+    const customContainer = document.getElementById("customTemplateContainer");
+    if (customContainer) {
+        customContainer.style.display = isCustom ? "block" : "none";
+    }
+}
+
+function toggleOptField(fieldId, show) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.style.display = show ? "block" : "none";
+    }
+}
     </script>
 </body>
 </html>
