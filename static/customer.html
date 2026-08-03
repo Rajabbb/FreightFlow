@@ -1271,7 +1271,8 @@ Best regards,
                             attachmentBtn = `<a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-light ms-2 fw-semibold border rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
                         }
 
-                        let qCount = req.quotes_count !== undefined ? req.quotes_count : 0;
+                        let qCount = req.quotes_count !== undefined && req.quotes_count !== null ? req.quotes_count : 0;
+                        let badgeClass = qCount > 0 ? 'bg-info text-dark' : 'bg-secondary';
                         
                         let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
                         let statusText = (req.status || 'Aktiv').toUpperCase();
@@ -1286,7 +1287,7 @@ Best regards,
                                         ${req.origin || req.loading_location || ''} <i class="bi bi-arrow-right-short mx-2 text-primary fs-5"></i> ${req.destination || req.delivery_location || ''}
                                     </h6>
                                     <div class="d-flex align-items-center gap-2">
-                                        <span class="badge ${qCount > 0 ? 'bg-info text-dark' : 'bg-secondary'} shadow-sm">${qCount} təklif</span>
+                                        <span class="badge ${badgeClass} shadow-sm">${qCount} təklif</span>
                                         <span class="badge ${bgClass} shadow-sm">${statusText}</span>
                                     </div>
                                 </div>
