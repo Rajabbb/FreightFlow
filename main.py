@@ -332,8 +332,10 @@ def get_customer_stats(customer_id: int):
         
         incoming_quotes_count = 0
         if req_ids:
-            quotes_res = supabase.table("quotes").select("id").in_("request_id", req_ids).not_.is_("price", "null").execute()
-            incoming_quotes_count = len(quotes_res.data or [])
+            quotes_res = supabase.table("quotes").select("price, extra_details").in_("request_id", req_ids).execute()
+            all_quotes = quotes_res.data or []
+            # Yalnız qiyməti olanlar və ya formun submitted bayrağı true olanlar sayılır:
+            incoming_quotes_count = sum(1 for q in all_quotes if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True))
 
         carriers_res = supabase.table("carriers").select("id").eq("customer_id", customer_id).execute()
         carriers_count = len(carriers_res.data or [])
@@ -618,7 +620,7 @@ def get_customer_requests(customer_id: int):
 
     for req in requests:
         quotes_list = req.get("quotes") or []
-        req["quotes_count"] = sum(1 for q in quotes_list if q.get("price") is not None)
+        req["quotes_count"] = len(quotes_list)
         if "quotes" in req:
             del req["quotes"]
 
@@ -773,31 +775,40 @@ async def submit_quote(
 
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int):
-    quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
-    quotes_list = []
-    for item in quotes_res.data or []:
-        carrier_info = item.get("carriers") or {}
-        
-        raw_extra = item.get("extra_details") or {}
-        filtered_extra = {
-            k: v for k, v in raw_extra.items() 
-            if normalize_text(k) not in ['company', 'sirket', 'firma', 'email', 'mail', 'name', 'ad', 'dasiyici']
-        }
-        
-        quotes_list.append({
-            "id": item.get("id"),
-            "request_id": item.get("request_id"),
-            "carrier_id": item.get("carrier_id"),
-            "carrier_company": carrier_info.get("company_name", f"Daşıyıcı #{item.get('carrier_id')}"),
-            "carrier_email": carrier_info.get("email", ""),
-            "price": item.get("price"),
-            "currency": item.get("currency", "AZN"),
-            "transit_time_days": item.get("transit_time_days"),
-            "is_winner": item.get("is_winner", False),
-            "extra_details": filtered_extra,
-            "extra_responses": filtered_extra
-        })
-    return {"status": "success", "quotes": quotes_list}
+    try:
+        quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
+        quotes_list = []
+        for item in quotes_res.data or []:
+            raw_extra = item.get("extra_details") or {}
+            
+            # Əgər daşıyıcı hələ qiymət yazmayıbsa və formu təsdiqləməyibsə, siyahıya əlavə etmirik
+            if item.get("price") is None and raw_extra.get("submitted") != True:
+                continue
+
+            carrier_info = item.get("carriers") or {}
+            
+            filtered_extra = {
+                k: v for k, v in raw_extra.items() 
+                if normalize_text(k) not in ['company', 'sirket', 'firma', 'email', 'mail', 'name', 'ad', 'dasiyici']
+            }
+            
+            quotes_list.append({
+                "id": item.get("id"),
+                "request_id": item.get("request_id"),
+                "carrier_id": item.get("carrier_id"),
+                "carrier_company": carrier_info.get("company_name", f"Daşıyıcı #{item.get('carrier_id')}"),
+                "carrier_email": carrier_info.get("email", ""),
+                "price": item.get("price"),
+                "currency": item.get("currency", "AZN"),
+                "transit_time_days": item.get("transit_time_days"),
+                "is_winner": item.get("is_winner", False),
+                "extra_details": filtered_extra,
+                "extra_responses": filtered_extra
+            })
+        return {"status": "success", "quotes": quotes_list}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/quotes/select-winner/{quote_id}")
 def select_winner_path(quote_id: int):
