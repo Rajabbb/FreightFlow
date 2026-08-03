@@ -769,9 +769,11 @@ Best regards,
         }
 
         function toggleCarrierSelection() {
-            const sendToSelected = document.getElementById("sendToSelectedRadio").checked;
+            const sendToSelected = document.getElementById("sendToSelectedRadio");
             const container = document.getElementById("carrierSelectionContainer");
-            if (sendToSelected) {
+            if (!sendToSelected || !container) return;
+            
+            if (sendToSelected.checked) {
                 container.classList.remove("d-none");
             } else {
                 container.classList.add("d-none");
@@ -779,13 +781,44 @@ Best regards,
         }
 
         function toggleEmailTemplateFields() {
-            const useCustom = document.getElementById("customTemplateRadio").checked;
+            const useCustom = document.getElementById("customTemplateRadio");
             const container = document.getElementById("customEmailContainer");
-            if (useCustom) {
+            if (!useCustom || !container) return;
+
+            if (useCustom.checked) {
                 container.classList.remove("d-none");
             } else {
                 container.classList.add("d-none");
-                document.getElementById("custom_email_body").value = "";
+                const customBody = document.getElementById("custom_email_body");
+                if (customBody) customBody.value = "";
+            }
+        }
+
+        function toggleOptField(key) {
+            const chk = document.getElementById(`chk_${key}`);
+            if (!chk) return;
+
+            if (key === 'info') {
+                const container = document.getElementById(`inp_info_container`);
+                if (!container) return;
+                if (chk.checked) {
+                    container.classList.remove('d-none');
+                } else {
+                    container.classList.add('d-none');
+                    const infoText = document.getElementById(`inp_info_text`);
+                    const infoFile = document.getElementById(`inp_info_file`);
+                    if (infoText) infoText.value = '';
+                    if (infoFile) infoFile.value = '';
+                }
+            } else {
+                const input = document.getElementById(`inp_${key}`);
+                if (!input) return;
+                if (chk.checked) {
+                    input.classList.remove('d-none');
+                } else {
+                    input.classList.add('d-none');
+                    input.value = '';
+                }
             }
         }
 
@@ -1011,28 +1044,6 @@ Best regards,
             } catch (err) {
                 console.error("Cədvəldən əlavə etmə xətası:", err);
                 alert("Serverlə əlaqə qurulmadı!");
-            }
-        }
-
-        function toggleOptField(key) {
-            const chk = document.getElementById(`chk_${key}`);
-            if (key === 'info') {
-                const container = document.getElementById(`inp_info_container`);
-                if (chk.checked) {
-                    container.classList.remove('d-none');
-                } else {
-                    container.classList.add('d-none');
-                    document.getElementById(`inp_info_text`).value = '';
-                    document.getElementById(`inp_info_file`).value = '';
-                }
-            } else {
-                const input = document.getElementById(`inp_${key}`);
-                if (chk.checked) {
-                    input.classList.remove('d-none');
-                } else {
-                    input.classList.add('d-none');
-                    input.value = '';
-                }
             }
         }
 
