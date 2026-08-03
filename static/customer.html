@@ -687,20 +687,19 @@ Best regards,
                 <i class="bi bi-ui-checks-grid"></i> RFQ Sorğuları və Təkliflər
             </div>
             <div class="section-desc">Yaratdığınız sorğuların statusunu izləyin, gələn qiymət təkliflərini analiz edin və qalibi seçin.</div>
-            <div id="requestsContainer" class="mt-3">
-                <p class="text-muted small">Sorğular yüklənir...</p>
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider">Sorğu Siyahısı</h5>
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="loadRequests()" style="font-size: 13px;">
+                    <i class="bi bi-arrow-clockwise"></i> Yenilə
+                </button>
             </div>
 
-            
-        </div><div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="fw-bold mb-0">RFQ Sorğuları və Təkliflər</h5>
-    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="refreshRfqsAndQuotes()" style="font-size: 13px;">
-        <i class="bi bi-arrow-clockwise" id="refreshIcon"></i> Yenilə
-    </button>
-</div>
+            <div id="requestsContainer" class="mt-2">
+                <p class="text-muted small">Sorğular yüklənir...</p>
+            </div>
+        </div>
 
-
-        
     </div>
 
     <!-- DETALLI BAXIŞ MODALI -->
@@ -1167,9 +1166,9 @@ Best regards,
             const transportModeVal = document.getElementById("transportation_mode")?.value;
 
             if (!originVal || !destinationVal || !cargoTypeVal || !weightVal || !transportModeVal) {
-    alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!");
-    return;
-}
+                alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!");
+                return;
+            }
 
             let additionalNotesCombined = "";
             if(document.getElementById("chk_info")?.checked) {
@@ -1240,6 +1239,7 @@ Best regards,
 
         async function loadRequests() {
             const container = document.getElementById("requestsContainer");
+            container.innerHTML = `<div class="text-center p-3"><span class="spinner-border spinner-border-sm text-primary me-2"></span><span class="text-muted small">Sorğular yüklənir...</span></div>`;
             try {
                 const customerId = getCustomerId();
                 const res = await fetch(`/requests/customer/${customerId}`);
@@ -1307,52 +1307,50 @@ Best regards,
         window.currentQuotesCache = {};
 
         async function loadQuotes(requestId) {
-    const quotesDiv = document.getElementById(`quotes-for-${requestId}`);
-    quotesDiv.innerHTML = `<div class="mt-2 p-2 text-center w-100"><span class="spinner-border spinner-border-sm text-primary me-2"></span> <span class="text-muted fw-medium small">Təkliflər yüklənir...</span></div>`;
-    
-    try {
-        const res = await fetch(`/quotes/request/${requestId}`);
-        const data = await res.json();
-        
-        let quotesList = [];
-        if (Array.isArray(data)) {
-            quotesList = data;
-        } else if (data && Array.isArray(data.quotes)) {
-            quotesList = data.quotes;
-        }
-
-        if (res.ok && quotesList.length > 0) {
-            window.currentQuotesCache[requestId] = quotesList;
+            const quotesDiv = document.getElementById(`quotes-for-${requestId}`);
+            quotesDiv.innerHTML = `<div class="mt-2 p-2 text-center w-100"><span class="spinner-border spinner-border-sm text-primary me-2"></span> <span class="text-muted fw-medium small">Təkliflər yüklənir...</span></div>`;
             
-            let html = `<div class="table-responsive mt-3 rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
-                <thead style="background: #f8fafc;">
-                    <tr>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Daşıyıcı Şirkət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Qiymət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Müddət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Qeydlər</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-center">Əməliyyat</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-        
-            for (let q of quotesList) {
-                let extraStr = "";
-                if (q.extra_details) {
-                    for (let [k, v] of Object.entries(q.extra_details)) {
-                        // 'submitted' və 'carrier_attachment_name' kimi arxa plan açarlarını cədvəldə/detallarda gizlədirik
-                        if (k === 'submitted' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
+            try {
+                const res = await fetch(`/quotes/request/${requestId}`);
+                const data = await res.json();
+                
+                let quotesList = [];
+                if (Array.isArray(data)) {
+                    quotesList = data;
+                } else if (data && Array.isArray(data.quotes)) {
+                    quotesList = data.quotes;
+                }
 
-                        if (v !== null && v !== undefined && v !== "") {
-                            if (k === 'carrier_attachment_url') {
-                                extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${v}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
-                            } else {
-                                extraStr += `<div><strong class="text-dark">${k}:</strong> ${v}</div>`;
+                if (res.ok && quotesList.length > 0) {
+                    window.currentQuotesCache[requestId] = quotesList;
+                    
+                    let html = `<div class="table-responsive mt-3 rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
+                        <thead style="background: #f8fafc;">
+                            <tr>
+                                <th class="py-2.5 px-3 text-muted fw-bold">Daşıyıcı Şirkət</th>
+                                <th class="py-2.5 px-3 text-muted fw-bold">Qiymət</th>
+                                <th class="py-2.5 px-3 text-muted fw-bold">Müddət</th>
+                                <th class="py-2.5 px-3 text-muted fw-bold">Qeydlər</th>
+                                <th class="py-2.5 px-3 text-muted fw-bold text-center">Əməliyyat</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                    for (let q of quotesList) {
+                        let extraStr = "";
+                        if (q.extra_details) {
+                            for (let [k, v] of Object.entries(q.extra_details)) {
+                                if (k === 'submitted' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
+
+                                if (v !== null && v !== undefined && v !== "") {
+                                    if (k === 'carrier_attachment_url') {
+                                        extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${v}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
+                                    } else {
+                                        extraStr += `<div><strong class="text-dark">${k}:</strong> ${v}</div>`;
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-                // (Dövrün davamı və qalan kodlarınız burada davam edir...)
 
                         let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") 
                             ? `${q.transit_time_days} gün` 
@@ -1398,26 +1396,25 @@ Best regards,
             if (!q) return;
 
             let extraHtml = "";
-    if (q.extra_details) {
-        for (let [k, v] of Object.entries(q.extra_details)) {
-            // Əgər açar 'submitted'-dirsə, bunu ekrana yazdırmırıq:
-            if (k === 'submitted') continue;
+            if (q.extra_details) {
+                for (let [k, v] of Object.entries(q.extra_details)) {
+                    if (k === 'submitted') continue;
 
-            if (v !== null && v !== undefined && v !== "" && v !== "null") {
-                if (k === 'carrier_attachment_url') {
-                    extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm d-flex justify-content-between align-items-center">
-                        <strong class="text-dark small">Qoşulmuş Fayl:</strong>
-                        <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Faylı Yüklə</a>
-                    </div>`;
-                } else {
-                    extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm">
-                        <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 11px;">${k}</strong>
-                        <p class="mb-0 text-dark fw-medium small" style="white-space: pre-wrap;">${v}</p>
-                    </div>`;
+                    if (v !== null && v !== undefined && v !== "" && v !== "null") {
+                        if (k === 'carrier_attachment_url') {
+                            extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm d-flex justify-content-between align-items-center">
+                                <strong class="text-dark small">Qoşulmuş Fayl:</strong>
+                                <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Faylı Yüklə</a>
+                            </div>`;
+                        } else {
+                            extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm">
+                                <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 11px;">${k}</strong>
+                                <p class="mb-0 text-dark fw-medium small" style="white-space: pre-wrap;">${v}</p>
+                            </div>`;
+                        }
+                    }
                 }
             }
-        }
-    }
 
             let modalTransitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null")
                 ? `${q.transit_time_days} <span class="fs-6 text-muted">gün</span>`
@@ -1477,27 +1474,6 @@ Best regards,
                 alert("Server xətası!");
             }
         }
-
-    function toggleCarrierSelection(show) {
-    const container = document.getElementById("carrierSelectionContainer");
-    if (container) {
-        container.style.display = show ? "block" : "none";
-    }
-}
-
-function toggleEmailTemplateFields(isCustom) {
-    const customContainer = document.getElementById("customTemplateContainer");
-    if (customContainer) {
-        customContainer.style.display = isCustom ? "block" : "none";
-    }
-}
-
-function toggleOptField(fieldId, show) {
-    const field = document.getElementById(fieldId);
-    if (field) {
-        field.style.display = show ? "block" : "none";
-    }
-}
     </script>
 </body>
 </html>
