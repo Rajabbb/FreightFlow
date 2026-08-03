@@ -615,17 +615,22 @@ async def create_shipment_request(
 
 @app.get("/requests/customer/{customer_id}")
 def get_customer_requests(customer_id: int):
-    res = supabase.table("shipment_requests").select("*, quotes(id, price)").eq("customer_id", customer_id).order("id", desc=True).execute()
+    res = supabase.table("shipment_requests").select("*, quotes(id, price, extra_details)").eq("customer_id", customer_id).order("id", desc=True).execute()
     requests = res.data or []
 
     for req in requests:
         quotes_list = req.get("quotes") or []
-        req["quotes_count"] = len(quotes_list)
+        # Yalnız həqiqətən qiymət yazmış və ya formu təqdim etmiş təklifləri sayırıq:
+        valid_quotes = [
+            q for q in quotes_list 
+            if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True)
+        ]
+        req["quotes_count"] = len(valid_quotes)
+        
         if "quotes" in req:
             del req["quotes"]
 
     return {"status": "success", "requests": requests}
-
 @app.get("/requests/details/{target_id}")
 def get_request_details(target_id: str):
     quote_res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", target_id).execute()
