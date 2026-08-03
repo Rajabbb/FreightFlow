@@ -489,6 +489,16 @@
                         <label class="form-label">Weight (Çəki - kq) <span class="text-danger">*</span></label>
                         <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
                     </div>
+                    <div class="col-md-12">
+                        <label class="form-label">Transportation Mode (Daşınma Növü) <span class="text-danger">*</span></label>
+                        <select class="form-select" id="transportation_mode" required>
+                            <option value="">Daşınma növünü seçin...</option>
+                            <option value="Quru (Road)">Quru (Road)</option>
+                            <option value="Hava (Air)">Hava (Air)</option>
+                            <option value="Su/Dəniz (Sea)">Su / Dəniz (Sea)</option>
+                            <option value="Dəmiryolu (Rail)">Dəmiryolu (Rail)</option>
+                        </select>
+                    </div>
                 </div>
 
                 <!-- Optional Seçimlər -->
@@ -1154,11 +1164,12 @@ Best regards,
             const destinationVal = document.getElementById("destination")?.value.trim();
             const cargoTypeVal = document.getElementById("cargo_type")?.value.trim();
             const weightVal = document.getElementById("weight_kg")?.value;
+            const transportModeVal = document.getElementById("transportation_mode")?.value;
 
-            if (!originVal || !destinationVal || !cargoTypeVal || !weightVal) {
-                alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!");
-                return;
-            }
+            if (!originVal || !destinationVal || !cargoTypeVal || !weightVal || !transportModeVal) {
+    alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!");
+    return;
+}
 
             let additionalNotesCombined = "";
             if(document.getElementById("chk_info")?.checked) {
@@ -1194,6 +1205,7 @@ Best regards,
                 note: additionalNotesCombined,
                 email_template_type: useCustomTemplate ? "custom" : "standard",
                 custom_email_body: customEmailBodyVal
+                transportation_mode: transportModeVal,
             };
 
             try {
