@@ -219,19 +219,19 @@ Best regards,
             </div>
             
             <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #1a73e8; margin: 20px 0;">
-                <p style="margin: 5px 0;"><strong>Marşrut:</strong> {origin} ➔ {destination}</p>
+                <p style="margin: 5px 0;"><strong>Route:</strong> {origin} ➔ {destination}</p>
             </div>
 
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{quote_link}" style="background-color: #1a73e8; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">
-                    👉 Təklifinizi Təqdim Edin
+                    👉 Submit Your Proposal
                 </a>
             </div>
         </div>
     </div>
     """
     message = MessageSchema(
-        subject=f"📦 Təklif Göndərin: {origin} - {destination}",
+        subject=f"📦 Submit a Proposal: {origin} - {destination}",
         recipients=[carrier_email],
         body=html_content,
         subtype=MessageType.html
