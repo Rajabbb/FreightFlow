@@ -307,21 +307,21 @@
             letter-spacing: 0.3px;
         }
 
-        /* TƏKMİLİSSƏLƏŞDİRİLMİŞ HORİZONTAL SCROLL QUTUSU */
+        /* DƏQİQ İŞLƏYƏN HORİZONTAL SCROLL QUTUSU (Sizə lazım olan həll) */
         .table-container-responsive {
             width: 100%;
-            max-width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
-            margin-top: 10px;
+            margin-top: 12px;
             padding-bottom: 8px;
             display: block;
             touch-action: pan-x;
         }
 
         .table-container-responsive table {
-            min-width: 580px;
+            min-width: 650px;
             width: 100%;
+            white-space: nowrap;
         }
 
         @media (max-width: 576px) {
@@ -340,7 +340,7 @@
         <div class="container-fluid px-3 px-md-4">
             <a class="navbar-brand fw-bold text-truncate d-flex align-items-center" href="#">
                 <i class="bi bi-lightning-charge-fill me-1" style="color: var(--primary-blue);"></i> LogiFast 
-                <span class="text-muted fs-6 fw-normal ms-1 d-none sm-inline" style="color: #64748b !important;">| Müştəri Paneli</span>
+                <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">| Müştəri Paneli</span>
             </a>
             <div class="ms-auto d-flex align-items-center gap-2">
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
@@ -1333,7 +1333,7 @@ Best regards,
                 if (res.ok && quotesList.length > 0) {
                     window.currentQuotesCache[requestId] = quotesList;
                     
-                    let html = `<div class="table-container-responsive mt-3 rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
+                    let html = `<div class="table-container-responsive rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
                         <thead style="background: #f8fafc;">
                             <tr>
                                 <th class="py-2.5 px-3 text-muted fw-bold">Daşıyıcı Şirkət</th>
