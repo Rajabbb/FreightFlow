@@ -328,7 +328,10 @@
 
         img, svg { max-width: 100%; height: auto; }
 
-        .table-responsive, .table-container-responsive { max-width: 100%; }
+        .table-container-responsive.overflow-hidden {
+            overflow-x: auto !important;
+            overflow-y: hidden !important;
+        }
 
         @media (max-width: 768px) {
             .container-fluid { padding-left: 12px; padding-right: 12px; }
