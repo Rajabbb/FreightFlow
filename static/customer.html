@@ -307,20 +307,21 @@
             letter-spacing: 0.3px;
         }
 
-        /* Mobil cihazlar üçün təkmilləşdirilmiş kart dizaynı və sürüşdürmə */
+        /* Telefonda cədvəlin sərbəst sola-sağa dartılıb sürüşdürülməsi üçün xüsusi tənzimləmə */
         .table-container-responsive {
             width: 100%;
+            max-width: 100%;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             margin-top: 10px;
-            padding-bottom: 5px;
+            padding-bottom: 8px;
+            display: block;
+            touch-action: pan-x;
         }
 
-        /* Mobil üçün xüsusi card-based alternativ və ya səliqəli cədvəl qaydası */
-        @media (max-width: 768px) {
-            .table-container-responsive table {
-                min-width: 600px; /* Cədvəlin sıxılmasının qarşısını alır, horizontal scroll yaradır */
-            }
+        .table-container-responsive table {
+            min-width: 580px;
+            width: 100%;
         }
 
         @media (max-width: 576px) {
