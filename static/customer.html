@@ -29,6 +29,7 @@
             font-size: 14px;
             -webkit-font-smoothing: antialiased;
             min-height: 100vh;
+            overflow-x: hidden; /* Mobil cihazlarda kənar daşmaların qarşısını alır */
         }
 
         ::-webkit-scrollbar { width: 7px; height: 7px; }
@@ -37,7 +38,7 @@
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         .navbar {
-            background: rgba(255, 255, 255, 0.7);
+            background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.5);
@@ -51,6 +52,7 @@
             background: linear-gradient(45deg, var(--primary-blue), var(--secondary-color));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            font-size: 1.15rem;
         }
 
         .card {
@@ -60,13 +62,15 @@
             background: var(--card-bg);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            padding: 28px;
+            padding: 24px;
             margin-bottom: 24px;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
+            width: 100%;
+            word-break: break-word;
         }
 
         .section-title {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: 800;
             color: var(--text-main);
             margin-bottom: 6px;
@@ -74,10 +78,11 @@
             align-items: center;
             gap: 10px;
             letter-spacing: -0.02em;
+            flex-wrap: wrap;
         }
 
         .section-title i {
-            font-size: 21px;
+            font-size: 20px;
             background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -86,12 +91,12 @@
         .section-desc {
             font-size: 13px;
             color: var(--text-muted);
-            margin-bottom: 22px;
+            margin-bottom: 20px;
             font-weight: 500;
         }
 
         .form-control, .form-select {
-            padding: 11px 15px;
+            padding: 10px 14px;
             border-radius: var(--radius-md);
             border: 1px solid #e2e8f0;
             font-size: 13.5px;
@@ -100,6 +105,7 @@
             font-weight: 500;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
+            width: 100%;
         }
 
         .form-control:focus, .form-select:focus {
@@ -123,7 +129,7 @@
         .btn-primary {
             background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%);
             border: none;
-            padding: 11px 22px;
+            padding: 11px 20px;
             border-radius: var(--radius-md);
             font-weight: 700;
             font-size: 13.5px;
@@ -131,6 +137,7 @@
             color: white;
             box-shadow: 0 8px 16px -8px rgba(79, 70, 229, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 100%;
         }
 
         .btn-primary:hover {
@@ -140,22 +147,16 @@
             color: white;
         }
 
-        .btn-outline-danger {
-            border-radius: var(--radius-sm);
-            font-weight: 600;
-            font-size: 13px;
-            transition: all 0.2s;
-        }
-
         .stats-card {
             border-radius: var(--radius-lg);
-            padding: 22px;
+            padding: 20px;
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid rgba(255,255,255,1);
             box-shadow: 0 12px 25px -10px rgba(0, 0, 0, 0.04);
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            height: 100%;
         }
 
         .stats-card::before {
@@ -175,40 +176,33 @@
         }
 
         .stats-card h3 {
-            font-size: 34px;
+            font-size: 30px;
             font-weight: 800;
             letter-spacing: -0.03em;
             background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-top: 6px;
+            margin-bottom: 0;
         }
 
         .optional-box {
             background: rgba(248, 250, 252, 0.6);
             border: 2px dashed #cbd5e1;
             border-radius: var(--radius-lg);
-            padding: 22px;
+            padding: 18px;
             margin-top: 20px;
             transition: border-color 0.3s;
         }
-
-        .optional-box:hover { border-color: #94a3b8; }
 
         .opt-row {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: var(--radius-md);
-            padding: 12px 16px;
+            padding: 12px 14px;
             margin-bottom: 10px;
             box-shadow: 0 3px 5px -3px rgba(0, 0, 0, 0.02);
             transition: all 0.2s ease;
-        }
-
-        .opt-row:hover {
-            border-color: #cbd5e1;
-            box-shadow: 0 8px 12px -3px rgba(0, 0, 0, 0.05);
-            transform: translateX(3px);
         }
 
         .form-check-input {
@@ -217,6 +211,7 @@
             border: 2px solid #cbd5e1;
             transition: all 0.2s ease;
             cursor: pointer;
+            flex-shrink: 0;
         }
         
         .form-check-input:checked {
@@ -227,7 +222,6 @@
 
         .form-check-label {
             cursor: pointer;
-            padding-top: 1px;
             font-size: 13.5px;
         }
 
@@ -236,7 +230,7 @@
             overflow-y: auto;
             border: 1px solid #e2e8f0;
             border-radius: var(--radius-md);
-            padding: 10px;
+            padding: 8px;
             background: #ffffff;
             box-shadow: inset 0 2px 8px rgba(0,0,0,0.01);
         }
@@ -244,7 +238,7 @@
         .carrier-item-row {
             display: flex;
             align-items: center;
-            padding: 9px 12px;
+            padding: 8px 10px;
             border-radius: var(--radius-sm);
             transition: all 0.2s ease;
             cursor: pointer;
@@ -255,20 +249,12 @@
         .carrier-item-row:hover {
             background: #f8fafc;
             border-color: #e2e8f0;
-            transform: scale(1.01);
-        }
-
-        .truncate-text {
-            max-width: 220px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
         }
 
         .request-card {
             border: 1px solid rgba(226, 232, 240, 0.9);
             border-radius: var(--radius-lg);
-            padding: 24px;
+            padding: 20px;
             margin-bottom: 20px;
             background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
@@ -284,17 +270,11 @@
             background: linear-gradient(to bottom, var(--primary-blue), var(--secondary-color));
         }
 
-        .request-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 35px -10px rgba(79, 70, 229, 0.08), 0 10px 15px -5px rgba(0, 0, 0, 0.05);
-            border-color: #cbd5e1;
-        }
-
         .request-meta-box {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: var(--radius-md);
-            padding: 14px 18px;
+            padding: 12px 14px;
             box-shadow: inset 0 1px 2px rgba(0,0,0,0.01);
         }
 
@@ -302,36 +282,44 @@
             border: none;
             border-radius: var(--radius-lg);
             box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
         }
 
         .modal-header {
             background: #f8fafc;
             border-bottom: 1px solid #e2e8f0;
-            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-            padding: 20px 26px;
+            padding: 18px 22px;
         }
         
-        .modal-body { padding: 26px; }
+        .modal-body { padding: 22px; }
+        
         .modal-footer {
             background: #f8fafc;
             border-top: 1px solid #e2e8f0;
-            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-            padding: 16px 26px;
+            padding: 14px 22px;
         }
 
         .badge {
-            padding: 6px 12px;
+            padding: 5px 10px;
             border-radius: 30px;
             font-weight: 700;
-            font-size: 11.5px;
+            font-size: 11px;
             letter-spacing: 0.3px;
         }
 
-        @media (max-width: 768px) {
+        /* Responsive cədvəl üçün xüsusi tənzimləmə */
+        .table-container-responsive {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (max-width: 576px) {
             .card { padding: 16px; }
-            .optional-box { padding: 14px; }
-            .stats-card h3 { font-size: 28px; }
-            .navbar-brand { font-size: 1rem !important; }
+            .optional-box { padding: 12px; }
+            .stats-card h3 { font-size: 26px; }
+            .navbar-brand { font-size: 1rem; }
+            body { font-size: 13.5px; }
         }
     </style>
 </head>
@@ -340,35 +328,36 @@
     <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-light py-2">
         <div class="container-fluid px-3 px-md-4">
-            <a class="navbar-brand fw-bold fs-5 text-truncate" href="#">
-                <i class="bi bi-lightning-charge-fill me-1" style="color: var(--primary-blue);"></i> LogiFast <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">| Müştəri Paneli</span>
+            <a class="navbar-brand fw-bold text-truncate d-flex align-items-center" href="#">
+                <i class="bi bi-lightning-charge-fill me-1" style="color: var(--primary-blue);"></i> LogiFast 
+                <span class="text-muted fs-6 fw-normal ms-1 d-none sm-inline" style="color: #64748b !important;">| Müştəri Paneli</span>
             </a>
             <div class="ms-auto d-flex align-items-center gap-2">
-                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 140px;">Şirkət</span>
-                <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2 px-md-3 py-1.5 rounded-pill text-nowrap">
+                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
+                <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
                     <i class="bi bi-box-arrow-right me-1"></i> Çıxış
                 </button>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-3 px-md-4 py-4">
+    <div class="container-fluid px-2 px-sm-3 px-md-4 py-3 py-md-4">
         
         <!-- STATS ROW -->
-        <div class="row g-3 mb-4">
-            <div class="col-12 col-md-4">
+        <div class="row g-2 g-md-3 mb-4">
+            <div class="col-12 col-sm-4">
                 <div class="stats-card">
                     <span class="text-muted small fw-bold text-uppercase tracking-wider">Aktiv RFQ Sorğuları</span>
                     <h3 id="statActiveRfqs">0</h3>
                 </div>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-sm-4">
                 <div class="stats-card">
                     <span class="text-muted small fw-bold text-uppercase tracking-wider">Tamamlanmış Daşımalar</span>
                     <h3 id="statCompleted">0</h3>
                 </div>
             </div>
-            <div class="col-12 col-md-4">
+            <div class="col-12 col-sm-4">
                 <div class="stats-card">
                     <span class="text-muted small fw-bold text-uppercase tracking-wider">Daşıyıcı Bazası</span>
                     <h3 id="statCarriersCount">0</h3>
@@ -377,35 +366,35 @@
         </div>
 
         <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
-        <div class="card shadow-sm border-0 mb-4 p-3 p-md-4">
+        <div class="card shadow-sm border-0 mb-4">
             <div class="section-title mb-1">
                 <i class="bi bi-people-fill text-primary"></i> Daşıyıcı Bazasını İdarə Etmək
             </div>
-            <div class="section-desc mb-4 text-muted">Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.</div>
+            <div class="section-desc mb-3">Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.</div>
 
-            <!-- Tab Keçid Düymələri (Bootstrap 5 Tabs) -->
-            <ul class="nav nav-pills mb-4 gap-2 flex-column flex-sm-row" id="carrierTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active px-3 py-2 fw-semibold w-100 text-sm-start" id="file-tab" data-bs-toggle="pill" data-bs-target="#file-content" type="button" role="tab">
+            <!-- Tab Keçid Düymələri -->
+            <ul class="nav nav-pills mb-3 gap-2 flex-column flex-sm-row" id="carrierTabs" role="tablist">
+                <li class="nav-item flex-fill text-center" role="presentation">
+                    <button class="nav-link active px-3 py-2 fw-semibold w-100" id="file-tab" data-bs-toggle="pill" data-bs-target="#file-content" type="button" role="tab" style="font-size: 13px;">
                         <i class="bi bi-file-earmark-excel me-1"></i> Fayl Yüklə
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link px-3 py-2 fw-semibold w-100 text-sm-start" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-content" type="button" role="tab">
+                <li class="nav-item flex-fill text-center" role="presentation">
+                    <button class="nav-link px-3 py-2 fw-semibold w-100" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-content" type="button" role="tab" style="font-size: 13px;">
                         <i class="bi bi-person-plus me-1"></i> Əllə Daxil Et
                     </button>
                 </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link px-3 py-2 fw-semibold w-100 text-sm-start" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-content" type="button" role="tab">
+                <li class="nav-item flex-fill text-center" role="presentation">
+                    <button class="nav-link px-3 py-2 fw-semibold w-100" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-content" type="button" role="tab" style="font-size: 13px;">
                         <i class="bi bi-clipboard-text me-1"></i> Cədvəldən Yapışdır
                     </button>
                 </li>
             </ul>
 
             <!-- Tab Məzmunları -->
-            <div class="tab-content mb-4" id="carrierTabsContent">
+            <div class="tab-content mb-3" id="carrierTabsContent">
                 
-                <!-- 1. Fayl Yüklə Bölməsi -->
+                <!-- 1. Fayl Yüklə -->
                 <div class="tab-pane fade show active" id="file-content" role="tabpanel">
                     <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
                         <div class="row align-items-end g-3">
@@ -415,14 +404,14 @@
                             </div>
                             <div class="col-12 col-md-4">
                                 <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-cloud-arrow-up-fill me-2"></i> Bazaya Əlavə Et
+                                    <i class="bi bi-cloud-arrow-up-fill me-2"></i> Əlavə Et
                                 </button>
                             </div>
                         </div>
                     </form>
                 </div>
 
-                <!-- 2. Əllə Daxil Et Bölməsi -->
+                <!-- 2. Əllə Daxil Et -->
                 <div class="tab-pane fade" id="manual-content" role="tabpanel">
                     <form onsubmit="addManualCarrier(event)" class="p-3 border rounded bg-light">
                         <div class="mb-3">
@@ -433,20 +422,20 @@
                             <label class="form-label text-muted">E-poçt Ünvanı</label>
                             <input type="email" class="form-control" id="manual_email" placeholder="info@logitrans.az" required>
                         </div>
-                        <button type="submit" class="btn btn-success w-100">
+                        <button type="submit" class="btn btn-primary w-100" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                             <i class="bi bi-person-plus-fill me-2"></i> Daşıyıcıyı Əlavə Et
                         </button>
                     </form>
                 </div>
 
-                <!-- 3. Cədvəldən Yapışdır Bölməsi -->
+                <!-- 3. Cədvəldən Yapışdır -->
                 <div class="tab-pane fade" id="paste-content" role="tabpanel">
                     <form onsubmit="addPasteCarrier(event)" class="p-3 border rounded bg-light">
                         <div class="mb-3">
                             <label class="form-label text-muted">Excel-dən sütunları kopyalayıb bura yapışdırın:</label>
-                            <textarea class="form-control" id="paste_raw_text" rows="4" placeholder="Şirkət A&#10;a@example.com&#10;Şirkət B&#10;b@example.com" required></textarea>
+                            <textarea class="form-control" id="paste_raw_text" rows="3" placeholder="Şirkət A&#10;a@example.com&#10;Şirkət B&#10;b@example.com" required></textarea>
                         </div>
-                        <button type="submit" class="btn btn-warning text-dark w-100 fw-semibold">
+                        <button type="submit" class="btn btn-primary w-100" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
                             <i class="bi bi-file-earmark-text-fill me-2"></i> Cədvəldən Əlavə Et
                         </button>
                     </form>
@@ -454,9 +443,9 @@
 
             </div>
 
-            <hr class="my-4 text-muted opacity-25">
+            <hr class="my-3 text-muted opacity-25">
 
-            <!-- Bazadakı Mövcud Daşıyıcılar Bölməsi -->
+            <!-- Mövcud Daşıyıcılar -->
             <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                 <span class="fw-bold text-dark small text-uppercase tracking-wider">
                     <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
@@ -475,11 +464,11 @@
             <div class="section-title">
                 <i class="bi bi-box-seam-fill"></i> Yeni Yük Sorğusu (RFQ) Yarat
             </div>
-            <div class="section-desc">Logistika parametrlərini ətraflı şəkildə daxil edin və ən uyğun təklifləri almaq üçün sorğunuzu göndərin.</div>
+            <div class="section-desc">Logistika parametrlərini ətraflı daxil edin və sorğunuzu göndərin.</div>
             
             <form id="rfqForm" onsubmit="createRfq(event)">
                 <!-- Məcburi Sahələr -->
-                <div class="row g-3 mb-2">
+                <div class="row g-2 g-md-3 mb-2">
                     <div class="col-12 col-md-6">
                         <label class="form-label">Loading Location (Yükləmə yeri) <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="origin" required placeholder="məs: Bakı, Azərbaycan">
@@ -496,7 +485,7 @@
                         <label class="form-label">Weight (Çəki - kq) <span class="text-danger">*</span></label>
                         <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
                     </div>
-                    <div class="col-12 col-md-12">
+                    <div class="col-12">
                         <label class="form-label">Transportation Mode (Daşınma Növü) <span class="text-danger">*</span></label>
                         <select class="form-select" id="transportation_mode" required>
                             <option value="">Daşınma növünü seçin...</option>
@@ -612,7 +601,7 @@
                 </div>
 
                 <!-- DAŞIYICIYA GÖNDƏRİLƏCƏK EMAIL MƏZMUNU SEÇİMİ -->
-                <div class="p-3 mt-4 mb-3" style="background: rgba(255,255,255,0.7); border: 1px solid #e2e8f0; border-radius: var(--radius-lg);">
+                <div class="p-3 mt-3 mb-3 bg-white border rounded-4">
                     <label class="form-label fw-bold text-dark fs-6 mb-3 d-flex align-items-center">
                         <i class="bi bi-envelope-paper-fill text-primary me-2 fs-5"></i> Daşıyıcılara Göndəriləcək Email Məzmunu
                     </label>
@@ -620,11 +609,11 @@
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="radio" name="emailTemplateOption" id="standardTemplateRadio" checked onchange="toggleEmailTemplateFields()">
                         <label class="form-check-label fw-bold text-dark" for="standardTemplateRadio">
-                            Standart Şablon (Tövsiyə olunan standart mətn)
+                            Standart Şablon
                         </label>
                     </div>
 
-                    <div class="p-3 mb-3 bg-white border rounded-3 text-muted small shadow-sm overflow-x-auto" style="font-family: monospace; white-space: pre-wrap; font-size: 12.5px;">Dear {{company_name}},
+                    <div class="p-3 mb-3 bg-light border rounded-3 text-muted small shadow-sm overflow-x-auto" style="font-family: monospace; white-space: pre-wrap; font-size: 12px;">Dear {{company_name}},
 
 Please review the shipment details below and kindly complete the quotation form using the link provided.
 
@@ -641,13 +630,12 @@ Best regards,
                     </div>
 
                     <div id="customEmailContainer" class="d-none mt-2">
-                        <textarea class="form-control" id="custom_email_body" rows="4" placeholder="Email mətnini bura yazın... İstədiyiniz xüsusi məzmunu daxil edə bilərsiniz."></textarea>
-                        <small class="text-muted mt-1 d-block" style="font-size: 11.5px;">Qeyd: Bu mətn daşıyıcılara gedən məktubun gövdəsində istifadə olunacaq.</small>
+                        <textarea class="form-control" id="custom_email_body" rows="3" placeholder="Email mətnini bura yazın..."></textarea>
                     </div>
                 </div>
 
                 <!-- DAŞIYICI PAYLAŞIM SEÇİMİ -->
-                <div class="p-3 mt-4 mb-3" style="background: rgba(255,255,255,0.7); border: 1px solid #e2e8f0; border-radius: var(--radius-lg);">
+                <div class="p-3 mt-3 mb-3 bg-white border rounded-4">
                     <label class="form-label fw-bold text-dark fs-6 mb-3 d-flex align-items-center">
                         <i class="bi bi-send-check-fill text-primary me-2 fs-5"></i> Daşıyıcı Paylaşım Ayarı
                     </label>
@@ -666,12 +654,12 @@ Best regards,
                         </label>
                     </div>
 
-                    <div id="carrierSelectionContainer" class="d-none mt-2 p-3 bg-white rounded-4 border">
+                    <div id="carrierSelectionContainer" class="d-none mt-2 p-2 p-sm-3 bg-light rounded-4 border">
                         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                            <small class="text-muted fw-bold text-uppercase tracking-wider">Siyahıdan daşıyıcıları seçin:</small>
+                            <small class="text-muted fw-bold text-uppercase tracking-wider" style="font-size: 11px;">Daşıyıcıları seçin:</small>
                             <div>
-                                <button type="button" class="btn btn-sm btn-light fw-bold me-1" style="font-size: 12px;" onclick="selectAllCarriers(true)">Hamısını Seç</button>
-                                <button type="button" class="btn btn-sm btn-link text-muted fw-semibold text-decoration-none" style="font-size: 12px;" onclick="selectAllCarriers(false)">Təmizlə</button>
+                                <button type="button" class="btn btn-sm btn-light fw-bold me-1 px-2 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(true)">Hamısını Seç</button>
+                                <button type="button" class="btn btn-sm btn-link text-muted fw-semibold text-decoration-none px-1 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(false)">Təmizlə</button>
                             </div>
                         </div>
                         <div class="carrier-select-box" id="carrierCheckboxList">
@@ -681,7 +669,7 @@ Best regards,
                 </div>
 
                 <div class="mt-3">
-                    <button type="submit" class="btn btn-primary btn-lg w-100 py-2.5" id="submitRfqBtn">
+                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3" id="submitRfqBtn">
                         <i class="bi bi-rocket-takeoff-fill me-2"></i> RFQ Sorğusunu Yarat və Göndər
                     </button>
                 </div>
@@ -693,11 +681,11 @@ Best regards,
             <div class="section-title">
                 <i class="bi bi-ui-checks-grid"></i> RFQ Sorğuları və Təkliflər
             </div>
-            <div class="section-desc">Yaratdığınız sorğuların statusunu izləyin, gələn qiymət təkliflərini analiz edin və qalibi seçin.</div>
+            <div class="section-desc">Yaratdığınız sorğuların statusunu izləyin və təklifləri analiz edin.</div>
             
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider">Sorğu Siyahısı</h5>
-                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="loadRequests()" style="font-size: 13px;">
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="loadRequests()" style="font-size: 12px;">
                     <i class="bi bi-arrow-clockwise"></i> Yenilə
                 </button>
             </div>
@@ -711,17 +699,17 @@ Best regards,
 
     <!-- DETALLI BAXIŞ MODALI -->
     <div class="modal fade" id="quoteDetailModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable mx-2 mx-sm-auto">
             <div class="modal-content">
                 <div class="modal-header d-flex justify-content-between align-items-center">
-                    <h5 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center">
+                    <h5 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center" style="font-size: 1.05rem;">
                         <i class="bi bi-file-earmark-text-fill text-primary me-2"></i> Təklif Detalları
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="modalQuoteContent"></div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary px-3 py-1.5 fw-semibold rounded-pill" style="font-size: 13px;" data-bs-dismiss="modal">Pəncərəni Bağla</button>
+                    <button type="button" class="btn btn-secondary px-3 py-1.5 fw-semibold rounded-pill w-100 w-sm-auto" style="font-size: 13px;" data-bs-dismiss="modal">Bağla</button>
                 </div>
             </div>
         </div>
@@ -858,7 +846,7 @@ Best regards,
                             <div class="carrier-item-row" onclick="document.getElementById('carrier_${carrierId}').click(); event.stopPropagation();">
                                 <div class="form-check mb-0 w-100">
                                     <input class="form-check-input carrier-item-check me-2" type="checkbox" value="${carrierId}" id="carrier_${carrierId}" onclick="event.stopPropagation();">
-                                    <label class="form-check-label fw-bold text-dark" for="carrier_${carrierId}" style="cursor: pointer;">
+                                    <label class="form-check-label fw-bold text-dark text-break" for="carrier_${carrierId}" style="cursor: pointer;">
                                         ${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'} <span class="text-muted fw-normal small ms-1">(${c.email || ''})</span>
                                     </label>
                                 </div>
@@ -897,7 +885,7 @@ Best regards,
                         let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
                         html += `
                             <div class="carrier-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <div>
+                                <div class="text-break" style="max-width: 70%;">
                                     <strong class="text-dark">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
                                     <span class="text-muted small ms-1">(${c.email || 'Email yoxdur'})</span>
                                 </div>
@@ -1275,7 +1263,7 @@ Best regards,
                     for (let req of requestsList) {
                         let attachmentBtn = "";
                         if (req.attachment_url) {
-                            attachmentBtn = `<a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-light ms-sm-2 mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
+                            attachmentBtn = `<a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-light mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 11.5px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
                         }
 
                         let qCount = req.quotes_count !== undefined && req.quotes_count !== null ? req.quotes_count : 0;
@@ -1284,14 +1272,16 @@ Best regards,
                         let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
                         let statusText = (req.status || 'Aktiv').toUpperCase();
 
-                        let deadlineField = req.deadline ? `<div class="col-12 col-sm-4 mb-1 mb-sm-0"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${req.deadline}</strong></div>` : '';
+                        let deadlineField = req.deadline ? `<div class="col-12 col-sm-4"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${req.deadline}</strong></div>` : '';
 
                         html += `
                             <div class="request-card">
-                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
-                                    <h6 class="fw-bold text-dark mb-2 mb-md-0 d-flex align-items-center fs-6 flex-wrap">
-                                        <span class="badge bg-light text-secondary border me-2 shadow-sm mb-1 mb-sm-0">ID: ${req.id}</span> 
-                                        <span class="text-break">${req.origin || req.loading_location || ''}</span> <i class="bi bi-arrow-right-short mx-2 text-primary fs-5"></i> <span class="text-break">${req.destination || req.delivery_location || ''}</span>
+                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+                                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center fs-6 flex-wrap gap-1">
+                                        <span class="badge bg-light text-secondary border shadow-sm">ID: ${req.id}</span> 
+                                        <span class="text-break">${req.origin || req.loading_location || ''}</span> 
+                                        <i class="bi bi-arrow-right-short mx-1 text-primary fs-5"></i> 
+                                        <span class="text-break">${req.destination || req.delivery_location || ''}</span>
                                     </h6>
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="badge ${badgeClass} shadow-sm">${qCount} təklif</span>
@@ -1306,7 +1296,7 @@ Best regards,
                                     </div>
                                 </div>
                                 <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
-                                    <button class="btn btn-sm btn-primary px-3.5 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12.5px;" onclick="loadQuotes(${req.id})">
+                                    <button class="btn btn-sm btn-primary px-3 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12px;" onclick="loadQuotes(${req.id})">
                                         <i class="bi bi-eye me-1"></i> Təkliflərə Bax (${qCount})
                                     </button>
                                     ${attachmentBtn}
@@ -1343,7 +1333,7 @@ Best regards,
                 if (res.ok && quotesList.length > 0) {
                     window.currentQuotesCache[requestId] = quotesList;
                     
-                    let html = `<div class="table-responsive mt-3 rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
+                    let html = `<div class="table-container-responsive mt-3 rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
                         <thead style="background: #f8fafc;">
                             <tr>
                                 <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Daşıyıcı Şirkət</th>
@@ -1385,15 +1375,15 @@ Best regards,
                                 <td class="px-3 text-success fw-bold py-2.5 text-nowrap">${priceDisplay}</td>
                                 <td class="px-3 fw-medium text-dark py-2.5 text-nowrap">${transitDisplay}</td>
                                 <td class="px-3 py-2.5">
-                                    <div class="truncate-text text-muted mb-1">${extraStr || 'Məlumat yoxdur'}</div>
-                                    <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none text-nowrap" style="font-size: 12px;" onclick="openQuoteModal(${requestId}, ${q.id})">
+                                    <div class="text-muted mb-1 text-truncate" style="max-width: 180px;">${extraStr || 'Məlumat yoxdur'}</div>
+                                    <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none text-nowrap" style="font-size: 11.5px;" onclick="openQuoteModal(${requestId}, ${q.id})">
                                         Daha Ətraflı <i class="bi bi-arrow-right-short"></i>
                                     </button>
                                 </td>
                                 <td class="px-3 text-center py-2.5 text-nowrap">
                                     ${q.is_winner ? 
-                                        '<span class="badge bg-success px-2.5 py-1.5 rounded-pill"><i class="bi bi-trophy-fill me-1"></i> Qalib</span>' : 
-                                        `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5" style="font-size: 12px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`
+                                        '<span class="badge bg-success px-2.5 py-1 rounded-pill"><i class="bi bi-trophy-fill me-1"></i> Qalib</span>' : 
+                                        `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`
                                     }
                                 </td>
                             </tr>
@@ -1421,13 +1411,13 @@ Best regards,
 
                     if (v !== null && v !== undefined && v !== "" && v !== "null") {
                         if (k === 'carrier_attachment_url') {
-                            extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <strong class="text-dark small">Qoşulmuş Fayl:</strong>
-                                <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Faylı Yüklə</a>
+                                <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Yüklə</a>
                             </div>`;
                         } else {
-                            extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm">
-                                <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 11px;">${k}</strong>
+                            extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm">
+                                <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 10.5px;">${k}</strong>
                                 <p class="mb-0 text-dark fw-medium small text-break" style="white-space: pre-wrap;">${v}</p>
                             </div>`;
                         }
@@ -1446,26 +1436,26 @@ Best regards,
             const modalContent = document.getElementById("modalQuoteContent");
             modalContent.innerHTML = `
                 <div class="mb-3 text-center">
-                    <span class="badge bg-light text-primary mb-1 px-2.5 py-1.5 border rounded-pill">Daşıyıcı Şirkət</span>
-                    <h4 class="fw-bold text-dark text-break">${q.carrier_company || 'Daşıyıcı'}</h4>
+                    <span class="badge bg-light text-primary mb-1 px-2.5 py-1 border rounded-pill">Daşıyıcı Şirkət</span>
+                    <h4 class="fw-bold text-dark text-break" style="font-size: 1.2rem;">${q.carrier_company || 'Daşıyıcı'}</h4>
                 </div>
-                <div class="row g-3 mb-3">
-                    <div class="col-12 col-md-6">
-                        <div class="p-3 rounded-4 border" style="background: #f8fafc;">
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 11px;">Təklif olunan Qiymət</span>
-                            <h3 class="text-success fw-bold mb-0 text-break">${modalPriceDisplay}</h3>
+                <div class="row g-2 mb-3">
+                    <div class="col-12 col-sm-6">
+                        <div class="p-3 rounded-4 border bg-light h-100">
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Təklif olunan Qiymət</span>
+                            <h3 class="text-success fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalPriceDisplay}</h3>
                         </div>
                     </div>
-                    <div class="col-12 col-md-6">
-                        <div class="p-3 rounded-4 border" style="background: #f8fafc;">
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 11px;">Tranzit Müddəti</span>
-                            <h3 class="text-dark fw-bold mb-0 text-break">${modalTransitDisplay}</h3>
+                    <div class="col-12 col-sm-6">
+                        <div class="p-3 rounded-4 border bg-light h-100">
+                            <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Tranzit Müddəti</span>
+                            <h3 class="text-dark fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalTransitDisplay}</h3>
                         </div>
                     </div>
                 </div>
-                <div class="p-3 rounded-4" style="background: rgba(241, 245, 249, 0.5);">
+                <div class="p-3 rounded-4 bg-light">
                     <h6 class="fw-bold text-dark mb-2 small"><i class="bi bi-list-stars text-primary me-2"></i> Əlavə Məlumatlar və Şərtlər:</h6>
-                    ${extraHtml || '<div class="p-2.5 border rounded-3 bg-white text-muted text-center small"><i class="bi bi-journal-x fs-5 d-block mb-1"></i>Əlavə detal qeyd olunmayıb.</div>'}
+                    ${extraHtml || '<div class="p-2 border rounded-3 bg-white text-muted text-center small">Əlavə detal qeyd olunmayıb.</div>'}
                 </div>
             `;
 
