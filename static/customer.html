@@ -326,42 +326,49 @@
             font-size: 11.5px;
             letter-spacing: 0.3px;
         }
+
+        @media (max-width: 768px) {
+            .card { padding: 16px; }
+            .optional-box { padding: 14px; }
+            .stats-card h3 { font-size: 28px; }
+            .navbar-brand { font-size: 1rem !important; }
+        }
     </style>
 </head>
 <body>
 
     <!-- NAVBAR -->
     <nav class="navbar navbar-expand-lg navbar-light py-2">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand fw-bold fs-5" href="#">
-                <i class="bi bi-lightning-charge-fill me-1" style="color: var(--primary-blue);"></i> LogiFast <span class="text-muted fs-6 fw-normal ms-1" style="color: #64748b !important;">| Müştəri Paneli</span>
+        <div class="container-fluid px-3 px-md-4">
+            <a class="navbar-brand fw-bold fs-5 text-truncate" href="#">
+                <i class="bi bi-lightning-charge-fill me-1" style="color: var(--primary-blue);"></i> LogiFast <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">| Müştəri Paneli</span>
             </a>
             <div class="ms-auto d-flex align-items-center gap-2">
-                <span id="userCompanyName" class="fw-bold text-dark small px-3 py-1.5 rounded-pill" style="background: #f1f5f9;">Şirkət</span>
-                <button onclick="logout()" class="btn btn-outline-danger btn-sm px-3 py-1.5 rounded-pill">
+                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 140px;">Şirkət</span>
+                <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2 px-md-3 py-1.5 rounded-pill text-nowrap">
                     <i class="bi bi-box-arrow-right me-1"></i> Çıxış
                 </button>
             </div>
         </div>
     </nav>
 
-    <div class="container-fluid px-4 py-4">
+    <div class="container-fluid px-3 px-md-4 py-4">
         
         <!-- STATS ROW -->
         <div class="row g-3 mb-4">
-            <div class="col-md-4">
+            <div class="col-12 col-md-4">
                 <div class="stats-card">
                     <span class="text-muted small fw-bold text-uppercase tracking-wider">Aktiv RFQ Sorğuları</span>
                     <h3 id="statActiveRfqs">0</h3>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-12 col-md-4">
                 <div class="stats-card">
                     <span class="text-muted small fw-bold text-uppercase tracking-wider">Tamamlanmış Daşımalar</span>
                     <h3 id="statCompleted">0</h3>
                 </div>
             </div>
-            <div class="col-md-4">
+            <div class="col-12 col-md-4">
                 <div class="stats-card">
                     <span class="text-muted small fw-bold text-uppercase tracking-wider">Daşıyıcı Bazası</span>
                     <h3 id="statCarriersCount">0</h3>
@@ -370,26 +377,26 @@
         </div>
 
         <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
-        <div class="card shadow-sm border-0 mb-4 p-4">
+        <div class="card shadow-sm border-0 mb-4 p-3 p-md-4">
             <div class="section-title mb-1">
                 <i class="bi bi-people-fill text-primary"></i> Daşıyıcı Bazasını İdarə Etmək
             </div>
             <div class="section-desc mb-4 text-muted">Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.</div>
 
             <!-- Tab Keçid Düymələri (Bootstrap 5 Tabs) -->
-            <ul class="nav nav-pills mb-4 gap-2" id="carrierTabs" role="tablist">
+            <ul class="nav nav-pills mb-4 gap-2 flex-column flex-sm-row" id="carrierTabs" role="tablist">
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link active px-3 py-2 fw-semibold" id="file-tab" data-bs-toggle="pill" data-bs-target="#file-content" type="button" role="tab">
+                    <button class="nav-link active px-3 py-2 fw-semibold w-100 text-sm-start" id="file-tab" data-bs-toggle="pill" data-bs-target="#file-content" type="button" role="tab">
                         <i class="bi bi-file-earmark-excel me-1"></i> Fayl Yüklə
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link px-3 py-2 fw-semibold" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-content" type="button" role="tab">
+                    <button class="nav-link px-3 py-2 fw-semibold w-100 text-sm-start" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-content" type="button" role="tab">
                         <i class="bi bi-person-plus me-1"></i> Əllə Daxil Et
                     </button>
                 </li>
                 <li class="nav-item" role="presentation">
-                    <button class="nav-link px-3 py-2 fw-semibold" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-content" type="button" role="tab">
+                    <button class="nav-link px-3 py-2 fw-semibold w-100 text-sm-start" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-content" type="button" role="tab">
                         <i class="bi bi-clipboard-text me-1"></i> Cədvəldən Yapışdır
                     </button>
                 </li>
@@ -402,11 +409,11 @@
                 <div class="tab-pane fade show active" id="file-content" role="tabpanel">
                     <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
                         <div class="row align-items-end g-3">
-                            <div class="col-md-8">
+                            <div class="col-12 col-md-8">
                                 <label class="form-label text-muted">Excel / CSV Faylı Yüklə</label>
                                 <input type="file" class="form-control" name="file" accept=".csv, .xlsx, .xls" required>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-12 col-md-4">
                                 <button type="submit" class="btn btn-primary w-100">
                                     <i class="bi bi-cloud-arrow-up-fill me-2"></i> Bazaya Əlavə Et
                                 </button>
@@ -450,7 +457,7 @@
             <hr class="my-4 text-muted opacity-25">
 
             <!-- Bazadakı Mövcud Daşıyıcılar Bölməsi -->
-            <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                 <span class="fw-bold text-dark small text-uppercase tracking-wider">
                     <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
                 </span>
@@ -473,23 +480,23 @@
             <form id="rfqForm" onsubmit="createRfq(event)">
                 <!-- Məcburi Sahələr -->
                 <div class="row g-3 mb-2">
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Loading Location (Yükləmə yeri) <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="origin" required placeholder="məs: Bakı, Azərbaycan">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Delivery Location (Boşaltma yeri) <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="destination" required placeholder="məs: İstanbul, Türkiyə">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Cargo Type (Yükün növü) <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="cargo_type" required placeholder="məs: Quru yük / Tekstil">
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <label class="form-label">Weight (Çəki - kq) <span class="text-danger">*</span></label>
                         <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
                     </div>
-                    <div class="col-md-12">
+                    <div class="col-12 col-md-12">
                         <label class="form-label">Transportation Mode (Daşınma Növü) <span class="text-danger">*</span></label>
                         <select class="form-select" id="transportation_mode" required>
                             <option value="">Daşınma növünü seçin...</option>
@@ -617,7 +624,7 @@
                         </label>
                     </div>
 
-                    <div class="p-3 mb-3 bg-white border rounded-3 text-muted small shadow-sm" style="font-family: monospace; white-space: pre-wrap; font-size: 12.5px;">Dear {{company_name}},
+                    <div class="p-3 mb-3 bg-white border rounded-3 text-muted small shadow-sm overflow-x-auto" style="font-family: monospace; white-space: pre-wrap; font-size: 12.5px;">Dear {{company_name}},
 
 Please review the shipment details below and kindly complete the quotation form using the link provided.
 
@@ -660,7 +667,7 @@ Best regards,
                     </div>
 
                     <div id="carrierSelectionContainer" class="d-none mt-2 p-3 bg-white rounded-4 border">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                             <small class="text-muted fw-bold text-uppercase tracking-wider">Siyahıdan daşıyıcıları seçin:</small>
                             <div>
                                 <button type="button" class="btn btn-sm btn-light fw-bold me-1" style="font-size: 12px;" onclick="selectAllCarriers(true)">Hamısını Seç</button>
@@ -688,7 +695,7 @@ Best regards,
             </div>
             <div class="section-desc">Yaratdığınız sorğuların statusunu izləyin, gələn qiymət təkliflərini analiz edin və qalibi seçin.</div>
             
-            <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider">Sorğu Siyahısı</h5>
                 <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="loadRequests()" style="font-size: 13px;">
                     <i class="bi bi-arrow-clockwise"></i> Yenilə
@@ -704,7 +711,7 @@ Best regards,
 
     <!-- DETALLI BAXIŞ MODALI -->
     <div class="modal fade" id="quoteDetailModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header d-flex justify-content-between align-items-center">
                     <h5 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center">
@@ -889,7 +896,7 @@ Best regards,
                     for (let c of carriers) {
                         let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
                         html += `
-                            <div class="carrier-item-row d-flex justify-content-between align-items-center">
+                            <div class="carrier-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <div>
                                     <strong class="text-dark">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
                                     <span class="text-muted small ms-1">(${c.email || 'Email yoxdur'})</span>
@@ -1268,7 +1275,7 @@ Best regards,
                     for (let req of requestsList) {
                         let attachmentBtn = "";
                         if (req.attachment_url) {
-                            attachmentBtn = `<a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-light ms-2 fw-semibold border rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
+                            attachmentBtn = `<a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-light ms-sm-2 mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
                         }
 
                         let qCount = req.quotes_count !== undefined && req.quotes_count !== null ? req.quotes_count : 0;
@@ -1277,14 +1284,14 @@ Best regards,
                         let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
                         let statusText = (req.status || 'Aktiv').toUpperCase();
 
-                        let deadlineField = req.deadline ? `<div class="col-sm-4 mb-1 mb-sm-0"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${req.deadline}</strong></div>` : '';
+                        let deadlineField = req.deadline ? `<div class="col-12 col-sm-4 mb-1 mb-sm-0"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${req.deadline}</strong></div>` : '';
 
                         html += `
                             <div class="request-card">
                                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3">
-                                    <h6 class="fw-bold text-dark mb-2 mb-md-0 d-flex align-items-center fs-6">
-                                        <span class="badge bg-light text-secondary border me-2 shadow-sm">ID: ${req.id}</span> 
-                                        ${req.origin || req.loading_location || ''} <i class="bi bi-arrow-right-short mx-2 text-primary fs-5"></i> ${req.destination || req.delivery_location || ''}
+                                    <h6 class="fw-bold text-dark mb-2 mb-md-0 d-flex align-items-center fs-6 flex-wrap">
+                                        <span class="badge bg-light text-secondary border me-2 shadow-sm mb-1 mb-sm-0">ID: ${req.id}</span> 
+                                        <span class="text-break">${req.origin || req.loading_location || ''}</span> <i class="bi bi-arrow-right-short mx-2 text-primary fs-5"></i> <span class="text-break">${req.destination || req.delivery_location || ''}</span>
                                     </h6>
                                     <div class="d-flex align-items-center gap-2">
                                         <span class="badge ${badgeClass} shadow-sm">${qCount} təklif</span>
@@ -1293,8 +1300,8 @@ Best regards,
                                 </div>
                                 <div class="request-meta-box mb-3">
                                     <div class="row text-muted small fw-medium g-2">
-                                        <div class="col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type || req.cargo || ''}</strong></div>
-                                        <div class="col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg || req.weight || 0} kq</strong></div>
+                                        <div class="col-12 col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type || req.cargo || ''}</strong></div>
+                                        <div class="col-12 col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg || req.weight || 0} kq</strong></div>
                                         ${deadlineField}
                                     </div>
                                 </div>
@@ -1339,11 +1346,11 @@ Best regards,
                     let html = `<div class="table-responsive mt-3 rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
                         <thead style="background: #f8fafc;">
                             <tr>
-                                <th class="py-2.5 px-3 text-muted fw-bold">Daşıyıcı Şirkət</th>
-                                <th class="py-2.5 px-3 text-muted fw-bold">Qiymət</th>
-                                <th class="py-2.5 px-3 text-muted fw-bold">Müddət</th>
-                                <th class="py-2.5 px-3 text-muted fw-bold">Qeydlər</th>
-                                <th class="py-2.5 px-3 text-muted fw-bold text-center">Əməliyyat</th>
+                                <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Daşıyıcı Şirkət</th>
+                                <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Qiymət</th>
+                                <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Müddət</th>
+                                <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Qeydlər</th>
+                                <th class="py-2.5 px-3 text-muted fw-bold text-center text-nowrap">Əməliyyat</th>
                             </tr>
                         </thead>
                         <tbody>`;
@@ -1374,16 +1381,16 @@ Best regards,
 
                         html += `
                             <tr class="${q.is_winner ? 'table-success' : ''}">
-                                <td class="px-3 fw-bold text-dark py-2.5">${q.carrier_company || 'Daşıyıcı'}</td>
-                                <td class="px-3 text-success fw-bold py-2.5">${priceDisplay}</td>
-                                <td class="px-3 fw-medium text-dark py-2.5">${transitDisplay}</td>
+                                <td class="px-3 fw-bold text-dark py-2.5 text-nowrap">${q.carrier_company || 'Daşıyıcı'}</td>
+                                <td class="px-3 text-success fw-bold py-2.5 text-nowrap">${priceDisplay}</td>
+                                <td class="px-3 fw-medium text-dark py-2.5 text-nowrap">${transitDisplay}</td>
                                 <td class="px-3 py-2.5">
                                     <div class="truncate-text text-muted mb-1">${extraStr || 'Məlumat yoxdur'}</div>
-                                    <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none" style="font-size: 12px;" onclick="openQuoteModal(${requestId}, ${q.id})">
+                                    <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none text-nowrap" style="font-size: 12px;" onclick="openQuoteModal(${requestId}, ${q.id})">
                                         Daha Ətraflı <i class="bi bi-arrow-right-short"></i>
                                     </button>
                                 </td>
-                                <td class="px-3 text-center py-2.5">
+                                <td class="px-3 text-center py-2.5 text-nowrap">
                                     ${q.is_winner ? 
                                         '<span class="badge bg-success px-2.5 py-1.5 rounded-pill"><i class="bi bi-trophy-fill me-1"></i> Qalib</span>' : 
                                         `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5" style="font-size: 12px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`
@@ -1414,14 +1421,14 @@ Best regards,
 
                     if (v !== null && v !== undefined && v !== "" && v !== "null") {
                         if (k === 'carrier_attachment_url') {
-                            extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm d-flex justify-content-between align-items-center">
+                            extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <strong class="text-dark small">Qoşulmuş Fayl:</strong>
                                 <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Faylı Yüklə</a>
                             </div>`;
                         } else {
                             extraHtml += `<div class="mb-2.5 p-3 rounded-4 border bg-white shadow-sm">
                                 <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 11px;">${k}</strong>
-                                <p class="mb-0 text-dark fw-medium small" style="white-space: pre-wrap;">${v}</p>
+                                <p class="mb-0 text-dark fw-medium small text-break" style="white-space: pre-wrap;">${v}</p>
                             </div>`;
                         }
                     }
@@ -1440,19 +1447,19 @@ Best regards,
             modalContent.innerHTML = `
                 <div class="mb-3 text-center">
                     <span class="badge bg-light text-primary mb-1 px-2.5 py-1.5 border rounded-pill">Daşıyıcı Şirkət</span>
-                    <h4 class="fw-bold text-dark">${q.carrier_company || 'Daşıyıcı'}</h4>
+                    <h4 class="fw-bold text-dark text-break">${q.carrier_company || 'Daşıyıcı'}</h4>
                 </div>
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="p-3 rounded-4 border" style="background: #f8fafc;">
                             <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 11px;">Təklif olunan Qiymət</span>
-                            <h3 class="text-success fw-bold mb-0">${modalPriceDisplay}</h3>
+                            <h3 class="text-success fw-bold mb-0 text-break">${modalPriceDisplay}</h3>
                         </div>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-12 col-md-6">
                         <div class="p-3 rounded-4 border" style="background: #f8fafc;">
                             <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 11px;">Tranzit Müddəti</span>
-                            <h3 class="text-dark fw-bold mb-0">${modalTransitDisplay}</h3>
+                            <h3 class="text-dark fw-bold mb-0 text-break">${modalTransitDisplay}</h3>
                         </div>
                     </div>
                 </div>
