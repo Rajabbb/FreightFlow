@@ -307,6 +307,7 @@
             letter-spacing: 0.3px;
         }
 
+        /* TƏKMİLİSSƏLƏŞDİRİLMİŞ HORİZONTAL SCROLL QUTUSU */
         .table-container-responsive {
             width: 100%;
             max-width: 100%;
@@ -1398,6 +1399,8 @@ Best regards,
             }
         }
 
+        window.currentQuotesCache = {};
+
         function openQuoteModal(requestId, quoteId) {
             const quotes = window.currentQuotesCache[requestId] || [];
             const q = quotes.find(item => item.id === quoteId);
@@ -1485,4 +1488,3 @@ Best regards,
     </script>
 </body>
 </html>
-```[cite: 2]
