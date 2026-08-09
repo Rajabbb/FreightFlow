@@ -307,7 +307,6 @@
             letter-spacing: 0.3px;
         }
 
-        /* DƏQİQ İŞLƏYƏN HORİZONTAL SCROLL QUTUSU (Sizə lazım olan həll) */
         .table-container-responsive {
             width: 100%;
             min-width: 0;
@@ -494,9 +493,13 @@
                 <span class="fw-bold text-dark small text-uppercase tracking-wider">
                     <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
                 </span>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="loadManageCarriersList()" style="font-size: 11px;">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <!-- YENİLİK: Daşıyıcı Axtarış Sətri -->
+                    <input type="text" id="carrierSearchInput" class="form-control form-control-sm" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="width: 160px; font-size: 12px;">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="loadManageCarriersList()" style="font-size: 11px;">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
+                    </button>
+                </div>
             </div>
             <div class="carrier-select-box" id="manageCarriersContainer">
                 <span class="text-muted small">Daşıyıcılar yüklənir...</span>
@@ -725,9 +728,13 @@ Best regards,
             
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider">Sorğu Siyahısı</h5>
-                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="loadRequests()" style="font-size: 12px;">
-                    <i class="bi bi-arrow-clockwise"></i> Yenilə
-                </button>
+                <div class="d-flex align-items-center gap-2">
+                    <!-- YENİLİK: Sorğu Axtarış Sətri -->
+                    <input type="text" id="requestSearchInput" class="form-control form-control-sm" placeholder="Sorğularda axtar..." onkeyup="filterRequests()" style="width: 180px; font-size: 12px;">
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="loadRequests()" style="font-size: 12px;">
+                        <i class="bi bi-arrow-clockwise"></i> Yenilə
+                    </button>
+                </div>
             </div>
 
             <div id="requestsContainer" class="mt-2">
@@ -777,6 +784,9 @@ Best regards,
         loadRequests();
         loadCarriersList();
         loadManageCarriersList();
+
+        let globalRequestsCache = [];
+        let globalCarriersCache = [];
 
         function getCustomerId() {
             let u = null;
@@ -908,7 +918,6 @@ Best regards,
                 const customerId = getCustomerId();
                 const res = await fetch(`/carriers/customer/${customerId}`);
                 const data = await res.json();
-                const box = document.getElementById("manageCarriersContainer");
                 
                 let carriers = [];
                 if (Array.isArray(data)) {
@@ -919,30 +928,52 @@ Best regards,
                     carriers = data.data;
                 }
 
-                if (res.ok && carriers.length > 0) {
-                    let html = "";
-                    for (let c of carriers) {
-                        let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
-                        html += `
-                            <div class="carrier-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <div class="text-break" style="max-width: 70%;">
-                                    <strong class="text-dark">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
-                                    <span class="text-muted small ms-1">(${c.email || 'Email yoxdur'})</span>
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 12px;" onclick="deleteCarrier(${carrierId})">
-                                    <i class="bi bi-trash3-fill me-1"></i> Sil
-                                </button>
-                            </div>
-                        `;
-                    }
-                    box.innerHTML = html;
+                if (res.ok) {
+                    globalCarriersCache = carriers;
+                    renderManageCarriers(carriers);
                 } else {
-                    box.innerHTML = `<span class="text-muted small p-3 d-block text-center">Bazada hələ heç bir daşıyıcı yoxdur.</span>`;
+                    document.getElementById("manageCarriersContainer").innerHTML = `<span class="text-muted small p-3 d-block text-center">Bazada hələ heç bir daşıyıcı yoxdur.</span>`;
                 }
             } catch (err) {
                 console.error("Daşıyıcılar idarəetmə siyahısı yüklənmədi:", err);
                 document.getElementById("manageCarriersContainer").innerHTML = `<span class="text-danger small p-3 d-block text-center">Məlumatları yükləmək mümkün olmadı.</span>`;
             }
+        }
+
+        function renderManageCarriers(carriers) {
+            const box = document.getElementById("manageCarriersContainer");
+            if (!carriers || carriers.length === 0) {
+                box.innerHTML = `<span class="text-muted small p-3 d-block text-center">Uyğun daşıyıcı tapılmadı.</span>`;
+                return;
+            }
+
+            let html = "";
+            for (let c of carriers) {
+                let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
+                html += `
+                    <div class="carrier-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div class="text-break" style="max-width: 70%;">
+                            <strong class="text-dark">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
+                            <span class="text-muted small ms-1">(${c.email || 'Email yoxdur'})</span>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 12px;" onclick="deleteCarrier(${carrierId})">
+                            <i class="bi bi-trash3-fill me-1"></i> Sil
+                        </button>
+                    </div>
+                `;
+            }
+            box.innerHTML = html;
+        }
+
+        // YENİLİK: Daşıyıcı filtrləmə funksiyası
+        function filterManageCarriers() {
+            const query = document.getElementById("carrierSearchInput").value.toLowerCase();
+            const filtered = globalCarriersCache.filter(c => {
+                const name = (c.company_name || c.name || c.carrier_name || '').toLowerCase();
+                const email = (c.email || '').toLowerCase();
+                return name.includes(query) || email.includes(query);
+            });
+            renderManageCarriers(filtered);
         }
 
         async function deleteCarrier(carrierId) {
@@ -1298,59 +1329,83 @@ Best regards,
                     requestsList = data.requests;
                 }
 
-                if (res.ok && requestsList.length > 0) {
-                    let html = "";
-                    for (let req of requestsList) {
-                        let attachmentBtn = "";
-                        if (req.attachment_url) {
-                            attachmentBtn = `<a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-light mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 11.5px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
-                        }
-
-                        let qCount = req.quotes_count !== undefined && req.quotes_count !== null ? req.quotes_count : 0;
-                        let badgeClass = qCount > 0 ? 'bg-info text-dark' : 'bg-secondary';
-                        
-                        let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
-                        let statusText = (req.status || 'Aktiv').toUpperCase();
-
-                        let deadlineField = req.deadline ? `<div class="col-12 col-sm-4"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${req.deadline}</strong></div>` : '';
-
-                        html += `
-                            <div class="request-card">
-                                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
-                                    <h6 class="fw-bold text-dark mb-0 d-flex align-items-center fs-6 flex-wrap gap-1">
-                                        <span class="badge bg-light text-secondary border shadow-sm">ID: ${req.id}</span> 
-                                        <span class="text-break">${req.origin || req.loading_location || ''}</span> 
-                                        <i class="bi bi-arrow-right-short mx-1 text-primary fs-5"></i> 
-                                        <span class="text-break">${req.destination || req.delivery_location || ''}</span>
-                                    </h6>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <span class="badge ${badgeClass} shadow-sm">${qCount} təklif</span>
-                                        <span class="badge ${bgClass} shadow-sm">${statusText}</span>
-                                    </div>
-                                </div>
-                                <div class="request-meta-box mb-3">
-                                    <div class="row text-muted small fw-medium g-2">
-                                        <div class="col-12 col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type || req.cargo || ''}</strong></div>
-                                        <div class="col-12 col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg || req.weight || 0} kq</strong></div>
-                                        ${deadlineField}
-                                    </div>
-                                </div>
-                                <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
-                                    <button class="btn btn-sm btn-primary px-3 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12px;" onclick="loadQuotes(${req.id})">
-                                        <i class="bi bi-eye me-1"></i> Təkliflərə Bax (${qCount})
-                                    </button>
-                                    ${attachmentBtn}
-                                </div>
-                            </div>
-                        `;
-                    }
-                    container.innerHTML = html;
+                if (res.ok) {
+                    globalRequestsCache = requestsList;
+                    renderRequests(requestsList);
                 } else {
                     container.innerHTML = `<div class="alert alert-light border text-center p-4 rounded-4"><i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i><span class="text-muted fw-medium small">Hələ heç bir sorğu yaratmamısınız.</span></div>`;
                 }
             } catch (err) {
                 container.innerHTML = `<p class="text-danger fw-bold small"><i class="bi bi-exclamation-circle-fill me-1"></i> Sorğuları yükləmək mümkün olmadı.</p>`;
             }
+        }
+
+        function renderRequests(requestsList) {
+            const container = document.getElementById("requestsContainer");
+            if (!requestsList || requestsList.length === 0) {
+                container.innerHTML = `<div class="alert alert-light border text-center p-4 rounded-4"><i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i><span class="text-muted fw-medium small">Uyğun sorğu tapılmadı.</span></div>`;
+                return;
+            }
+
+            let html = "";
+            for (let req of requestsList) {
+                let attachmentBtn = "";
+                if (req.attachment_url) {
+                    attachmentBtn = `<a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-light mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 11.5px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
+                }
+
+                let qCount = req.quotes_count !== undefined && req.quotes_count !== null ? req.quotes_count : 0;
+                let badgeClass = qCount > 0 ? 'bg-info text-dark' : 'bg-secondary';
+                
+                let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
+                let statusText = (req.status || 'Aktiv').toUpperCase();
+
+                let deadlineField = req.deadline ? `<div class="col-12 col-sm-4"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${req.deadline}</strong></div>` : '';
+
+                html += `
+                    <div class="request-card">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
+                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center fs-6 flex-wrap gap-1">
+                                <span class="badge bg-light text-secondary border shadow-sm">ID: ${req.id}</span> 
+                                <span class="text-break">${req.origin || req.loading_location || ''}</span> 
+                                <i class="bi bi-arrow-right-short mx-1 text-primary fs-5"></i> 
+                                <span class="text-break">${req.destination || req.delivery_location || ''}</span>
+                            </h6>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge ${badgeClass} shadow-sm">${qCount} təklif</span>
+                                <span class="badge ${bgClass} shadow-sm">${statusText}</span>
+                            </div>
+                        </div>
+                        <div class="request-meta-box mb-3">
+                            <div class="row text-muted small fw-medium g-2">
+                                <div class="col-12 col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type || req.cargo || ''}</strong></div>
+                                <div class="col-12 col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg || req.weight || 0} kq</strong></div>
+                                ${deadlineField}
+                            </div>
+                        </div>
+                        <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
+                            <button class="btn btn-sm btn-primary px-3 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12px;" onclick="loadQuotes(${req.id})">
+                                <i class="bi bi-eye me-1"></i> Təkliflərə Bax (${qCount})
+                            </button>
+                            ${attachmentBtn}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        // YENİLİK: Sorğu filtrləmə funksiyası
+        function filterRequests() {
+            const query = document.getElementById("requestSearchInput").value.toLowerCase();
+            const filtered = globalRequestsCache.filter(req => {
+                const origin = (req.origin || req.loading_location || '').toLowerCase();
+                const destination = (req.destination || req.delivery_location || '').toLowerCase();
+                const cargo = (req.cargo_type || req.cargo || '').toLowerCase();
+                const idStr = String(req.id || '').toLowerCase();
+                return origin.includes(query) || destination.includes(query) || cargo.includes(query) || idStr.includes(query);
+            });
+            renderRequests(filtered);
         }
 
         window.currentQuotesCache = {};
@@ -1438,8 +1493,6 @@ Best regards,
                 quotesDiv.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`;
             }
         }
-
-        window.currentQuotesCache = {};
 
         function openQuoteModal(requestId, quoteId) {
             const quotes = window.currentQuotesCache[requestId] || [];
