@@ -905,8 +905,13 @@ Best regards,
 
                 <!-- GÖNDƏRİLMƏ STATUSU -->
                 <div class="card mb-3">
-                    <div class="section-title mb-1">
-                        <i class="bi bi-graph-up-arrow"></i> Göndərilmə statusu
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div class="section-title mb-0">
+                            <i class="bi bi-graph-up-arrow"></i> Göndərilmə statusu
+                        </div>
+                        <button type="button" id="checkBouncesBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size: 11px;" onclick="checkBouncesNow()" title="Gmail qutusunu çatdırılmayan maillər üçün indi yoxla">
+                            <i class="bi bi-arrow-repeat"></i> Bounce yoxla
+                        </button>
                     </div>
                     <div class="section-desc mb-2">Sorğunun daşıyıcılara çatdırılma və reaksiya statistikası.</div>
 
@@ -1996,6 +2001,40 @@ Best regards,
             }
             html += `</div>`;
             box.innerHTML = html;
+        }
+
+        async function checkBouncesNow() {
+            const btn = document.getElementById("checkBouncesBtn");
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:11px;height:11px;"></span> Yoxlanılır...`;
+
+            try {
+                const res = await fetch(`/quotes/check-bounces`, { method: "POST" });
+                const data = await res.json();
+
+                if (res.ok && data.status === "success") {
+                    const count = (data.updated || []).length;
+                    if (count > 0 && typeof showToast === "function") {
+                        showToast(`${count} mail ünvanı çatdırılmayan olaraq tapıldı və yeniləndi.`, "success");
+                    } else if (count === 0 && typeof showToast === "function") {
+                        showToast("Yeni çatdırılmayan mail tapılmadı.", "info");
+                    }
+                    // Statistikanı təzələ
+                    if (currentDetailRequestId) {
+                        await loadDetailCarriersStatus(currentDetailRequestId);
+                    }
+                } else if (typeof showToast === "function") {
+                    showToast("Bounce yoxlanışı zamanı xəta baş verdi.", "danger");
+                }
+            } catch (err) {
+                if (typeof showToast === "function") {
+                    showToast("Bounce yoxlanışı zamanı xəta baş verdi.", "danger");
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
         }
 
         async function loadDetailCarriersStatus(requestId) {
