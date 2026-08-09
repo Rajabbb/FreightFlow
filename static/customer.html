@@ -370,6 +370,119 @@
         @media (max-width: 340px) {
             #userCompanyName { display: none; }
         }
+
+        /* ============ RFQ DETAIL PAGE ============ */
+        .detail-header-card {
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid rgba(255,255,255,1);
+            box-shadow: 0 12px 25px -10px rgba(0, 0, 0, 0.04);
+        }
+
+        .mini-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        @media (max-width: 700px) {
+            .mini-stat-grid {
+                grid-auto-flow: column;
+                grid-auto-columns: minmax(96px, 1fr);
+                grid-template-columns: none;
+                overflow-x: auto;
+                padding-bottom: 4px;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        .mini-stat-box {
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            background: #f8fafc;
+            padding: 12px 10px;
+            text-align: center;
+        }
+
+        .mini-stat-box .mini-stat-icon {
+            width: 30px; height: 30px;
+            border-radius: 9px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            margin-bottom: 6px;
+        }
+
+        .mini-stat-box .mini-stat-value { font-size: 20px; font-weight: 800; color: var(--text-main); line-height: 1; }
+        .mini-stat-box .mini-stat-label { font-size: 10.5px; color: var(--text-muted); font-weight: 700; margin-top: 3px; display: block; }
+
+        .avatar-circle {
+            width: 38px; height: 38px; min-width: 38px;
+            border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 13px; color: #fff;
+        }
+
+        .carrier-panel-row {
+            border: 1px solid #e2e8f0;
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+            margin-bottom: 8px;
+            background: #fff;
+            transition: all 0.2s ease;
+        }
+        .carrier-panel-row:hover { border-color: #c7d2fe; background: #f8fafc; }
+
+        .filter-pill {
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            border-radius: 30px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            white-space: nowrap;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .filter-pill.active {
+            background: var(--primary-blue);
+            border-color: var(--primary-blue);
+            color: #fff;
+        }
+
+        #carriersPanel.offcanvas-lg {
+            width: 100%;
+            max-width: 380px;
+        }
+        @media (min-width: 992px) {
+            #carriersPanel.offcanvas-lg {
+                max-width: 100%;
+                border: 1px solid rgba(255,255,255,1);
+                border-radius: var(--radius-lg);
+                box-shadow: 0 12px 25px -10px rgba(0, 0, 0, 0.04);
+                background: rgba(255, 255, 255, 0.9) !important;
+                max-height: calc(100vh - 110px);
+                position: sticky;
+                top: 90px;
+            }
+            #carriersPanel.offcanvas-lg .offcanvas-header {
+                display: flex !important;
+                background: transparent;
+            }
+            #carriersPanel.offcanvas-lg .offcanvas-body {
+                background: transparent !important;
+                overflow-y: auto;
+            }
+        }
+
+        .envelope-box {
+            width: 100%;
+            min-height: 120px;
+            border-radius: var(--radius-lg);
+            background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%);
+            display: flex; align-items: center; justify-content: center;
+        }
     </style>
 </head>
 <body>
@@ -390,7 +503,7 @@
         </div>
     </nav>
 
-    <div class="container-fluid px-2 px-sm-3 px-md-4 py-3 py-md-4">
+    <div class="container-fluid px-2 px-sm-3 px-md-4 py-3 py-md-4" id="dashboardMain">
         
         <!-- STATS ROW -->
         <div class="row g-2 g-md-3 mb-4">
@@ -755,6 +868,180 @@ Best regards,
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="modalQuoteContent"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary px-3 py-1.5 fw-semibold rounded-pill w-100 w-sm-auto" style="font-size: 13px;" data-bs-dismiss="modal">Bağla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =============== RFQ DETAIL SƏHİFƏSİ =============== -->
+    <div id="rfqDetailPage" class="container-fluid px-2 px-sm-3 px-md-4 py-3 py-md-4 d-none">
+
+        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+            <nav style="font-size: 13px;">
+                <a href="#" onclick="closeRfqDetail(); return false;" class="text-decoration-none text-primary fw-bold">
+                    <i class="bi bi-arrow-left me-1"></i>RFQ-lar
+                </a>
+                <span class="text-muted mx-1">›</span>
+                <span class="text-dark fw-bold" id="detailBreadcrumbId">RFQ #</span>
+            </nav>
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#carriersPanel">
+                <i class="bi bi-people-fill me-1"></i> Daşıyıcılar (<span id="mobileCarriersCount">0</span>)
+            </button>
+        </div>
+
+        <div class="row g-3 g-lg-4">
+            <!-- SOL SÜTUN -->
+            <div class="col-12 col-lg-8">
+
+                <!-- RFQ BAŞLIĞI -->
+                <div class="detail-header-card mb-3">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3 gap-2">
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <span class="badge bg-light text-secondary border shadow-sm" id="detailIdBadge">ID: —</span>
+                            <h5 class="fw-bold text-dark mb-0 d-flex align-items-center flex-wrap gap-1" style="font-size: 1.05rem;">
+                                <span class="text-break" id="detailOrigin">—</span>
+                                <i class="bi bi-arrow-right-short text-primary fs-5"></i>
+                                <span class="text-break" id="detailDestination">—</span>
+                            </h5>
+                        </div>
+                        <span class="badge bg-primary shadow-sm" id="detailStatusBadge">OPEN</span>
+                    </div>
+                    <div class="row text-muted small fw-medium g-2 mb-3">
+                        <div class="col-12 col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark" id="detailCargoType">—</strong></div>
+                        <div class="col-12 col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark" id="detailWeight">—</strong></div>
+                        <div class="col-12 col-sm-4"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark" id="detailDeadline">—</strong></div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" style="font-size: 12px;" data-bs-toggle="modal" data-bs-target="#requestExtraModal">
+                        <i class="bi bi-info-circle me-1"></i> Daha ətraflı məlumat
+                    </button>
+                </div>
+
+                <!-- GÖNDƏRİLMƏ STATUSU -->
+                <div class="card mb-3">
+                    <div class="section-title mb-1">
+                        <i class="bi bi-graph-up-arrow"></i> Göndərilmə statusu
+                    </div>
+                    <div class="section-desc mb-2">Sorğunun daşıyıcılara çatdırılma və reaksiya statistikası.</div>
+
+                    <div class="mini-stat-grid mb-3">
+                        <div class="mini-stat-box">
+                            <span class="mini-stat-icon" style="background:#eef2ff; color:#4f46e5;"><i class="bi bi-send-fill"></i></span>
+                            <span class="mini-stat-value" id="statSent">0</span>
+                            <span class="mini-stat-label">Göndərildi</span>
+                        </div>
+                        <div class="mini-stat-box">
+                            <span class="mini-stat-icon" style="background:#dcfce7; color:#16a34a;"><i class="bi bi-check-circle-fill"></i></span>
+                            <span class="mini-stat-value" id="statDelivered">0</span>
+                            <span class="mini-stat-label">Çatdırıldı</span>
+                        </div>
+                        <div class="mini-stat-box">
+                            <span class="mini-stat-icon" style="background:#f1f5f9; color:#334155;"><i class="bi bi-eye-fill"></i></span>
+                            <span class="mini-stat-value" id="statViewed">0</span>
+                            <span class="mini-stat-label">Baxıldı</span>
+                        </div>
+                        <div class="mini-stat-box">
+                            <span class="mini-stat-icon" style="background:#fef9c3; color:#ca8a04;"><i class="bi bi-chat-left-text-fill"></i></span>
+                            <span class="mini-stat-value" id="statQuoted">0</span>
+                            <span class="mini-stat-label">Təklif alındı</span>
+                        </div>
+                        <div class="mini-stat-box">
+                            <span class="mini-stat-icon" style="background:#fee2e2; color:#dc2626;"><i class="bi bi-exclamation-triangle-fill"></i></span>
+                            <span class="mini-stat-value" id="statFailed">0</span>
+                            <span class="mini-stat-label">Çatdırılmadı</span>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 d-inline-flex align-items-center gap-1 d-lg-none" style="font-size: 12px;" data-bs-toggle="offcanvas" data-bs-target="#carriersPanel">
+                        <i class="bi bi-people-fill"></i> Daşıyıcılar (<span id="statBtnCarriersCount">0</span>)
+                    </button>
+                </div>
+
+                <!-- TƏKLİFLƏR -->
+                <div class="card mb-3">
+                    <div class="section-title mb-1">
+                        <i class="bi bi-file-earmark-text-fill"></i> Təkliflər (<span id="detailQuotesCount">0</span>)
+                    </div>
+                    <div class="section-desc mb-2">Daşıyıcıların göndərdiyi qiymət təklifləri.</div>
+                    <div id="detailQuotesContainer">
+                        <p class="text-muted small">Təkliflər yüklənir...</p>
+                    </div>
+                </div>
+
+                <!-- RFQ PAYLAŞIM MƏLUMATI -->
+                <div class="card mb-3">
+                    <div class="section-title mb-1">
+                        <i class="bi bi-envelope-fill"></i> RFQ paylaşım məlumatı
+                    </div>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-12 col-md-7">
+                            <div class="mb-2"><span class="text-muted small">Göndərən:</span> <strong class="text-dark ms-1" id="detailSenderCompany">—</strong></div>
+                            <div class="mb-2"><span class="text-muted small">Göndərən email:</span> <strong class="text-dark ms-1" id="detailSenderEmail">—</strong></div>
+                            <div class="mb-2"><span class="text-muted small">Reply-To:</span> <strong class="text-dark ms-1" id="detailReplyTo">—</strong></div>
+                            <div class="mb-0"><span class="text-muted small">Email şablonu:</span> <strong class="text-dark ms-1" id="detailEmailTemplate">Standart şablon</strong></div>
+                        </div>
+                        <div class="col-12 col-md-5">
+                            <div class="envelope-box">
+                                <i class="bi bi-send-check-fill" style="font-size: 56px; color: var(--primary-blue); opacity: .85;"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CAVABSIZ DAŞIYICI XƏBƏRDARLIĞI -->
+                <div id="detailNonResponders" class="alert alert-light border rounded-4 p-3 d-none align-items-center justify-content-between flex-wrap gap-2">
+                    <span class="text-muted small mb-0"><i class="bi bi-info-circle text-primary me-1"></i> Bu RFQ üçün <strong id="detailPendingCount">0</strong> daşıyıcı hələ təklif göndərməyib.</span>
+                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 w-100 w-sm-auto" onclick="sendSelectedReminders()">
+                        <i class="bi bi-send me-1"></i> Seçilənləri reminder göndər
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- SAĞ SÜTUN: DAŞIYICILAR PANELİ (offcanvas-lg: mobil-də sürüşən panel, lg+ ekranda sabit sütun) -->
+            <div class="col-12 col-lg-4">
+                <div class="offcanvas offcanvas-end offcanvas-lg" tabindex="-1" id="carriersPanel">
+                    <div class="offcanvas-header border-bottom">
+                        <h5 class="offcanvas-title fw-bold text-dark" style="font-size: 1rem;">
+                            Daşıyıcılar (<span id="panelCarriersCount">0</span>)
+                        </h5>
+                        <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas"></button>
+                    </div>
+                    <div class="offcanvas-body d-flex flex-column p-3">
+                        <div class="input-group input-group-sm mb-2">
+                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
+                        </div>
+
+                        <div class="d-flex gap-2 mb-3 flex-wrap">
+                            <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
+                            <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif alanlar (<span id="tabRespondedCount">0</span>)</span>
+                            <span class="filter-pill" id="filterPillPending" onclick="setCarrierPanelFilter('pending')">Təklif almayanlar (<span id="tabPendingCount">0</span>)</span>
+                        </div>
+
+                        <div id="carriersPanelList" class="flex-grow-1" style="overflow-y: auto; max-height: 55vh;">
+                            <p class="text-muted small">Daşıyıcılar yüklənir...</p>
+                        </div>
+
+                        <button type="button" class="btn btn-outline-secondary w-100 mt-3 rounded-pill" data-bs-dismiss="offcanvas">Bağla</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RFQ ƏLAVƏ DETALLAR MODALI -->
+    <div class="modal fade" id="requestExtraModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable mx-2 mx-sm-auto">
+            <div class="modal-content">
+                <div class="modal-header d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.05rem;">
+                        <i class="bi bi-info-circle-fill text-primary me-2"></i> RFQ-nun Əlavə Detalları
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="requestExtraModalContent"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary px-3 py-1.5 fw-semibold rounded-pill w-100 w-sm-auto" style="font-size: 13px;" data-bs-dismiss="modal">Bağla</button>
                 </div>
@@ -1384,8 +1671,8 @@ Best regards,
                             </div>
                         </div>
                         <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
-                            <button class="btn btn-sm btn-primary px-3 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12px;" onclick="loadQuotes(${req.id})">
-                                <i class="bi bi-eye me-1"></i> Təkliflərə Bax (${qCount})
+                            <button class="btn btn-sm btn-primary px-3 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12px;" onclick="openRfqDetail(${req.id})">
+                                <i class="bi bi-eye me-1"></i> RFQ-ya Bax (${qCount} təklif)
                             </button>
                             ${attachmentBtn}
                         </div>
@@ -1410,14 +1697,79 @@ Best regards,
 
         window.currentQuotesCache = {};
 
-        async function loadQuotes(requestId) {
-            const quotesDiv = document.getElementById(`quotes-for-${requestId}`);
-            quotesDiv.innerHTML = `<div class="mt-2 p-2 text-center w-100"><span class="spinner-border spinner-border-sm text-primary me-2"></span> <span class="text-muted fw-medium small">Təkliflər yüklənir...</span></div>`;
-            
+        function buildQuotesTableHtml(quotesList, requestId) {
+            if (!quotesList || quotesList.length === 0) {
+                return `<div class="alert alert-light mt-2 border rounded-3 p-2.5 w-100"><p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> Hələ bu sorğuya təklif göndərilməyib.</p></div>`;
+            }
+
+            let html = `<div class="table-container-responsive rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
+                <thead style="background: #f8fafc;">
+                    <tr>
+                        <th class="py-2.5 px-3 text-muted fw-bold">Daşıyıcı Şirkət</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold">Qiymət</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold">Müddət</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold">Qeydlər</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-center">Əməliyyat</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            for (let q of quotesList) {
+                let extraStr = "";
+                if (q.extra_details) {
+                    for (let [k, v] of Object.entries(q.extra_details)) {
+                        if (k === 'submitted' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
+
+                        if (v !== null && v !== undefined && v !== "") {
+                            if (k === 'carrier_attachment_url') {
+                                extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${v}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
+                            } else {
+                                extraStr += `<div><strong class="text-dark">${k}:</strong> ${v}</div>`;
+                            }
+                        }
+                    }
+                }
+
+                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") 
+                    ? `${q.transit_time_days} gün` 
+                    : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
+
+                let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") 
+                    ? `${q.price} <span class="text-muted small">${q.currency || 'AZN'}</span>` 
+                    : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
+
+                html += `
+                    <tr class="${q.is_winner ? 'table-success' : ''}">
+                        <td class="px-3 fw-bold text-dark py-2.5" style="min-width: 130px;">${q.carrier_company || 'Daşıyıcı'}</td>
+                        <td class="px-3 text-success fw-bold py-2.5" style="min-width: 100px;">${priceDisplay}</td>
+                        <td class="px-3 fw-medium text-dark py-2.5" style="min-width: 90px;">${transitDisplay}</td>
+                        <td class="px-3 py-2.5" style="min-width: 160px;">
+                            <div class="text-muted mb-1 text-truncate" style="max-width: 180px;">${extraStr || 'Məlumat yoxdur'}</div>
+                            <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none text-nowrap" style="font-size: 11.5px;" onclick="openQuoteModal(${requestId}, ${q.id})">
+                                Daha Ətraflı <i class="bi bi-arrow-right-short"></i>
+                            </button>
+                        </td>
+                        <td class="px-3 text-center py-2.5" style="min-width: 100px;">
+                            ${q.is_winner ? 
+                                '<span class="badge bg-success px-2.5 py-1 rounded-pill"><i class="bi bi-trophy-fill me-1"></i> Qalib</span>' : 
+                                `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`
+                            }
+                        </td>
+                    </tr>
+                `;
+            }
+            html += `</tbody></table></div>`;
+            return html;
+        }
+
+        async function loadQuotesInto(requestId, container) {
+            if (!container) return;
+            container.innerHTML = `<div class="mt-2 p-2 text-center w-100"><span class="spinner-border spinner-border-sm text-primary me-2"></span> <span class="text-muted fw-medium small">Təkliflər yüklənir...</span></div>`;
+
             try {
                 const res = await fetch(`/quotes/request/${requestId}`);
                 const data = await res.json();
-                
+
                 let quotesList = [];
                 if (Array.isArray(data)) {
                     quotesList = data;
@@ -1425,73 +1777,29 @@ Best regards,
                     quotesList = data.quotes;
                 }
 
-                if (res.ok && quotesList.length > 0) {
+                if (res.ok) {
                     window.currentQuotesCache[requestId] = quotesList;
-                    
-                    let html = `<div class="table-container-responsive rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
-                        <thead style="background: #f8fafc;">
-                            <tr>
-                                <th class="py-2.5 px-3 text-muted fw-bold">Daşıyıcı Şirkət</th>
-                                <th class="py-2.5 px-3 text-muted fw-bold">Qiymət</th>
-                                <th class="py-2.5 px-3 text-muted fw-bold">Müddət</th>
-                                <th class="py-2.5 px-3 text-muted fw-bold">Qeydlər</th>
-                                <th class="py-2.5 px-3 text-muted fw-bold text-center">Əməliyyat</th>
-                            </tr>
-                        </thead>
-                        <tbody>`;
-                
-                    for (let q of quotesList) {
-                        let extraStr = "";
-                        if (q.extra_details) {
-                            for (let [k, v] of Object.entries(q.extra_details)) {
-                                if (k === 'submitted' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
-
-                                if (v !== null && v !== undefined && v !== "") {
-                                    if (k === 'carrier_attachment_url') {
-                                        extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${v}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
-                                    } else {
-                                        extraStr += `<div><strong class="text-dark">${k}:</strong> ${v}</div>`;
-                                    }
-                                }
-                            }
-                        }
-
-                        let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") 
-                            ? `${q.transit_time_days} gün` 
-                            : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
-
-                        let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") 
-                            ? `${q.price} <span class="text-muted small">${q.currency || 'AZN'}</span>` 
-                            : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
-
-                        html += `
-                            <tr class="${q.is_winner ? 'table-success' : ''}">
-                                <td class="px-3 fw-bold text-dark py-2.5" style="min-width: 130px;">${q.carrier_company || 'Daşıyıcı'}</td>
-                                <td class="px-3 text-success fw-bold py-2.5" style="min-width: 100px;">${priceDisplay}</td>
-                                <td class="px-3 fw-medium text-dark py-2.5" style="min-width: 90px;">${transitDisplay}</td>
-                                <td class="px-3 py-2.5" style="min-width: 160px;">
-                                    <div class="text-muted mb-1 text-truncate" style="max-width: 180px;">${extraStr || 'Məlumat yoxdur'}</div>
-                                    <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none text-nowrap" style="font-size: 11.5px;" onclick="openQuoteModal(${requestId}, ${q.id})">
-                                        Daha Ətraflı <i class="bi bi-arrow-right-short"></i>
-                                    </button>
-                                </td>
-                                <td class="px-3 text-center py-2.5" style="min-width: 100px;">
-                                    ${q.is_winner ? 
-                                        '<span class="badge bg-success px-2.5 py-1 rounded-pill"><i class="bi bi-trophy-fill me-1"></i> Qalib</span>' : 
-                                        `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`
-                                    }
-                                </td>
-                            </tr>
-                        `;
-                    }
-                    html += `</tbody></table></div>`;
-                    quotesDiv.innerHTML = html;
+                    container.innerHTML = buildQuotesTableHtml(quotesList, requestId);
                 } else {
-                    quotesDiv.innerHTML = `<div class="alert alert-light mt-2 border rounded-3 p-2.5 w-100"><p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> Hələ bu sorğuya təklif göndərilməyib.</p></div>`;
+                    container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`;
                 }
+                return quotesList;
             } catch (err) {
-                quotesDiv.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`;
+                container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`;
+                return [];
             }
+        }
+
+        async function loadQuotes(requestId) {
+            const quotesDiv = document.getElementById(`quotes-for-${requestId}`);
+            await loadQuotesInto(requestId, quotesDiv);
+        }
+
+        async function loadDetailQuotes(requestId) {
+            const container = document.getElementById("detailQuotesContainer");
+            const quotesList = await loadQuotesInto(requestId, container);
+            const countEl = document.getElementById("detailQuotesCount");
+            if (countEl) countEl.textContent = quotesList.length;
         }
 
         function openQuoteModal(requestId, quoteId) {
@@ -1571,6 +1879,315 @@ Best regards,
                     alert("Qalib təklif uğurla təsdiqləndi!");
                     loadRequests();
                     loadStats();
+                    if (currentDetailRequestId === requestId) {
+                        loadDetailQuotes(requestId);
+                        loadDetailCarriersStatus(requestId);
+                    }
+                } else {
+                    alert("Xəta: " + formatErrorDetail(data.detail));
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+
+        /* ================================================================
+           RFQ DETAIL SƏHİFƏSİ
+           ================================================================ */
+        let currentDetailRequestId = null;
+        let currentDetailRequestObj = null;
+        let detailCarriersCache = [];
+        let carrierPanelFilter = 'all';
+        let selectedReminderIds = new Set();
+
+        const AVATAR_PALETTE = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
+
+        function getInitials(name) {
+            if (!name) return "?";
+            const parts = String(name).trim().split(/\s+/).filter(Boolean);
+            if (parts.length === 0) return "?";
+            if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+            return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+
+        async function openRfqDetail(requestId) {
+            currentDetailRequestId = requestId;
+            selectedReminderIds = new Set();
+
+            document.getElementById("dashboardMain").classList.add("d-none");
+            document.getElementById("rfqDetailPage").classList.remove("d-none");
+            window.scrollTo(0, 0);
+
+            let req = (globalRequestsCache || []).find(r => String(r.id) === String(requestId));
+            if (!req) {
+                try {
+                    const res = await fetch(`/requests/details/${requestId}`);
+                    const data = await res.json();
+                    if (res.ok && data.request) req = data.request;
+                } catch (err) { /* ignore, fallback below */ }
+            }
+            currentDetailRequestObj = req || { id: requestId };
+            renderDetailHeader(currentDetailRequestObj);
+
+            loadDetailQuotes(requestId);
+            loadDetailCarriersStatus(requestId);
+        }
+
+        function closeRfqDetail() {
+            document.getElementById("rfqDetailPage").classList.add("d-none");
+            document.getElementById("dashboardMain").classList.remove("d-none");
+            currentDetailRequestId = null;
+            loadRequests();
+            loadStats();
+        }
+
+        function renderDetailHeader(req) {
+            document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.id}`;
+            document.getElementById("detailIdBadge").textContent = `ID: ${req.id}`;
+            document.getElementById("detailOrigin").textContent = req.origin || req.loading_location || "—";
+            document.getElementById("detailDestination").textContent = req.destination || req.delivery_location || "—";
+            document.getElementById("detailCargoType").textContent = req.cargo_type || req.cargo || "—";
+
+            const weight = req.weight_kg || req.weight;
+            document.getElementById("detailWeight").textContent = weight ? `${weight} kq` : "Qeyd edilməyib";
+            document.getElementById("detailDeadline").textContent = req.deadline || "Qeyd edilməyib";
+
+            const statusBadge = document.getElementById("detailStatusBadge");
+            const isOpen = (req.status || "open") === "open";
+            statusBadge.textContent = isOpen ? "OPEN" : "CLOSED";
+            statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
+
+            document.getElementById("detailSenderCompany").textContent = (user && (user.company_name || user.name)) || "—";
+            document.getElementById("detailSenderEmail").textContent = (user && user.email) || "—";
+            document.getElementById("detailReplyTo").textContent = (user && user.email) || "—";
+            document.getElementById("detailEmailTemplate").textContent = req.email_template_type === 'custom' ? "Fərdi şablon" : "Standart şablon";
+
+            renderRequestExtraModal(req);
+        }
+
+        function renderRequestExtraModal(req) {
+            const box = document.getElementById("requestExtraModalContent");
+            const rows = [
+                ["Daşınma növü / Truck type", req.truck_type],
+                ["Yük tipi (Shipment type)", req.shipment_type],
+                ["HS Kodu", req.hs_code],
+                ["Həcm (m3)", req.volume_m3],
+                ["Stiflənə bilər (Stackable)", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
+                ["Əlavə qeydlər", req.additional_notes || req.note]
+            ];
+
+            let html = `<div class="d-flex flex-column gap-2">`;
+            let hasAny = false;
+            for (let [label, value] of rows) {
+                if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib") continue;
+                hasAny = true;
+                html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">${label}</strong><span class="text-dark small">${value}</span></div>`;
+            }
+
+            if (Array.isArray(req.required_fields) && req.required_fields.length > 0) {
+                hasAny = true;
+                html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">Tələb olunan sahələr</strong><span class="text-dark small">${req.required_fields.join(", ")}</span></div>`;
+            }
+
+            if (req.attachment_url) {
+                hasAny = true;
+                html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
+            }
+
+            if (!hasAny) {
+                html += `<div class="text-muted small text-center p-3">Əlavə detal qeyd olunmayıb.</div>`;
+            }
+            html += `</div>`;
+            box.innerHTML = html;
+        }
+
+        async function loadDetailCarriersStatus(requestId) {
+            const list = document.getElementById("carriersPanelList");
+            list.innerHTML = `<div class="text-center p-3"><span class="spinner-border spinner-border-sm text-primary me-2"></span><span class="text-muted small">Daşıyıcılar yüklənir...</span></div>`;
+
+            try {
+                const res = await fetch(`/requests/carriers-status/${requestId}`);
+                const data = await res.json();
+                detailCarriersCache = (res.ok && Array.isArray(data.carriers)) ? data.carriers : [];
+
+                selectedReminderIds = new Set(
+                    detailCarriersCache.filter(c => !c.has_submitted).map(c => c.quote_id)
+                );
+
+                const total = detailCarriersCache.length;
+                const delivered = detailCarriersCache.filter(c => c.mail_status === 'delivered').length;
+                const viewed = detailCarriersCache.filter(c => c.is_viewed).length;
+                const quoted = detailCarriersCache.filter(c => c.has_submitted).length;
+                const failed = detailCarriersCache.filter(c => c.mail_status === 'failed').length;
+                const pending = detailCarriersCache.filter(c => !c.has_submitted).length;
+
+                document.getElementById("statSent").textContent = total;
+                document.getElementById("statDelivered").textContent = delivered;
+                document.getElementById("statViewed").textContent = viewed;
+                document.getElementById("statQuoted").textContent = quoted;
+                document.getElementById("statFailed").textContent = failed;
+
+                document.getElementById("mobileCarriersCount").textContent = total;
+                document.getElementById("statBtnCarriersCount").textContent = total;
+                document.getElementById("panelCarriersCount").textContent = total;
+
+                const pendingBanner = document.getElementById("detailNonResponders");
+                document.getElementById("detailPendingCount").textContent = pending;
+                if (pending > 0) {
+                    pendingBanner.classList.remove("d-none");
+                    pendingBanner.classList.add("d-flex");
+                } else {
+                    pendingBanner.classList.remove("d-flex");
+                    pendingBanner.classList.add("d-none");
+                }
+
+                renderCarrierPanel();
+            } catch (err) {
+                list.innerHTML = `<p class="text-danger small fw-bold"><i class="bi bi-x-circle me-1"></i> Daşıyıcıları yükləmək mümkün olmadı.</p>`;
+            }
+        }
+
+        function setCarrierPanelFilter(filter) {
+            carrierPanelFilter = filter;
+            document.getElementById("filterPillAll").classList.toggle("active", filter === 'all');
+            document.getElementById("filterPillResponded").classList.toggle("active", filter === 'responded');
+            document.getElementById("filterPillPending").classList.toggle("active", filter === 'pending');
+            renderCarrierPanel();
+        }
+
+        function renderCarrierPanel() {
+            const list = document.getElementById("carriersPanelList");
+            const searchEl = document.getElementById("carrierPanelSearch");
+            const query = (searchEl ? searchEl.value : "").toLowerCase().trim();
+
+            const respondedCount = detailCarriersCache.filter(c => c.has_submitted).length;
+            const pendingCount = detailCarriersCache.filter(c => !c.has_submitted).length;
+            document.getElementById("tabAllCount").textContent = detailCarriersCache.length;
+            document.getElementById("tabRespondedCount").textContent = respondedCount;
+            document.getElementById("tabPendingCount").textContent = pendingCount;
+
+            let filtered = detailCarriersCache.filter(c => {
+                if (carrierPanelFilter === 'responded' && !c.has_submitted) return false;
+                if (carrierPanelFilter === 'pending' && c.has_submitted) return false;
+                if (query) {
+                    const name = (c.company_name || "").toLowerCase();
+                    const email = (c.email || "").toLowerCase();
+                    if (!name.includes(query) && !email.includes(query)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="text-center text-muted small p-4"><i class="bi bi-people fs-3 d-block mb-2 opacity-50"></i>Uyğun daşıyıcı tapılmadı.</div>`;
+                return;
+            }
+
+            let html = "";
+            filtered.forEach((c, idx) => {
+                const color = AVATAR_PALETTE[idx % AVATAR_PALETTE.length];
+                const initials = getInitials(c.company_name);
+
+                let deliveryBadge;
+                if (c.mail_status === 'delivered') {
+                    deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`;
+                } else if (c.mail_status === 'failed') {
+                    deliveryBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Çatdırılmadı</span>`;
+                } else {
+                    deliveryBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Göndərilir...</span>`;
+                }
+
+                let quoteStatus = c.has_submitted
+                    ? `<span class="text-success fw-bold" style="font-size: 11.5px;"><i class="bi bi-check-circle-fill me-1"></i>Təklif alındı</span>`
+                    : `<span class="text-warning fw-bold" style="font-size: 11.5px;"><i class="bi bi-hourglass-split me-1"></i>Təklif yoxdur</span>`;
+
+                let actionBtn;
+                if (c.mail_status === 'failed') {
+                    actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="resendCarrierEmail(${c.quote_id})"><i class="bi bi-arrow-clockwise me-1"></i>Yenidən göndər</button>`;
+                } else if (!c.has_submitted) {
+                    actionBtn = `<button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="sendSingleReminder(${c.quote_id})"><i class="bi bi-bell me-1"></i>Reminder göndər</button>`;
+                } else {
+                    actionBtn = "";
+                }
+
+                const checkbox = !c.has_submitted
+                    ? `<input type="checkbox" class="form-check-input flex-shrink-0" style="margin-top:2px;" ${selectedReminderIds.has(c.quote_id) ? 'checked' : ''} onchange="toggleReminderSelect(${c.quote_id}, this.checked)">`
+                    : `<span style="width:1.15em; display:inline-block;"></span>`;
+
+                html += `
+                    <div class="carrier-panel-row d-flex align-items-start gap-2">
+                        ${checkbox}
+                        <div class="avatar-circle" style="background:${color};">${initials}</div>
+                        <div class="flex-grow-1" style="min-width:0;">
+                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                <div style="min-width:0;">
+                                    <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 170px;">${c.company_name || 'Daşıyıcı'}</div>
+                                    <div class="text-muted text-truncate" style="font-size: 11.5px; max-width: 170px;">${c.email || ''}</div>
+                                </div>
+                                ${deliveryBadge}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-1">
+                                ${quoteStatus}
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+        }
+
+        function toggleReminderSelect(quoteId, checked) {
+            if (checked) selectedReminderIds.add(quoteId);
+            else selectedReminderIds.delete(quoteId);
+        }
+
+        async function sendSingleReminder(quoteId) {
+            try {
+                const res = await fetch(`/quotes/reminder/${quoteId}`, { method: "POST" });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Reminder göndərildi!");
+                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
+                } else {
+                    alert("Xəta: " + formatErrorDetail(data.detail));
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+
+        async function resendCarrierEmail(quoteId) {
+            try {
+                const res = await fetch(`/quotes/resend/${quoteId}`, { method: "POST" });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Mail yenidən göndərildi!");
+                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
+                } else {
+                    alert("Xəta: " + formatErrorDetail(data.detail));
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+
+        async function sendSelectedReminders() {
+            const ids = Array.from(selectedReminderIds);
+            if (ids.length === 0) {
+                alert("Zəhmət olmasa Daşıyıcılar panelindən azı bir daşıyıcı seçin.");
+                return;
+            }
+            try {
+                const res = await fetch(`/quotes/reminder-batch`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ quote_ids: ids })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Reminderlər göndərildi!");
+                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
                 } else {
                     alert("Xəta: " + formatErrorDetail(data.detail));
                 }
