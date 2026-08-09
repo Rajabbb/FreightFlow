@@ -38,7 +38,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-app = FastAPI(title="LogiFast Backend API")
+app = FastAPI(title="Arachi Backend API")
 
 # Bounce yoxlaması arasında gözlənilən vaxt (saniyə). Env dəyişəni ilə tənzimlənə bilər.
 BOUNCE_CHECK_INTERVAL_SECONDS = int(os.getenv("BOUNCE_CHECK_INTERVAL_SECONDS", "300"))
@@ -82,7 +82,7 @@ conf = ConnectionConfig(
     MAIL_USERNAME="burzuyevrcb@gmail.com",
     MAIL_PASSWORD="yslb bddm cgyg scns",
     MAIL_FROM="burzuyevrcb@gmail.com",
-    MAIL_FROM_NAME="LogiFast",
+    MAIL_FROM_NAME="Arachi",
     MAIL_PORT=465,
     MAIL_SERVER="smtp.gmail.com",
     MAIL_STARTTLS=False,
@@ -271,7 +271,7 @@ def get_sender_info_from_shipment(shipment: Optional[Dict[str, Any]]) -> Tuple[s
     və Reply-To üçün müştərinin öz emailini çıxarır."""
     shipment = shipment or {}
     customer = shipment.get("customers") or {}
-    sender_company = customer.get("company_name") or customer.get("name") or "LogiFast"
+    sender_company = customer.get("company_name") or customer.get("name") or "Arachi"
     customer_email = customer.get("email")
     return sender_company, customer_email
 
@@ -398,7 +398,7 @@ async def send_carrier_email_link(
     destination: str, 
     token: str, 
     custom_body: Optional[str] = None,
-    sender_company: str = "LogiFast",
+    sender_company: str = "Arachi",
     is_reminder: bool = False,
     reply_to_email: Optional[str] = None
 ):
@@ -461,7 +461,7 @@ Best regards,
         body=html_content,
         subtype=MessageType.html,
         # From başlığında müştərinin şirkət adı göstərilir: "Şirkət adı" <burzuyevrcb@gmail.com>
-        from_name=(sender_company or "LogiFast").strip() or "LogiFast"
+        from_name=(sender_company or "Arachi").strip() or "Arachi"
     )
     # Reply-To: cavab müştərinin öz emailinə getsin (əgər varsa)
     if reply_to_email:
@@ -800,11 +800,11 @@ async def create_shipment_request(
         request_id = shipment_data["id"]
 
         cust_res = supabase.table("customers").select("*").eq("id", payload.customer_id).execute()
-        sender_company = "LogiFast"
+        sender_company = "Arachi"
         customer_email = None
         if cust_res.data:
             c_data = cust_res.data[0]
-            sender_company = c_data.get("company_name") or c_data.get("name") or "LogiFast"
+            sender_company = c_data.get("company_name") or c_data.get("name") or "Arachi"
             customer_email = c_data.get("email")
 
         c_query = supabase.table("carriers").select("*").eq("customer_id", payload.customer_id).range(0, 9999).execute()
