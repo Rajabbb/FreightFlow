@@ -451,29 +451,9 @@
             color: #fff;
         }
 
-        #carriersPanel.offcanvas-lg {
+        #carriersPanel {
             width: 100%;
-            max-width: 380px;
-        }
-        @media (min-width: 992px) {
-            #carriersPanel.offcanvas-lg {
-                max-width: 100%;
-                border: 1px solid rgba(255,255,255,1);
-                border-radius: var(--radius-lg);
-                box-shadow: 0 12px 25px -10px rgba(0, 0, 0, 0.04);
-                background: rgba(255, 255, 255, 0.9) !important;
-                max-height: calc(100vh - 110px);
-                position: sticky;
-                top: 90px;
-            }
-            #carriersPanel.offcanvas-lg .offcanvas-header {
-                display: flex !important;
-                background: transparent;
-            }
-            #carriersPanel.offcanvas-lg .offcanvas-body {
-                background: transparent !important;
-                overflow-y: auto;
-            }
+            max-width: 400px;
         }
 
         .envelope-box {
@@ -886,14 +866,19 @@ Best regards,
                 <span class="text-muted mx-1">›</span>
                 <span class="text-dark fw-bold" id="detailBreadcrumbId">RFQ #</span>
             </nav>
-            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 d-lg-none" data-bs-toggle="offcanvas" data-bs-target="#carriersPanel">
-                <i class="bi bi-people-fill me-1"></i> Daşıyıcılar (<span id="mobileCarriersCount">0</span>)
-            </button>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="refreshRfqDetail()">
+                    <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-toggle="offcanvas" data-bs-target="#carriersPanel">
+                    <i class="bi bi-people-fill me-1"></i> Daşıyıcılar (<span id="mobileCarriersCount">0</span>)
+                </button>
+            </div>
         </div>
 
         <div class="row g-3 g-lg-4">
-            <!-- SOL SÜTUN -->
-            <div class="col-12 col-lg-8">
+            <!-- ƏSAS SÜTUN (tam en) -->
+            <div class="col-12">
 
                 <!-- RFQ BAŞLIĞI -->
                 <div class="detail-header-card mb-3">
@@ -953,7 +938,7 @@ Best regards,
                         </div>
                     </div>
 
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 d-inline-flex align-items-center gap-1 d-lg-none" style="font-size: 12px;" data-bs-toggle="offcanvas" data-bs-target="#carriersPanel">
+                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 d-inline-flex align-items-center gap-1" style="font-size: 12px;" data-bs-toggle="offcanvas" data-bs-target="#carriersPanel">
                         <i class="bi bi-people-fill"></i> Daşıyıcılar (<span id="statBtnCarriersCount">0</span>)
                     </button>
                 </div>
@@ -991,43 +976,49 @@ Best regards,
 
                 <!-- CAVABSIZ DAŞIYICI XƏBƏRDARLIĞI -->
                 <div id="detailNonResponders" class="alert alert-light border rounded-4 p-3 d-none align-items-center justify-content-between flex-wrap gap-2">
-                    <span class="text-muted small mb-0"><i class="bi bi-info-circle text-primary me-1"></i> Bu RFQ üçün <strong id="detailPendingCount">0</strong> daşıyıcı hələ təklif göndərməyib.</span>
+                    <span class="text-muted small mb-0"><i class="bi bi-info-circle text-primary me-1"></i> Bu RFQ üçün <strong id="detailPendingCount">0</strong> daşıyıcı hələ təklif göndərməyib. (<span id="detailSelectedCount">0</span> seçilib)</span>
                     <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 w-100 w-sm-auto" onclick="sendSelectedReminders()">
                         <i class="bi bi-send me-1"></i> Seçilənləri reminder göndər
                     </button>
                 </div>
 
             </div>
+        </div>
+    </div>
 
-            <!-- SAĞ SÜTUN: DAŞIYICILAR PANELİ (offcanvas-lg: mobil-də sürüşən panel, lg+ ekranda sabit sütun) -->
-            <div class="col-12 col-lg-4">
-                <div class="offcanvas offcanvas-end offcanvas-lg" tabindex="-1" id="carriersPanel">
-                    <div class="offcanvas-header border-bottom">
-                        <h5 class="offcanvas-title fw-bold text-dark" style="font-size: 1rem;">
-                            Daşıyıcılar (<span id="panelCarriersCount">0</span>)
-                        </h5>
-                        <button type="button" class="btn-close d-lg-none" data-bs-dismiss="offcanvas"></button>
-                    </div>
-                    <div class="offcanvas-body d-flex flex-column p-3">
-                        <div class="input-group input-group-sm mb-2">
-                            <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
-                        </div>
-
-                        <div class="d-flex gap-2 mb-3 flex-wrap">
-                            <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
-                            <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif alanlar (<span id="tabRespondedCount">0</span>)</span>
-                            <span class="filter-pill" id="filterPillPending" onclick="setCarrierPanelFilter('pending')">Təklif almayanlar (<span id="tabPendingCount">0</span>)</span>
-                        </div>
-
-                        <div id="carriersPanelList" class="flex-grow-1" style="overflow-y: auto; max-height: 55vh;">
-                            <p class="text-muted small">Daşıyıcılar yüklənir...</p>
-                        </div>
-
-                        <button type="button" class="btn btn-outline-secondary w-100 mt-3 rounded-pill" data-bs-dismiss="offcanvas">Bağla</button>
-                    </div>
-                </div>
+    <!-- DAŞIYICILAR PANELİ (bütün ekran ölçülərində sürüşən panel) -->
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="carriersPanel">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title fw-bold text-dark" style="font-size: 1rem;">
+                Daşıyıcılar (<span id="panelCarriersCount">0</span>)
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+        </div>
+        <div class="offcanvas-body d-flex flex-column p-3">
+            <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
             </div>
+
+            <div class="d-flex gap-2 mb-3 flex-wrap">
+                <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
+                <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif alanlar (<span id="tabRespondedCount">0</span>)</span>
+                <span class="filter-pill" id="filterPillPending" onclick="setCarrierPanelFilter('pending')">Təklif almayanlar (<span id="tabPendingCount">0</span>)</span>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold" style="font-size: 12px;" onclick="selectAllPendingReminders()">Hamısını seç</button>
+                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold text-muted" style="font-size: 12px;" onclick="clearAllReminderSelection()">Seçimi ləğv et</button>
+            </div>
+
+            <div id="carriersPanelList" class="flex-grow-1" style="overflow-y: auto; max-height: 55vh;">
+                <p class="text-muted small">Daşıyıcılar yüklənir...</p>
+            </div>
+
+            <button type="button" class="btn btn-primary w-100 mt-3 rounded-pill" onclick="sendSelectedReminders()">
+                <i class="bi bi-send me-1"></i> Seçilənləri reminder göndər (<span id="panelSelectedCount">0</span>)
+            </button>
+            <button type="button" class="btn btn-outline-secondary w-100 mt-2 rounded-pill" data-bs-dismiss="offcanvas">Bağla</button>
         </div>
     </div>
 
@@ -1941,6 +1932,12 @@ Best regards,
             loadStats();
         }
 
+        function refreshRfqDetail() {
+            if (!currentDetailRequestId) return;
+            loadDetailQuotes(currentDetailRequestId);
+            loadDetailCarriersStatus(currentDetailRequestId);
+        }
+
         function renderDetailHeader(req) {
             document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.id}`;
             document.getElementById("detailIdBadge").textContent = `ID: ${req.id}`;
@@ -2013,6 +2010,7 @@ Best regards,
                 selectedReminderIds = new Set(
                     detailCarriersCache.filter(c => !c.has_submitted).map(c => c.quote_id)
                 );
+                updateSelectedReminderCount();
 
                 const total = detailCarriersCache.length;
                 const delivered = detailCarriersCache.filter(c => c.mail_status === 'delivered').length;
@@ -2137,9 +2135,30 @@ Best regards,
             list.innerHTML = html;
         }
 
+        function updateSelectedReminderCount() {
+            const n = selectedReminderIds.size;
+            const el1 = document.getElementById("detailSelectedCount");
+            const el2 = document.getElementById("panelSelectedCount");
+            if (el1) el1.textContent = n;
+            if (el2) el2.textContent = n;
+        }
+
         function toggleReminderSelect(quoteId, checked) {
             if (checked) selectedReminderIds.add(quoteId);
             else selectedReminderIds.delete(quoteId);
+            updateSelectedReminderCount();
+        }
+
+        function selectAllPendingReminders() {
+            detailCarriersCache.filter(c => !c.has_submitted).forEach(c => selectedReminderIds.add(c.quote_id));
+            renderCarrierPanel();
+            updateSelectedReminderCount();
+        }
+
+        function clearAllReminderSelection() {
+            selectedReminderIds.clear();
+            renderCarrierPanel();
+            updateSelectedReminderCount();
         }
 
         async function sendSingleReminder(quoteId) {
