@@ -1,2258 +1,1278 @@
-<!DOCTYPE html>
-<html lang="az">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müştəri Paneli - LogiFast</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    <style>
-        :root {
-            --primary-blue: #4f46e5;
-            --primary-hover: #4338ca;
-            --secondary-color: #0ea5e9;
-            --bg-gradient: linear-gradient(145deg, #f0f4f8 0%, #e2e8f0 100%);
-            --card-bg: rgba(255, 255, 255, 0.85);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-color: rgba(226, 232, 240, 0.8);
-            --radius-lg: 20px;
-            --radius-md: 12px;
-            --radius-sm: 8px;
-        }
+import os
+import uuid
+import traceback
+import io
+import json
+import re
+import asyncio
+import imaplib
+import email as email_lib
+from email.header import decode_header
+import pandas as pd
+from typing import Optional, Dict, Any, List, Tuple
+from pydantic import BaseModel, EmailStr
+from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
+from supabase import create_client, Client
+from dotenv import load_dotenv
+from passlib.context import CryptContext
+from pathlib import Path
 
-        body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-gradient);
-            color: var(--text-main);
-            font-size: 14px;
-            -webkit-font-smoothing: antialiased;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+BASE_DIR = Path(__file__).resolve().parent
 
-        ::-webkit-scrollbar { width: 7px; height: 7px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid #f0f4f8; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+# Mühit dəyişənlərini yükləyirik (.env faylından)
+load_dotenv()
 
-        .navbar {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
-            position: sticky;
-            top: 0;
-            z-index: 1020;
-        }
+# ------------------------------------------------------------------
+# KONFİQURASİYA VƏ BAZA
+# ------------------------------------------------------------------
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-        .navbar-brand {
-            background: linear-gradient(45deg, var(--primary-blue), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-size: 1.15rem;
-        }
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("SUPABASE_URL və ya SUPABASE_KEY təyin olunmayıb! Zəhmət olmasa .env faylını yoxlayın.")
 
-        .card {
-            border: 1px solid rgba(255, 255, 255, 0.9);
-            border-radius: var(--radius-lg);
-            box-shadow: 0 15px 35px -15px rgba(15, 23, 42, 0.05);
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 24px;
-            margin-bottom: 24px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            width: 100%;
-            word-break: break-word;
-        }
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-        .section-title {
-            font-size: 17px;
-            font-weight: 800;
-            color: var(--text-main);
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            letter-spacing: -0.02em;
-            flex-wrap: wrap;
-        }
+app = FastAPI(title="LogiFast Backend API")
 
-        .section-title i {
-            font-size: 20px;
-            background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
+# Bounce yoxlaması arasında gözlənilən vaxt (saniyə). Env dəyişəni ilə tənzimlənə bilər.
+BOUNCE_CHECK_INTERVAL_SECONDS = int(os.getenv("BOUNCE_CHECK_INTERVAL_SECONDS", "300"))
 
-        .section-desc {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            font-weight: 500;
-        }
+async def _bounce_check_loop():
+    """Server işlədiyi müddətdə arxa planda dövri olaraq Gmail inbox-unu
+    bounce mailləri üçün yoxlayır və müvafiq mail_status-ları yeniləyir."""
+    while True:
+        try:
+            result = await asyncio.to_thread(check_bounced_emails)
+            if result.get("updated"):
+                print(f"[bounce-check] {len(result['updated'])} quote(s) 'failed' olaraq yeniləndi: {result['updated']}")
+            if result.get("errors"):
+                print(f"[bounce-check] Xətalar: {result['errors']}")
+        except Exception:
+            traceback.print_exc()
+        await asyncio.sleep(BOUNCE_CHECK_INTERVAL_SECONDS)
 
-        .form-control, .form-select {
-            padding: 10px 14px;
-            border-radius: var(--radius-md);
-            border: 1px solid #e2e8f0;
-            font-size: 13.5px;
-            background-color: #f8fafc;
-            color: var(--text-main);
-            font-weight: 500;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
-            width: 100%;
-        }
+@app.on_event("startup")
+async def start_bounce_check_background_task():
+    asyncio.create_task(_bounce_check_loop())
 
-        .form-control:focus, .form-select:focus {
-            background-color: #ffffff;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12), inset 0 1px 2px rgba(0, 0, 0, 0.02);
-            outline: none;
-            transform: translateY(-1px);
-        }
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-        .form-control::placeholder { color: #94a3b8; }
+# Qovluqların yaradılması
+os.makedirs("static", exist_ok=True)
+UPLOAD_DIR = "static/uploads"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-        .form-label {
-            font-size: 12.5px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 6px;
-            letter-spacing: -0.01em;
-        }
+# Statik faylların və uploads qovluğunun montajı
+app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%);
-            border: none;
-            padding: 11px 20px;
-            border-radius: var(--radius-md);
-            font-weight: 700;
-            font-size: 13.5px;
-            letter-spacing: 0.3px;
-            color: white;
-            box-shadow: 0 8px 16px -8px rgba(79, 70, 229, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 100%;
-        }
+conf = ConnectionConfig(
+    MAIL_USERNAME="burzuyevrcb@gmail.com",
+    MAIL_PASSWORD="yslb bddm cgyg scns",
+    MAIL_FROM="burzuyevrcb@gmail.com",
+    MAIL_FROM_NAME="LogiFast",
+    MAIL_PORT=465,
+    MAIL_SERVER="smtp.gmail.com",
+    MAIL_STARTTLS=False,
+    MAIL_SSL_TLS=True,
+    USE_CREDENTIALS=True
+)
 
-        .btn-primary:hover {
-            background: linear-gradient(135deg, var(--primary-hover) 0%, #2563eb 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 12px 20px -8px rgba(79, 70, 229, 0.6), inset 0 1px 0 rgba(255,255,255,0.2);
-            color: white;
-        }
+fastmail = FastMail(conf)
 
-        .stats-card {
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255,255,255,1);
-            box-shadow: 0 12px 25px -10px rgba(0, 0, 0, 0.04);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            height: 100%;
-        }
+# ------------------------------------------------------------------
+# BOUNCE (ÇATDIRILMAYAN MAİL) İZLƏMƏ SİSTEMİ
+# ------------------------------------------------------------------
+# İzah: fastmail.send_message() yalnız SMTP-yə TƏHVİL zamanı baş verən sinxron
+# xətalarda (bağlantı, autentifikasiya və s.) istisna atır. Amma "ünvan mövcud
+# deyil" kimi xətalar adətən Gmail tərəfindən mesaj artıq qəbul edildikdən
+# (250 OK) sonra, bir neçə dəqiqə gecikmə ilə, göndərən qutuya DSN
+# (Delivery Status Notification) maili şəklində geri qayıdır. Bu səbəbdən
+# əvvəlki kod bu cür "gecikmiş" bounce-ları heç vaxt "failed" kimi qeyd etmirdi.
+# Aşağıdakı funksiyalar göndərən Gmail qutusunu IMAP ilə yoxlayıb bu bounce
+# mesajlarını tapır, uğursuz alıcının email ünvanını çıxarır və müvafiq
+# "quotes" sətirlərinin mail_status-unu "failed" olaraq yeniləyir.
 
-        .stats-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 5px; height: 100%;
-            background: linear-gradient(to bottom, var(--primary-blue), #8b5cf6);
-            border-radius: 10px 0 0 10px;
-        }
+IMAP_HOST = "imap.gmail.com"
+IMAP_PORT = 993
+IMAP_USERNAME = conf.MAIL_USERNAME
+IMAP_PASSWORD = conf.MAIL_PASSWORD.get_secret_value() if hasattr(conf.MAIL_PASSWORD, "get_secret_value") else conf.MAIL_PASSWORD
 
-        .stats-card:nth-child(2)::before { background: linear-gradient(to bottom, #10b981, #34d399); }
-        .stats-card:nth-child(3)::before { background: linear-gradient(to bottom, #f59e0b, #fbbf24); }
+def _decode_mime_str(s: Optional[str]) -> str:
+    if not s:
+        return ""
+    parts = decode_header(s)
+    decoded = ""
+    for text, enc in parts:
+        if isinstance(text, bytes):
+            try:
+                decoded += text.decode(enc or "utf-8", errors="ignore")
+            except LookupError:
+                decoded += text.decode("utf-8", errors="ignore")
+        else:
+            decoded += text
+    return decoded
 
-        .stats-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 16px 30px -10px rgba(0, 0, 0, 0.08);
-        }
+def _get_message_text(msg) -> str:
+    """Mesajın bütün mətn hissələrini (plain + html) bir string kimi çıxarır."""
+    chunks = []
+    if msg.is_multipart():
+        for part in msg.walk():
+            ctype = part.get_content_type()
+            if ctype in ("text/plain", "text/html", "message/delivery-status"):
+                try:
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        charset = part.get_content_charset() or "utf-8"
+                        chunks.append(payload.decode(charset, errors="ignore"))
+                except Exception:
+                    continue
+    else:
+        try:
+            payload = msg.get_payload(decode=True)
+            if payload:
+                charset = msg.get_content_charset() or "utf-8"
+                chunks.append(payload.decode(charset, errors="ignore"))
+        except Exception:
+            pass
+    return "\n".join(chunks)
 
-        .stats-card h3 {
-            font-size: 30px;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-top: 6px;
-            margin-bottom: 0;
-        }
+def extract_bounced_recipient(msg) -> Optional[str]:
+    """Bir bounce/DSN mesajından uğursuz alıcının email ünvanını çıxarır."""
+    # 1) Standart DSN: "message/delivery-status" hissəsindəki "Final-Recipient" başlığı
+    if msg.is_multipart():
+        for part in msg.walk():
+            if part.get_content_type() == "message/delivery-status":
+                try:
+                    payload = part.get_payload(decode=True) or b""
+                    text = payload.decode("utf-8", errors="ignore")
+                    m = re.search(r'Final-Recipient:\s*rfc822;\s*([^\s]+)', text, re.IGNORECASE)
+                    if m:
+                        return extract_clean_email(m.group(1))
+                except Exception:
+                    continue
 
-        .optional-box {
-            background: rgba(248, 250, 252, 0.6);
-            border: 2px dashed #cbd5e1;
-            border-radius: var(--radius-lg);
-            padding: 18px;
-            margin-top: 20px;
-            transition: border-color 0.3s;
-        }
+    body_text = _get_message_text(msg)
 
-        .opt-row {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 12px 14px;
-            margin-bottom: 10px;
-            box-shadow: 0 3px 5px -3px rgba(0, 0, 0, 0.02);
-            transition: all 0.2s ease;
-        }
+    # 2) Gmail-in lokallaşdırılmış mətni: "Mesajınız X ünvanına çatdırıla bilmədi"
+    m = re.search(r'Mesajınız\s+([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)\s+ünvanına', body_text)
+    if m:
+        return extract_clean_email(m.group(1))
 
-        .form-check-input {
-            width: 1.15em;
-            height: 1.15em;
-            border: 2px solid #cbd5e1;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
+    # 3) İngilis dilli variant: "reach <email>" və ya "to <email>"
+    m = re.search(r'(?:reach|deliver(?:ing)? (?:your message )?to|to)\s+([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', body_text, re.IGNORECASE)
+    if m:
+        return extract_clean_email(m.group(1))
+
+    # 4) Son çarə: mətndəki ilk email ünvanı (adətən uğursuz alıcı olur)
+    m = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', body_text)
+    if m:
+        return extract_clean_email(m.group(0))
+
+    return None
+
+def _is_bounce_message(msg) -> bool:
+    from_addr = (msg.get("From") or "").lower()
+    subject = _decode_mime_str(msg.get("Subject") or "").lower()
+    content_type = (msg.get("Content-Type") or "").lower()
+
+    bounce_signals = [
+        "mailer-daemon" in from_addr,
+        "mail delivery subsystem" in from_addr,
+        "postmaster" in from_addr,
+        "delivery status notification" in subject,
+        "delivery failure" in subject,
+        "undelivered" in subject,
+        "undeliverable" in subject,
+        "report-type=delivery-status" in content_type,
+    ]
+    return any(bounce_signals)
+
+def check_bounced_emails() -> Dict[str, Any]:
+    """Gmail inbox-unu IMAP ilə yoxlayır, bounce mesajlarını tapır və
+    uyğun 'quotes' sətirlərinin mail_status-unu 'failed' olaraq yeniləyir.
+    Bloklayıcı (sync) funksiyadır - background task / thread içində çağırılmalıdır."""
+    updated = []
+    checked = 0
+    errors = []
+
+    try:
+        imap = imaplib.IMAP4_SSL(IMAP_HOST, IMAP_PORT)
+        imap.login(IMAP_USERNAME, IMAP_PASSWORD)
+        imap.select("INBOX")
+
+        # Yalnız oxunmamış mailləri yoxlayırıq ki, eyni bounce təkrar emal olunmasın
+        status, data = imap.search(None, "UNSEEN")
+        if status != "OK":
+            imap.logout()
+            return {"checked": 0, "updated": [], "errors": ["IMAP search uğursuz oldu."]}
+
+        msg_ids = data[0].split()
+
+        for msg_id in msg_ids:
+            try:
+                status, msg_data = imap.fetch(msg_id, "(RFC822)")
+                if status != "OK" or not msg_data or not msg_data[0]:
+                    continue
+
+                raw_msg = msg_data[0][1]
+                msg = email_lib.message_from_bytes(raw_msg)
+                checked += 1
+
+                if not _is_bounce_message(msg):
+                    continue
+
+                bounced_email = extract_bounced_recipient(msg)
+                if not bounced_email:
+                    continue
+
+                # Bounce olan ünvana uyğun daşıyıcı(lar)ı tap
+                carriers_res = supabase.table("carriers").select("id").eq("email", bounced_email).execute()
+                carrier_ids = [c["id"] for c in (carriers_res.data or [])]
+
+                if not carrier_ids:
+                    continue
+
+                # Bu daşıyıcılara aid, hələ "failed" olaraq qeyd olunmamış quotes sətirlərini yenilə
+                for cid in carrier_ids:
+                    q_res = supabase.table("quotes").select("id, mail_status").eq("carrier_id", cid).execute()
+                    for q in (q_res.data or []):
+                        if q.get("mail_status") in ("delivered", "pending"):
+                            supabase.table("quotes").update({"mail_status": "failed"}).eq("id", q["id"]).execute()
+                            updated.append({"quote_id": q["id"], "carrier_id": cid, "email": bounced_email})
+
+                # Mesajı emal olunmuş kimi işarələ (\Seen), təkrar yoxlanmasın
+                imap.store(msg_id, "+FLAGS", "\\Seen")
+
+            except Exception as inner_e:
+                errors.append(str(inner_e))
+                continue
+
+        imap.logout()
+    except Exception as e:
+        errors.append(str(e))
+
+    return {"checked": checked, "updated": updated, "errors": errors}
+
+def get_sender_info_from_shipment(shipment: Optional[Dict[str, Any]]) -> Tuple[str, Optional[str]]:
+    """Shipment_requests qeydinə bağlı customers məlumatından göndərən şirkət adını
+    və Reply-To üçün müştərinin öz emailini çıxarır."""
+    shipment = shipment or {}
+    customer = shipment.get("customers") or {}
+    sender_company = customer.get("company_name") or customer.get("name") or "LogiFast"
+    customer_email = customer.get("email")
+    return sender_company, customer_email
+
+# ------------------------------------------------------------------
+# KÖMƏKÇİ FUNKSİYALAR
+# ------------------------------------------------------------------
+def normalize_text(text: Any) -> str:
+    if not isinstance(text, str):
+        text = str(text)
+    text = text.strip().lower()
+    replacements = {"ə": "e", "ç": "c", "ş": "s", "ı": "i", "ö": "o", "ü": "u", "ğ": "g"}
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+    return text
+
+def extract_clean_email(val: Any) -> Optional[str]:
+    if val is None or pd.isna(val):
+        return None
+    val_str = str(val).strip()
+    if not val_str or val_str.lower() == 'nan':
+        return None
         
-        .form-check-input:checked {
-            background-color: var(--primary-blue);
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 8px rgba(79, 70, 229, 0.3);
-        }
-
-        .form-check-label {
-            cursor: pointer;
-            font-size: 13.5px;
-        }
-
-        .carrier-select-box {
-            max-height: 220px;
-            overflow-y: auto;
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 8px;
-            background: #ffffff;
-            box-shadow: inset 0 2px 8px rgba(0,0,0,0.01);
-        }
-
-        .carrier-item-row {
-            display: flex;
-            align-items: center;
-            padding: 8px 10px;
-            border-radius: var(--radius-sm);
-            transition: all 0.2s ease;
-            cursor: pointer;
-            border: 1px solid transparent;
-            margin-bottom: 3px;
-        }
-
-        .carrier-item-row:hover {
-            background: #f8fafc;
-            border-color: #e2e8f0;
-        }
-
-        .request-card {
-            border: 1px solid rgba(226, 232, 240, 0.9);
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .request-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 4px; height: 100%;
-            background: linear-gradient(to bottom, var(--primary-blue), var(--secondary-color));
-        }
-
-        .request-meta-box {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 12px 14px;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.01);
-        }
-
-        .modal-content {
-            border: none;
-            border-radius: var(--radius-lg);
-            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-        }
-
-        .modal-header {
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 18px 22px;
-        }
-        
-        .modal-body { padding: 22px; }
-        
-        .modal-footer {
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-            padding: 14px 22px;
-        }
-
-        .badge {
-            padding: 5px 10px;
-            border-radius: 30px;
-            font-weight: 700;
-            font-size: 11px;
-            letter-spacing: 0.3px;
-        }
-
-        .table-container-responsive {
-            width: 100%;
-            min-width: 0;
-            flex: 1 1 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            margin-top: 12px;
-            padding-bottom: 8px;
-            display: block;
-            touch-action: pan-x;
-        }
-
-        .table-container-responsive table {
-            min-width: 650px;
-            width: 100%;
-            white-space: nowrap;
-        }
-
-        img, svg { max-width: 100%; height: auto; }
-
-        .table-container-responsive.overflow-hidden {
-            overflow-x: auto !important;
-            overflow-y: hidden !important;
-        }
-
-        @media (max-width: 768px) {
-            .container-fluid { padding-left: 12px; padding-right: 12px; }
-            .stats-card h3 { font-size: 28px; }
-            .section-title { font-size: 16px; }
-        }
-
-        @media (max-width: 576px) {
-            .card { padding: 16px; }
-            .optional-box { padding: 12px; }
-            .stats-card { padding: 16px; }
-            .stats-card h3 { font-size: 24px; }
-            .navbar-brand { font-size: 1rem; }
-            body { font-size: 13.5px; }
-            .section-title { font-size: 15px; }
-            .section-desc { font-size: 12.5px; }
-            .modal-body { padding: 16px; }
-            .modal-header { padding: 14px 16px; }
-            .modal-footer { padding: 12px 16px; }
-            .btn { white-space: normal; }
-            #userCompanyName { max-width: 100px; }
-        }
-
-        @media (max-width: 400px) {
-            .navbar-brand { font-size: 0.9rem; }
-            .navbar-brand i { font-size: 0.95rem; }
-            #userCompanyName { max-width: 76px; font-size: 11.5px; padding-left: 8px !important; padding-right: 8px !important; }
-            .stats-card h3 { font-size: 21px; }
-            .section-title { font-size: 14px; flex-wrap: wrap; }
-            .section-title i { font-size: 17px; }
-            .card { padding: 12px; }
-            .request-card { padding: 14px; }
-            .badge { font-size: 10px; padding: 4px 8px; }
-            body { font-size: 13px; }
-        }
-
-        @media (max-width: 340px) {
-            #userCompanyName { display: none; }
-        }
-
-        /* ============ RFQ DETAIL PAGE ============ */
-        .detail-header-card {
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255,255,255,1);
-            box-shadow: 0 12px 25px -10px rgba(0, 0, 0, 0.04);
-        }
-
-        .mini-stat-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        @media (max-width: 700px) {
-            .mini-stat-grid {
-                grid-auto-flow: column;
-                grid-auto-columns: minmax(96px, 1fr);
-                grid-template-columns: none;
-                overflow-x: auto;
-                padding-bottom: 4px;
-                -webkit-overflow-scrolling: touch;
-            }
-        }
-
-        .mini-stat-box {
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            background: #f8fafc;
-            padding: 12px 10px;
-            text-align: center;
-        }
-
-        .mini-stat-box .mini-stat-icon {
-            width: 30px; height: 30px;
-            border-radius: 9px;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-size: 14px;
-            margin-bottom: 6px;
-        }
-
-        .mini-stat-box .mini-stat-value { font-size: 20px; font-weight: 800; color: var(--text-main); line-height: 1; }
-        .mini-stat-box .mini-stat-label { font-size: 10.5px; color: var(--text-muted); font-weight: 700; margin-top: 3px; display: block; }
-
-        .avatar-circle {
-            width: 38px; height: 38px; min-width: 38px;
-            border-radius: 50%;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-weight: 800; font-size: 13px; color: #fff;
-        }
-
-        .carrier-panel-row {
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            background: #fff;
-            transition: all 0.2s ease;
-        }
-        .carrier-panel-row:hover { border-color: #c7d2fe; background: #f8fafc; }
-
-        .filter-pill {
-            border: 1px solid #e2e8f0;
-            background: #fff;
-            border-radius: 30px;
-            padding: 6px 12px;
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-muted);
-            white-space: nowrap;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .filter-pill.active {
-            background: var(--primary-blue);
-            border-color: var(--primary-blue);
-            color: #fff;
-        }
-
-        #carriersPanel {
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .envelope-box {
-            width: 100%;
-            min-height: 120px;
-            border-radius: var(--radius-lg);
-            background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%);
-            display: flex; align-items: center; justify-content: center;
-        }
-    </style>
-</head>
-<body>
-
-    <!-- NAVBAR -->
-    <nav class="navbar navbar-expand-lg navbar-light py-2">
-        <div class="container-fluid px-3 px-md-4">
-            <a class="navbar-brand fw-bold text-truncate d-flex align-items-center" href="#">
-                <i class="bi bi-lightning-charge-fill me-1" style="color: var(--primary-blue);"></i> LogiFast 
-                <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">| Müştəri Paneli</span>
-            </a>
-            <div class="ms-auto d-flex align-items-center gap-2">
-                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
-                <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-box-arrow-right me-1"></i> Çıxış
-                </button>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container-fluid px-2 px-sm-3 px-md-4 py-3 py-md-4" id="dashboardMain">
-        
-        <!-- STATS ROW -->
-        <div class="row g-2 g-md-3 mb-4">
-            <div class="col-12 col-sm-4">
-                <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Aktiv RFQ Sorğuları</span>
-                    <h3 id="statActiveRfqs">0</h3>
-                </div>
-            </div>
-            <div class="col-12 col-sm-4">
-                <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Tamamlanmış Daşımalar</span>
-                    <h3 id="statCompleted">0</h3>
-                </div>
-            </div>
-            <div class="col-12 col-sm-4">
-                <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Daşıyıcı Bazası</span>
-                    <h3 id="statCarriersCount">0</h3>
-                </div>
-            </div>
-        </div>
-
-        <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
-        <div class="card shadow-sm border-0 mb-4">
-            <div class="section-title mb-1">
-                <i class="bi bi-people-fill text-primary"></i> Daşıyıcı Bazasını İdarə Etmək
-            </div>
-            <div class="section-desc mb-3">Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.</div>
-
-            <ul class="nav nav-pills mb-3 gap-2 flex-column flex-sm-row" id="carrierTabs" role="tablist">
-                <li class="nav-item flex-fill text-center" role="presentation">
-                    <button class="nav-link active px-3 py-2 fw-semibold w-100" id="file-tab" data-bs-toggle="pill" data-bs-target="#file-content" type="button" role="tab" style="font-size: 13px;">
-                        <i class="bi bi-file-earmark-excel me-1"></i> Fayl Yüklə
-                    </button>
-                </li>
-                <li class="nav-item flex-fill text-center" role="presentation">
-                    <button class="nav-link px-3 py-2 fw-semibold w-100" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-content" type="button" role="tab" style="font-size: 13px;">
-                        <i class="bi bi-person-plus me-1"></i> Əllə Daxil Et
-                    </button>
-                </li>
-                <li class="nav-item flex-fill text-center" role="presentation">
-                    <button class="nav-link px-3 py-2 fw-semibold w-100" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-content" type="button" role="tab" style="font-size: 13px;">
-                        <i class="bi bi-clipboard-text me-1"></i> Cədvəldən Yapışdır
-                    </button>
-                </li>
-            </ul>
-
-            <div class="tab-content mb-3" id="carrierTabsContent">
-                
-                <div class="tab-pane fade show active" id="file-content" role="tabpanel">
-                    <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
-                        <div class="row align-items-end g-3">
-                            <div class="col-12 col-md-8">
-                                <label class="form-label text-muted">Excel / CSV Faylı Yüklə</label>
-                                <input type="file" class="form-control" name="file" accept=".csv, .xlsx, .xls" required>
-                            </div>
-                            <div class="col-12 col-md-4">
-                                <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-cloud-arrow-up-fill me-2"></i> Əlavə Et
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-
-                <div class="tab-pane fade" id="manual-content" role="tabpanel">
-                    <form onsubmit="addManualCarrier(event)" class="p-3 border rounded bg-light">
-                        <div class="mb-3">
-                            <label class="form-label text-muted">Şirkət / Daşıyıcı Adı</label>
-                            <input type="text" class="form-control" id="manual_company_name" placeholder="Məsələn: LogiTrans MMC" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label text-muted">E-poçt Ünvanı</label>
-                            <input type="email" class="form-control" id="manual_email" placeholder="info@logitrans.az" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                            <i class="bi bi-person-plus-fill me-2"></i> Daşıyıcıyı Əlavə Et
-                        </button>
-                    </form>
-                </div>
-
-                <div class="tab-pane fade" id="paste-content" role="tabpanel">
-                    <form onsubmit="addPasteCarrier(event)" class="p-3 border rounded bg-light">
-                        <div class="mb-3">
-                            <label class="form-label text-muted">Excel-dən sütunları kopyalayıb bura yapışdırın:</label>
-                            <textarea class="form-control" id="paste_raw_text" rows="3" placeholder="Şirkət A&#10;a@example.com&#10;Şirkət B&#10;b@example.com" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-                            <i class="bi bi-file-earmark-text-fill me-2"></i> Cədvəldən Əlavə Et
-                        </button>
-                    </form>
-                </div>
-
-            </div>
-
-            <hr class="my-3 text-muted opacity-25">
-
-            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                <span class="fw-bold text-dark small text-uppercase tracking-wider">
-                    <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
-                </span>
-                <div class="d-flex align-items-center gap-2">
-                    <!-- YENİLİK: Daşıyıcı Axtarış Sətri -->
-                    <input type="text" id="carrierSearchInput" class="form-control form-control-sm" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="width: 160px; font-size: 12px;">
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="loadManageCarriersList()" style="font-size: 11px;">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
-                    </button>
-                </div>
-            </div>
-            <div class="carrier-select-box" id="manageCarriersContainer">
-                <span class="text-muted small">Daşıyıcılar yüklənir...</span>
-            </div>
-        </div>
-
-        <!-- YENİ YÜK SORĞUSU (RFQ) YARAT -->
-        <div class="card">
-            <div class="section-title">
-                <i class="bi bi-box-seam-fill"></i> Yeni Yük Sorğusu (RFQ) Yarat
-            </div>
-            <div class="section-desc">Logistika parametrlərini ətraflı daxil edin və sorğunuzu göndərin.</div>
+    match = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', val_str)
+    if match:
+        clean = match.group(0).strip().lower()
+        if '@' in clean and '.' in clean:
+            return clean
             
-            <form id="rfqForm" onsubmit="createRfq(event)">
-                <div class="row g-2 g-md-3 mb-2">
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Loading Location (Yükləmə yeri) <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="origin" required placeholder="məs: Bakı, Azərbaycan">
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Delivery Location (Boşaltma yeri) <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="destination" required placeholder="məs: İstanbul, Türkiyə">
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Cargo Type (Yükün növü) <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="cargo_type" required placeholder="məs: Quru yük / Tekstil">
-                    </div>
-                    <div class="col-12 col-md-6">
-                        <label class="form-label">Weight (Çəki - kq) <span class="text-danger">*</span></label>
-                        <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
-                    </div>
-                    <div class="col-12">
-                        <label class="form-label">Transportation Mode (Daşınma Növü) <span class="text-danger">*</span></label>
-                        <select class="form-select" id="transportation_mode" required>
-                            <option value="">Daşınma növünü seçin...</option>
-                            <option value="Quru (Road)">Quru (Road)</option>
-                            <option value="Hava (Air)">Hava (Air)</option>
-                            <option value="Su/Dəniz (Sea)">Su / Dəniz (Sea)</option>
-                            <option value="Dəmiryolu (Rail)">Dəmiryolu (Rail)</option>
-                        </select>
-                    </div>
-                </div>
+    return None
 
-                <div class="optional-box">
-                    <label class="form-label fw-bold mb-3 text-dark fs-6 d-flex align-items-center">
-                        <i class="bi bi-sliders text-primary me-2 fs-5"></i> İxtiyari (Optional) Parametrlər
-                    </label>
+def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, Any]]) -> Dict[str, Any]:
+    if not raw_carriers:
+        raise HTTPException(status_code=400, detail="Əlavə ediləcək daşıyıcı məlumatı tapılmadı.")
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_loading_date" onchange="toggleOptField('loading_date')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_loading_date">Loading Date (Yükləmə tarixi)</label>
-                        </div>
-                        <input type="date" class="form-control opt-input d-none mt-2" id="inp_loading_date">
-                    </div>
+    existing_emails = set()
+    try:
+        res1 = supabase.table("carriers").select("email").eq("customer_id", customer_id).range(0, 9999).execute()
+        if res1.data:
+            for item in res1.data:
+                em = extract_clean_email(item.get("email"))
+                if em:
+                    existing_emails.add(em)
+        
+        res2 = supabase.table("carriers").select("email").eq("customer_id", str(customer_id)).range(0, 9999).execute()
+        if res2.data:
+            for item in res2.data:
+                em = extract_clean_email(item.get("email"))
+                if em:
+                    existing_emails.add(em)
+    except Exception as e:
+        print("Xəta (existing_emails yoxlanarkən):", e)
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_truck_type" onchange="toggleOptField('truck_type')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_truck_type">Truck Type (Maşın növü)</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_truck_type" placeholder="məs: Tentli / Refrijerator">
-                    </div>
-                    
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_volume" onchange="toggleOptField('volume')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_volume">Volume (CBM)</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_volume" placeholder="məs: 15 m3">
-                    </div>
+    carriers_to_insert = []
+    seen_in_input = set()
+    duplicate_emails = []
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_hs_code" onchange="toggleOptField('hs_code')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_hs_code">HS Code</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_hs_code" placeholder="məs: 1234.56">
-                    </div>
+    for item in raw_carriers:
+        if not isinstance(item, dict):
+            continue
+        
+        raw_email = item.get("email")
+        clean_email = extract_clean_email(raw_email)
+        
+        if not clean_email:
+            continue
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_stackable" onchange="toggleOptField('stackable')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_stackable">Stackable / Non-stackable</label>
-                        </div>
-                        <select class="form-select opt-input d-none mt-2" id="inp_stackable">
-                            <option value="">Seçin...</option>
-                            <option value="Stackable">Stackable</option>
-                            <option value="Non-stackable">Non-stackable</option>
-                        </select>
-                    </div>
+        if clean_email in existing_emails or clean_email in seen_in_input:
+            duplicate_emails.append(clean_email)
+            continue
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_shipment_type" onchange="toggleOptField('shipment_type')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_shipment_type">Shipment Type (FTL / LTL / LCL / FCL)</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_shipment_type" placeholder="məs: FTL">
-                    </div>
+        seen_in_input.add(clean_email)
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_incoterm" onchange="toggleOptField('incoterm')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_incoterm">Incoterm</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_incoterm" placeholder="məs: EXW / FAP">
-                    </div>
+        company = item.get("name") or item.get("company_name") or "Daşıyıcı"
+        if not company or str(company).lower() == 'nan' or not str(company).strip():
+            company = "Daşıyıcı"
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_adr" onchange="toggleOptField('adr')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_adr">Dangerous Goods (ADR)</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_adr" placeholder="məs: Klass 3">
-                    </div>
+        carriers_to_insert.append({
+            "customer_id": customer_id,
+            "company_name": str(company).strip(),
+            "email": clean_email
+        })
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_temp" onchange="toggleOptField('temp')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_temp">Temperature Requirement (Reefer)</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_temp" placeholder="məs: +2 to +8 °C">
-                    </div>
+    if duplicate_emails:
+        unique_dups = ", ".join(list(set(duplicate_emails)))
+        raise HTTPException(status_code=400, detail=f"Bu e-poçt ünvanı artıq bazada və ya siyahıda mövcuddur: {unique_dups}")
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_deliv_date" onchange="toggleOptField('deliv_date')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_deliv_date">Delivery Deadline</label>
-                        </div>
-                        <input type="date" class="form-control opt-input d-none mt-2" id="inp_deliv_date">
-                    </div>
+    if not carriers_to_insert:
+        raise HTTPException(status_code=400, detail="Daxil edilən e-poçt ünvanı etibarsızdır və ya artıq mövcuddur.")
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_info" onchange="toggleOptField('info')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_info">Additional Information (Qeyd və ya sənəd əlavəsi)</label>
-                        </div>
-                        <div id="inp_info_container" class="d-none mt-2">
-                            <textarea class="form-control mb-2" id="inp_info_text" rows="2" placeholder="Əlavə xüsusi şərtlər və təlimatlar..."></textarea>
-                            <label class="form-label text-muted small mb-1">Əlavə fayl yüklə (istəyə bağlı):</label>
-                            <input type="file" class="form-control" id="inp_info_file">
-                        </div>
-                    </div>
-                </div>
+    supabase.table("carriers").insert(carriers_to_insert).execute()
+    return {"status": "success", "message": f"{len(carriers_to_insert)} yeni daşıyıcı uğurla əlavə edildi!"}
 
-                <div class="p-3 mt-3 mb-3 bg-white border rounded-4">
-                    <label class="form-label fw-bold text-dark fs-6 mb-3 d-flex align-items-center">
-                        <i class="bi bi-envelope-paper-fill text-primary me-2 fs-5"></i> Daşıyıcılara Göndəriləcək Email Məzmunu
-                    </label>
-                    
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="radio" name="emailTemplateOption" id="standardTemplateRadio" checked onchange="toggleEmailTemplateFields()">
-                        <label class="form-check-label fw-bold text-dark" for="standardTemplateRadio">
-                            Standart Şablon
-                        </label>
-                    </div>
+def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int):
+    if df.empty:
+        raise HTTPException(status_code=400, detail="Məlumat tapılmadı və ya cədvəl boşdur.")
 
-                    <div class="p-3 mb-3 bg-light border rounded-3 text-muted small shadow-sm overflow-x-auto" style="font-family: monospace; white-space: pre-wrap; font-size: 12px;">Dear {{company_name}},
+    normalized_columns = {col: normalize_text(col) for col in df.columns}
+
+    email_keywords = ['email', 'e-mail', 'e-poct', 'epoct', 'e poct', 'poct', 'elaqe', 'contact', 'mail']
+    email_col = next((orig for orig, norm in normalized_columns.items() if any(kw in norm for kw in email_keywords)), None)
+
+    if not email_col:
+        raise HTTPException(status_code=400, detail="Cədvəldə e-poçt sütunu tapılmadı.")
+
+    company_keywords = ['company', 'sirket', 'firma', 'ad', 'name', 'carrier', 'dasiyici']
+    comp_col = next((orig for orig, norm in normalized_columns.items() if any(kw in norm for kw in company_keywords)), None)
+
+    raw_list = []
+    for _, row in df.iterrows():
+        raw_email_val = row[email_col] if pd.notna(row[email_col]) else ""
+        clean_email = extract_clean_email(raw_email_val)
+        if not clean_email:
+            continue
+            
+        company = str(row[comp_col]).strip() if comp_col and pd.notna(row[comp_col]) else "Daşıyıcı"
+        raw_list.append({"name": company, "email": clean_email})
+
+    return filter_and_insert_carriers(customer_id, raw_list)
+
+async def send_carrier_email_link(
+    carrier_email: str, 
+    carrier_name: str, 
+    origin: str, 
+    destination: str, 
+    token: str, 
+    custom_body: Optional[str] = None,
+    sender_company: str = "LogiFast",
+    is_reminder: bool = False,
+    reply_to_email: Optional[str] = None
+):
+    quote_link = f"http://162.35.186.229:8000/carrier_quote/quote?token={token}"
+    tracking_pixel_url = f"http://162.35.186.229:8000/quotes/track/{token}"
+
+    if is_reminder:
+        text_content = f"""Dear {carrier_name},
+
+This is a gentle reminder regarding the shipment request from {origin} to {destination}. Please kindly submit your quotation using the link below if you haven't already.
+
+Thank you.
+
+Best regards,
+{sender_company}"""
+        subject_prefix = "⏰ Reminder: Submit a Proposal"
+    elif not custom_body or not custom_body.strip():
+        text_content = f"""Dear {carrier_name},
 
 Please review the shipment details below and kindly complete the quotation form using the link provided.
 
 Thank you.
 
 Best regards,
-{{sender_company}}</div>
+{sender_company}"""
+        subject_prefix = "📦 Submit a Proposal"
+    else:
+        text_content = custom_body
+        text_content = text_content.replace("{{company_name}}", carrier_name)
+        text_content = text_content.replace("{{sender_company}}", sender_company)
+        text_content = text_content.replace("{{origin}}", origin)
+        text_content = text_content.replace("{{destination}}", destination)
+        subject_prefix = "📦 Submit a Proposal"
 
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="radio" name="emailTemplateOption" id="customTemplateRadio" onchange="toggleEmailTemplateFields()">
-                        <label class="form-check-label fw-bold text-dark" for="customTemplateRadio">
-                            Öz Şablonumu Daxil Et (Custom)
-                        </label>
-                    </div>
+    formatted_text = text_content.replace("\n", "<br>")
 
-                    <div id="customEmailContainer" class="d-none mt-2">
-                        <textarea class="form-control" id="custom_email_body" rows="3" placeholder="Email mətnini bura yazın..."></textarea>
-                    </div>
-                </div>
-
-                <div class="p-3 mt-3 mb-3 bg-white border rounded-4">
-                    <label class="form-label fw-bold text-dark fs-6 mb-3 d-flex align-items-center">
-                        <i class="bi bi-send-check-fill text-primary me-2 fs-5"></i> Daşıyıcı Paylaşım Ayarı
-                    </label>
-                    
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="radio" name="carrierOption" id="sendToAllRadio" checked onchange="toggleCarrierSelection()">
-                        <label class="form-check-label fw-bold text-dark" for="sendToAllRadio">
-                            Sorğunu bütün daşıyıcılara göndər
-                        </label>
-                    </div>
-
-                    <div class="form-check mb-3">
-                        <input class="form-check-input" type="radio" name="carrierOption" id="sendToSelectedRadio" onchange="toggleCarrierSelection()">
-                        <label class="form-check-label fw-bold text-dark" for="sendToSelectedRadio">
-                            Seçilmiş daşıyıcılara göndər
-                        </label>
-                    </div>
-
-                    <div id="carrierSelectionContainer" class="d-none mt-2 p-2 p-sm-3 bg-light rounded-4 border">
-                        <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                            <small class="text-muted fw-bold text-uppercase tracking-wider" style="font-size: 11px;">Daşıyıcıları seçin:</small>
-                            <div>
-                                <button type="button" class="btn btn-sm btn-light fw-bold me-1 px-2 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(true)">Hamısını Seç</button>
-                                <button type="button" class="btn btn-sm btn-link text-muted fw-semibold text-decoration-none px-1 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(false)">Təmizlə</button>
-                            </div>
-                        </div>
-                        <div class="carrier-select-box" id="carrierCheckboxList">
-                            <span class="text-muted small">Daşıyıcılar yüklənir...</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3" id="submitRfqBtn">
-                        <i class="bi bi-rocket-takeoff-fill me-2"></i> RFQ Sorğusunu Yarat və Göndər
-                    </button>
-                </div>
-            </form>
-        </div>
-
-        <!-- AKTİV VƏ KEÇMİŞ SORĞULAR -->
-        <div class="card">
-            <div class="section-title">
-                <i class="bi bi-ui-checks-grid"></i> RFQ Sorğuları və Təkliflər
+    html_content = f"""
+    <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px;">
+        <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 30px; border: 1px solid #e0e0e0;">
+            <div style="font-size: 15px; color: #333333; line-height: 1.6; margin-bottom: 25px;">
+                {formatted_text}
             </div>
-            <div class="section-desc">Yaratdığınız sorğuların statusunu izləyin və təklifləri analiz edin.</div>
             
-            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider">Sorğu Siyahısı</h5>
-                <div class="d-flex align-items-center gap-2">
-                    <!-- YENİLİK: Sorğu Axtarış Sətri -->
-                    <input type="text" id="requestSearchInput" class="form-control form-control-sm" placeholder="Sorğularda axtar..." onkeyup="filterRequests()" style="width: 180px; font-size: 12px;">
-                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="loadRequests()" style="font-size: 12px;">
-                        <i class="bi bi-arrow-clockwise"></i> Yenilə
-                    </button>
-                </div>
+            <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #1a73e8; margin: 20px 0;">
+                <p style="margin: 5px 0;"><strong>Route:</strong> {origin} ➔ {destination}</p>
             </div>
 
-            <div id="requestsContainer" class="mt-2">
-                <p class="text-muted small">Sorğular yüklənir...</p>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- DETALLI BAXIŞ MODALI -->
-    <div class="modal fade" id="quoteDetailModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable mx-2 mx-sm-auto">
-            <div class="modal-content">
-                <div class="modal-header d-flex justify-content-between align-items-center">
-                    <h5 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center" style="font-size: 1.05rem;">
-                        <i class="bi bi-file-earmark-text-fill text-primary me-2"></i> Təklif Detalları
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="modalQuoteContent"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary px-3 py-1.5 fw-semibold rounded-pill w-100 w-sm-auto" style="font-size: 13px;" data-bs-dismiss="modal">Bağla</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- =============== RFQ DETAIL SƏHİFƏSİ =============== -->
-    <div id="rfqDetailPage" class="container-fluid px-2 px-sm-3 px-md-4 py-3 py-md-4 d-none">
-
-        <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
-            <nav style="font-size: 13px;">
-                <a href="#" onclick="closeRfqDetail(); return false;" class="text-decoration-none text-primary fw-bold">
-                    <i class="bi bi-arrow-left me-1"></i>RFQ-lar
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{quote_link}" style="background-color: #1a73e8; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">
+                    👉 Submit Your Proposal
                 </a>
-                <span class="text-muted mx-1">›</span>
-                <span class="text-dark fw-bold" id="detailBreadcrumbId">RFQ #</span>
-            </nav>
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="refreshRfqDetail()">
-                    <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
-                </button>
-                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" data-bs-toggle="offcanvas" data-bs-target="#carriersPanel">
-                    <i class="bi bi-people-fill me-1"></i> Daşıyıcılar (<span id="mobileCarriersCount">0</span>)
-                </button>
             </div>
         </div>
-
-        <div class="row g-3 g-lg-4">
-            <!-- ƏSAS SÜTUN (tam en) -->
-            <div class="col-12">
-
-                <!-- RFQ BAŞLIĞI -->
-                <div class="detail-header-card mb-3">
-                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3 gap-2">
-                        <div class="d-flex align-items-center flex-wrap gap-2">
-                            <span class="badge bg-light text-secondary border shadow-sm" id="detailIdBadge">ID: —</span>
-                            <h5 class="fw-bold text-dark mb-0 d-flex align-items-center flex-wrap gap-1" style="font-size: 1.05rem;">
-                                <span class="text-break" id="detailOrigin">—</span>
-                                <i class="bi bi-arrow-right-short text-primary fs-5"></i>
-                                <span class="text-break" id="detailDestination">—</span>
-                            </h5>
-                        </div>
-                        <span class="badge bg-primary shadow-sm" id="detailStatusBadge">OPEN</span>
-                    </div>
-                    <div class="row text-muted small fw-medium g-2 mb-3">
-                        <div class="col-12 col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark" id="detailCargoType">—</strong></div>
-                        <div class="col-12 col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark" id="detailWeight">—</strong></div>
-                        <div class="col-12 col-sm-4"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark" id="detailDeadline">—</strong></div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" style="font-size: 12px;" data-bs-toggle="modal" data-bs-target="#requestExtraModal">
-                        <i class="bi bi-info-circle me-1"></i> Daha ətraflı məlumat
-                    </button>
-                </div>
-
-                <!-- GÖNDƏRİLMƏ STATUSU -->
-                <div class="card mb-3">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <div class="section-title mb-0">
-                            <i class="bi bi-graph-up-arrow"></i> Göndərilmə statusu
-                        </div>
-                        <button type="button" id="checkBouncesBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size: 11px;" onclick="checkBouncesNow()" title="Gmail qutusunu çatdırılmayan maillər üçün indi yoxla">
-                            <i class="bi bi-arrow-repeat"></i> Bounce yoxla
-                        </button>
-                    </div>
-                    <div class="section-desc mb-2">Sorğunun daşıyıcılara çatdırılma və reaksiya statistikası.</div>
-
-                    <div class="mini-stat-grid mb-3">
-                        <div class="mini-stat-box">
-                            <span class="mini-stat-icon" style="background:#eef2ff; color:#4f46e5;"><i class="bi bi-send-fill"></i></span>
-                            <span class="mini-stat-value" id="statSent">0</span>
-                            <span class="mini-stat-label">Göndərildi</span>
-                        </div>
-                        <div class="mini-stat-box">
-                            <span class="mini-stat-icon" style="background:#dcfce7; color:#16a34a;"><i class="bi bi-check-circle-fill"></i></span>
-                            <span class="mini-stat-value" id="statDelivered">0</span>
-                            <span class="mini-stat-label">Çatdırıldı</span>
-                        </div>
-                        <div class="mini-stat-box">
-                            <span class="mini-stat-icon" style="background:#f1f5f9; color:#334155;"><i class="bi bi-eye-fill"></i></span>
-                            <span class="mini-stat-value" id="statViewed">0</span>
-                            <span class="mini-stat-label">Baxıldı</span>
-                        </div>
-                        <div class="mini-stat-box">
-                            <span class="mini-stat-icon" style="background:#fef9c3; color:#ca8a04;"><i class="bi bi-chat-left-text-fill"></i></span>
-                            <span class="mini-stat-value" id="statQuoted">0</span>
-                            <span class="mini-stat-label">Təklif alındı</span>
-                        </div>
-                        <div class="mini-stat-box">
-                            <span class="mini-stat-icon" style="background:#fee2e2; color:#dc2626;"><i class="bi bi-exclamation-triangle-fill"></i></span>
-                            <span class="mini-stat-value" id="statFailed">0</span>
-                            <span class="mini-stat-label">Çatdırılmadı</span>
-                        </div>
-                    </div>
-
-                    <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 d-inline-flex align-items-center gap-1" style="font-size: 12px;" data-bs-toggle="offcanvas" data-bs-target="#carriersPanel">
-                        <i class="bi bi-people-fill"></i> Daşıyıcılar (<span id="statBtnCarriersCount">0</span>)
-                    </button>
-                </div>
-
-                <!-- TƏKLİFLƏR -->
-                <div class="card mb-3">
-                    <div class="section-title mb-1">
-                        <i class="bi bi-file-earmark-text-fill"></i> Təkliflər (<span id="detailQuotesCount">0</span>)
-                    </div>
-                    <div class="section-desc mb-2">Daşıyıcıların göndərdiyi qiymət təklifləri.</div>
-                    <div id="detailQuotesContainer">
-                        <p class="text-muted small">Təkliflər yüklənir...</p>
-                    </div>
-                </div>
-
-                <!-- RFQ PAYLAŞIM MƏLUMATI -->
-                <div class="card mb-3">
-                    <div class="section-title mb-1">
-                        <i class="bi bi-envelope-fill"></i> RFQ paylaşım məlumatı
-                    </div>
-                    <div class="row g-3 align-items-center">
-                        <div class="col-12 col-md-7">
-                            <div class="mb-2"><span class="text-muted small">Göndərən:</span> <strong class="text-dark ms-1" id="detailSenderCompany">—</strong></div>
-                            <div class="mb-2"><span class="text-muted small">Göndərən email:</span> <strong class="text-dark ms-1" id="detailSenderEmail">—</strong></div>
-                            <div class="mb-2"><span class="text-muted small">Reply-To:</span> <strong class="text-dark ms-1" id="detailReplyTo">—</strong></div>
-                            <div class="mb-0"><span class="text-muted small">Email şablonu:</span> <strong class="text-dark ms-1" id="detailEmailTemplate">Standart şablon</strong></div>
-                        </div>
-                        <div class="col-12 col-md-5">
-                            <div class="envelope-box">
-                                <i class="bi bi-send-check-fill" style="font-size: 56px; color: var(--primary-blue); opacity: .85;"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- CAVABSIZ DAŞIYICI XƏBƏRDARLIĞI -->
-                <div id="detailNonResponders" class="alert alert-light border rounded-4 p-3 d-none align-items-center justify-content-between flex-wrap gap-2">
-                    <span class="text-muted small mb-0"><i class="bi bi-info-circle text-primary me-1"></i> Bu RFQ üçün <strong id="detailPendingCount">0</strong> daşıyıcı hələ təklif göndərməyib. (<span id="detailSelectedCount">0</span> seçilib)</span>
-                    <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 w-100 w-sm-auto" onclick="sendSelectedReminders()">
-                        <i class="bi bi-send me-1"></i> Seçilənləri reminder göndər
-                    </button>
-                </div>
-
-            </div>
-        </div>
+        <img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" />
     </div>
+    """
+    message_kwargs = dict(
+        subject=f"{subject_prefix}: {origin} - {destination}",
+        recipients=[carrier_email],
+        body=html_content,
+        subtype=MessageType.html,
+        # From başlığında müştərinin şirkət adı göstərilir: "Şirkət adı" <burzuyevrcb@gmail.com>
+        from_name=(sender_company or "LogiFast").strip() or "LogiFast"
+    )
+    # Reply-To: cavab müştərinin öz emailinə getsin (əgər varsa)
+    if reply_to_email:
+        message_kwargs["reply_to"] = [reply_to_email]
 
-    <!-- DAŞIYICILAR PANELİ (bütün ekran ölçülərində sürüşən panel) -->
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="carriersPanel">
-        <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title fw-bold text-dark" style="font-size: 1rem;">
-                Daşıyıcılar (<span id="panelCarriersCount">0</span>)
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-        </div>
-        <div class="offcanvas-body d-flex flex-column p-3">
-            <div class="input-group input-group-sm mb-2">
-                <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
-            </div>
+    message = MessageSchema(**message_kwargs)
+    try:
+        await fastmail.send_message(message)
+        supabase.table("quotes").update({"mail_status": "delivered"}).eq("token", token).execute()
+    except Exception:
+        traceback.print_exc()
+        supabase.table("quotes").update({"mail_status": "failed"}).eq("token", token).execute()
 
-            <div class="d-flex gap-2 mb-3 flex-wrap">
-                <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
-                <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif alanlar (<span id="tabRespondedCount">0</span>)</span>
-                <span class="filter-pill" id="filterPillPending" onclick="setCarrierPanelFilter('pending')">Təklif almayanlar (<span id="tabPendingCount">0</span>)</span>
-            </div>
+# ------------------------------------------------------------------
+# PYDANTIC MODELLƏRİ
+# ------------------------------------------------------------------
+class ShipmentRequestCreate(BaseModel):
+    customer_id: int
+    origin: str
+    destination: str
+    cargo_type: Optional[str] = ""
+    weight_kg: Optional[float] = 0.0
+    volume_m3: Optional[float] = 0.0
+    deadline: Optional[str] = None
+    truck_type: Optional[str] = ""
+    hs_code: Optional[str] = ""
+    stackable: Optional[Any] = None
+    shipment_type: Optional[str] = ""
+    required_fields: Optional[List[Any]] = []
+    send_to_all: bool = True
+    carrier_ids: Optional[List[int]] = []
+    
+    attachment_url: Optional[str] = None
+    additional_notes: Optional[str] = ""
+    note: Optional[str] = ""
+    email_template_type: Optional[str] = "standard"
+    email_body: Optional[str] = None
+    custom_email_body: Optional[str] = None
 
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold" style="font-size: 12px;" onclick="selectAllPendingReminders()">Hamısını seç</button>
-                <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none fw-semibold text-muted" style="font-size: 12px;" onclick="clearAllReminderSelection()">Seçimi ləğv et</button>
-            </div>
+class DynamicQuoteSubmit(BaseModel):
+    request_id: Optional[int] = None
+    price: Optional[float] = None
+    transit_time_days: Optional[int] = None
+    extra_details: Optional[Dict[str, Any]] = {}
 
-            <div id="carriersPanelList" class="flex-grow-1" style="overflow-y: auto; max-height: 55vh;">
-                <p class="text-muted small">Daşıyıcılar yüklənir...</p>
-            </div>
+class SelectWinnerRequest(BaseModel):
+    request_id: int
+    quote_id: int
 
-            <button type="button" class="btn btn-primary w-100 mt-3 rounded-pill" onclick="sendSelectedReminders()">
-                <i class="bi bi-send me-1"></i> Seçilənləri reminder göndər (<span id="panelSelectedCount">0</span>)
-            </button>
-            <button type="button" class="btn btn-outline-secondary w-100 mt-2 rounded-pill" data-bs-dismiss="offcanvas">Bağla</button>
-        </div>
-    </div>
+class DeleteCarrierRequest(BaseModel):
+    customer_id: int
+    carrier_id: int
 
-    <!-- RFQ ƏLAVƏ DETALLAR MODALI -->
-    <div class="modal fade" id="requestExtraModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable mx-2 mx-sm-auto">
-            <div class="modal-content">
-                <div class="modal-header d-flex justify-content-between align-items-center">
-                    <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.05rem;">
-                        <i class="bi bi-info-circle-fill text-primary me-2"></i> RFQ-nun Əlavə Detalları
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="requestExtraModalContent"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary px-3 py-1.5 fw-semibold rounded-pill w-100 w-sm-auto" style="font-size: 13px;" data-bs-dismiss="modal">Bağla</button>
-                </div>
-            </div>
-        </div>
-    </div>
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+class BatchReminderRequest(BaseModel):
+    quote_ids: List[int]
 
-    <script>
-        let user = null;
-        try {
-            user = JSON.parse(localStorage.getItem("user"));
-        } catch (e) {
-            user = null;
-        }
+# ------------------------------------------------------------------
+# SƏHİFƏ MARŞRUTLARI (HTML PAGES)
+# ------------------------------------------------------------------
+@app.get("/", response_class=HTMLResponse)
+def get_home(): 
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html")
+    return "index.html tapılmadı", 404
 
-        const currentUserId = (user && user.id) ? user.id : 1;
+@app.get("/login", response_class=HTMLResponse)
+def get_login(): 
+    response = FileResponse("static/login.html")
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+@app.get("/customer")
+def get_customer_dashboard(): 
+    response = FileResponse("static/customer.html")
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+@app.get("/carrier_quote/quote")
+def get_carrier_quote_page(token: str):
+    file_path = BASE_DIR / "static" / "carrier_quote.html"
+    return FileResponse(file_path)
+
+# ------------------------------------------------------------------
+# API ENDPOINT-LƏRİ
+# ------------------------------------------------------------------
+
+@app.get("/customer/stats/{customer_id}")
+def get_customer_stats(customer_id: int):
+    try:
+        reqs_res = supabase.table("shipment_requests").select("id, status").eq("customer_id", customer_id).execute()
+        requests = reqs_res.data or []
         
-        if (user && user.id) {
-            document.getElementById("userCompanyName").innerText = user.company_name || user.email || "Müştəri";
-        } else {
-            document.getElementById("userCompanyName").innerText = "Test Müştəri (ID: 1)";
+        active_rfqs = sum(1 for r in requests if r.get("status") == "open")
+        completed_shipments = sum(1 for r in requests if r.get("status") == "closed")
+        
+        req_ids = [r["id"] for r in requests]
+        
+        incoming_quotes_count = 0
+        if req_ids:
+            quotes_res = supabase.table("quotes").select("price, extra_details").in_("request_id", req_ids).execute()
+            all_quotes = quotes_res.data or []
+            incoming_quotes_count = sum(1 for q in all_quotes if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True))
+
+        carriers_res = supabase.table("carriers").select("id").eq("customer_id", customer_id).execute()
+        carriers_count = len(carriers_res.data or [])
+
+        return {
+            "status": "success",
+            "active_rfqs": active_rfqs,
+            "incoming_quotes": incoming_quotes_count,
+            "completed_shipments": completed_shipments,
+            "carriers_count": carriers_count
         }
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
-        loadStats();
-        loadRequests();
-        loadCarriersList();
-        loadManageCarriersList();
+@app.post("/carriers/manual")
+async def add_carriers_manual(request: Request):
+    try:
+        body = {}
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            body = await request.json()
+        else:
+            form = await request.form()
+            body = dict(form)
+            if "carriers" in body and isinstance(body["carriers"], str):
+                try:
+                    body["carriers"] = json.loads(body["carriers"])
+                except:
+                    body["carriers"] = []
 
-        let globalRequestsCache = [];
-        let globalCarriersCache = [];
+        customer_id = body.get("customer_id") or request.query_params.get("customer_id")
+        if not customer_id:
+            raise HTTPException(status_code=400, detail="customer_id tapılmadı.")
 
-        function getCustomerId() {
-            let u = null;
-            try { u = JSON.parse(localStorage.getItem("user")); } catch(e) {}
-            let rawId = (u && u.id) ? u.id : (typeof currentUserId !== 'undefined' ? currentUserId : 1);
-            let cleaned = parseInt(String(rawId).replace(/[^0-9]/g, ''));
-            return isNaN(cleaned) ? 1 : cleaned;
-        }
+        customer_id = int(customer_id)
+        
+        carriers = body.get("carriers")
+        if not carriers:
+            email = body.get("email")
+            name = body.get("name") or body.get("company_name") or "Daşıyıcı"
+            if email:
+                carriers = [{"name": name, "email": email}]
+            else:
+                carriers = []
 
-        function formatErrorDetail(errDetail) {
-            if (!errDetail) return "Naməlum xəta";
-            if (typeof errDetail === 'string') return errDetail;
-            if (Array.isArray(errDetail)) {
-                return errDetail.map(err => err.msg || JSON.stringify(err)).join(", ");
-            }
-            if (typeof errDetail === 'object') {
-                return JSON.stringify(errDetail);
-            }
-            return String(errDetail);
-        }
+        return filter_and_insert_carriers(customer_id, carriers)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=400, detail=str(e))
 
-        function logout() {
-            localStorage.removeItem("user");
-            window.location.replace("/login");
-        }
+@app.post("/carriers/upload-excel")
+async def upload_carriers_excel(request: Request):
+    try:
+        form = await request.form()
+        customer_id = form.get("customer_id") or request.query_params.get("customer_id")
+        file = form.get("file")
+        
+        if not customer_id or not file:
+            raise HTTPException(status_code=400, detail="customer_id və ya fayl əskikdir.")
+        
+        customer_id = int(customer_id)
+        contents = await file.read()
+        filename = getattr(file, "filename", "file.xlsx")
+        df = pd.read_csv(io.BytesIO(contents)) if filename.lower().endswith('.csv') else pd.read_excel(io.BytesIO(contents))
+        return process_dataframe_and_insert(df, customer_id)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Fayl oxunarkən xəta: {str(e)}")
 
-        function toggleCarrierSelection() {
-            const sendToSelected = document.getElementById("sendToSelectedRadio");
-            const container = document.getElementById("carrierSelectionContainer");
-            if (!sendToSelected || !container) return;
+@app.post("/carriers/upload-text")
+async def upload_carriers_text(request: Request):
+    try:
+        body = {}
+        content_type = request.headers.get("content-type", "")
+        if "application/json" in content_type:
+            body = await request.json()
+        else:
+            form = await request.form()
+            body = dict(form)
+        
+        customer_id = body.get("customer_id") or request.query_params.get("customer_id")
+        raw_text = body.get("raw_text") or body.get("text") or request.query_params.get("raw_text") or request.query_params.get("text") or ""
+
+        if not customer_id or not str(raw_text).strip():
+            raise HTTPException(status_code=400, detail="customer_id və ya raw_text tələb olunur.")
+        
+        customer_id = int(customer_id)
+
+        lines = raw_text.strip().split("\n")
+        raw_list = []
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
             
-            if (sendToSelected.checked) {
-                container.classList.remove("d-none");
-            } else {
-                container.classList.add("d-none");
-            }
+            parts = re.split(r'[\t,;|]', line)
+            parts = [p.strip() for p in parts if p.strip()]
+            
+            email = None
+            name = "Daşıyıcı"
+            
+            for part in parts:
+                extracted = extract_clean_email(part)
+                if extracted:
+                    email = extracted
+                    break
+            
+            if not email:
+                continue
+            
+            other_parts = [p for p in parts if extract_clean_email(p) != email]
+            if other_parts:
+                name = other_parts[0]
+            
+            raw_list.append({"name": name, "email": email})
+
+        if not raw_list:
+            try:
+                df = pd.read_csv(io.StringIO(raw_text), sep="\t")
+                if len(df.columns) == 1: 
+                    df = pd.read_csv(io.StringIO(raw_text), sep=",")
+                return process_dataframe_and_insert(df, customer_id)
+            except Exception:
+                raise HTTPException(status_code=400, detail="Məlumat formatı düzgün deyil. E-poçt tapılmadı.")
+
+        return filter_and_insert_carriers(customer_id, raw_list)
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Xəta: {str(e)}")
+
+@app.post("/carriers/delete")
+def delete_customer_carrier(payload: DeleteCarrierRequest):
+    try:
+        supabase.table("carriers").delete().eq("id", payload.carrier_id).eq("customer_id", payload.customer_id).execute()
+        return {"status": "success", "message": "Daşıyıcı bazadan uğurla silindi!"}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/carriers/customer/{customer_id}")
+def get_customer_carriers(customer_id: int):
+    try:
+        res = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute()
+        return res.data if res.data is not None else []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/carriers/my-list/{customer_id}")
+def get_customer_carriers_legacy(customer_id: int):
+    res = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute()
+    return {"carriers": res.data}
+
+@app.post("/requests/upload-attachment")
+async def upload_request_attachment(file: UploadFile = File(...)):
+    try:
+        file_ext = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
+        contents = await file.read()
+        with open(file_path, "wb") as buffer:
+            buffer.write(contents)
+            
+        return {
+            "status": "success",
+            "attachment_url": f"/uploads/{unique_filename}",
+            "filename": file.filename
         }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fayl yüklənərkən xəta: {str(e)}")
 
-        function toggleEmailTemplateFields() {
-            const useCustom = document.getElementById("customTemplateRadio");
-            const container = document.getElementById("customEmailContainer");
-            if (!useCustom || !container) return;
+@app.post("/requests/create")
+async def create_shipment_request(
+    payload: ShipmentRequestCreate,
+    background_tasks: BackgroundTasks = BackgroundTasks()
+):
+    try:
+        parsed_required = []
+        for item in (payload.required_fields or []):
+            if isinstance(item, dict):
+                val_str = ", ".join([f"{k}: {v}" for k, v in item.items()])
+                parsed_required.append(val_str)
+            else:
+                parsed_required.append(str(item))
 
-            if (useCustom.checked) {
-                container.classList.remove("d-none");
-            } else {
-                container.classList.add("d-none");
-                const customBody = document.getElementById("custom_email_body");
-                if (customBody) customBody.value = "";
-            }
+        final_note = payload.additional_notes or payload.note or ""
+
+        deadline_val = payload.deadline
+        if deadline_val == "" or deadline_val is None:
+            deadline_val = None
+        elif deadline_val and deadline_val in final_note and ("loading" in final_note.lower() or "tarix" in final_note.lower()):
+            deadline_val = None
+
+        stackable_val = payload.stackable
+        if isinstance(stackable_val, str):
+            if stackable_val.strip() == "" or stackable_val.lower() == "none":
+                stackable_val = None
+            else:
+                stackable_val = stackable_val.lower() in ["true", "1", "yes", "on"]
+
+        response = supabase.table("shipment_requests").insert({
+            "customer_id": payload.customer_id,
+            "origin": payload.origin,
+            "destination": payload.destination,
+            "cargo_type": payload.cargo_type,
+            "weight_kg": payload.weight_kg,
+            "volume_m3": payload.volume_m3,
+            "deadline": deadline_val,
+            "truck_type": payload.truck_type,
+            "hs_code": payload.hs_code,
+            "stackable": stackable_val,
+            "shipment_type": payload.shipment_type,
+            "required_fields": parsed_required,
+            "attachment_url": payload.attachment_url,
+            "additional_notes": final_note,
+            "status": "open"
+        }).execute()
+        
+        shipment_data = response.data[0]
+        request_id = shipment_data["id"]
+
+        cust_res = supabase.table("customers").select("*").eq("id", payload.customer_id).execute()
+        sender_company = "LogiFast"
+        customer_email = None
+        if cust_res.data:
+            c_data = cust_res.data[0]
+            sender_company = c_data.get("company_name") or c_data.get("name") or "LogiFast"
+            customer_email = c_data.get("email")
+
+        c_query = supabase.table("carriers").select("*").eq("customer_id", payload.customer_id).range(0, 9999).execute()
+        all_customer_carriers = c_query.data or []
+
+        if payload.send_to_all:
+            target_carriers = all_customer_carriers
+        else:
+            selected_ids = set(payload.carrier_ids or [])
+            target_carriers = [c for c in all_customer_carriers if c["id"] in selected_ids]
+
+        active_custom_body = payload.custom_email_body or payload.email_body
+
+        for carrier in target_carriers:
+            unique_token = str(uuid.uuid4())
+            carrier_name = carrier.get("company_name") or "Daşıyıcı"
+            carrier_email = carrier.get("email")
+
+            # Email ünvanı olmayan daşıyıcı üçün "pending" statusunda əbədi qalıb
+            # yanlış olaraq "göndərildi" kimi göstərilməsinin qarşısını alırıq:
+            # dərhal "failed" olaraq qeyd edirik ki, panel və statistikada düzgün əks olunsun.
+            initial_status = "pending" if carrier_email else "failed"
+
+            supabase.table("quotes").insert({
+                "request_id": request_id, 
+                "carrier_id": carrier["id"], 
+                "token": unique_token,
+                "mail_status": initial_status,
+                "is_viewed": False
+            }).execute()
+
+            if carrier_email:
+                background_tasks.add_task(
+                    send_carrier_email_link,
+                    carrier_email=carrier_email,
+                    carrier_name=carrier_name,
+                    origin=payload.origin,
+                    destination=payload.destination,
+                    token=unique_token,
+                    custom_body=active_custom_body,
+                    sender_company=sender_company,
+                    reply_to_email=customer_email
+                )
+
+        return {
+            "status": "success", 
+            "message": f"Sorğu #{request_id} yaradıldı. {len(target_carriers)} daşıyıcıya təklif linki göndərildi!", 
+            "request_details": shipment_data
         }
+        
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
-        function toggleOptField(key) {
-            const chk = document.getElementById(`chk_${key}`);
-            if (!chk) return;
+@app.get("/requests/customer/{customer_id}")
+def get_customer_requests(customer_id: int):
+    res = supabase.table("shipment_requests").select("*, quotes(id, price, extra_details)").eq("customer_id", customer_id).order("id", desc=True).execute()
+    requests = res.data or []
 
-            if (key === 'info') {
-                const container = document.getElementById(`inp_info_container`);
-                if (!container) return;
-                if (chk.checked) {
-                    container.classList.remove('d-none');
-                } else {
-                    container.classList.add('d-none');
-                    const infoText = document.getElementById(`inp_info_text`);
-                    const infoFile = document.getElementById(`inp_info_file`);
-                    if (infoText) infoText.value = '';
-                    if (infoFile) infoFile.value = '';
-                }
-            } else {
-                const input = document.getElementById(`inp_${key}`);
-                if (!input) return;
-                if (chk.checked) {
-                    input.classList.remove('d-none');
-                } else {
-                    input.classList.add('d-none');
-                    input.value = '';
-                }
-            }
+    for req in requests:
+        quotes_list = req.get("quotes") or []
+        valid_quotes = [
+            q for q in quotes_list 
+            if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True)
+        ]
+        req["quotes_count"] = len(valid_quotes)
+        
+        if "quotes" in req:
+            del req["quotes"]
+
+    return {"status": "success", "requests": requests}
+
+# Yeni: RFQ-ya qoşulmuş daşıyıcıların statuslarını (çatdırıldı, oxundu, təklif gəldi) qaytaran endpoint
+@app.get("/requests/carriers-status/{request_id}")
+def get_request_carriers_status(request_id: int):
+    try:
+        quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
+        items = quotes_res.data or []
+        
+        result_carriers = []
+        for item in items:
+            carrier = item.get("carriers") or {}
+            extra = item.get("extra_details") or {}
+            
+            has_submitted = item.get("price") is not None or extra.get("submitted") == True
+            
+            result_carriers.append({
+                "quote_id": item.get("id"),
+                "carrier_id": item.get("carrier_id"),
+                "company_name": carrier.get("company_name", "Daşıyıcı"),
+                "email": carrier.get("email", ""),
+                "mail_status": item.get("mail_status", "pending"), # delivered, failed, pending
+                "is_viewed": item.get("is_viewed", False),
+                "has_submitted": has_submitted,
+                "token": item.get("token")
+            })
+
+        return {"status": "success", "carriers": result_carriers}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/requests/details/{target_id}")
+def get_request_details(target_id: str):
+    quote_res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", target_id).execute()
+    if quote_res.data:
+        quote = quote_res.data[0]
+        shipment = quote.get("shipment_requests") or {}
+        
+        if isinstance(shipment, dict):
+            note_val = shipment.get("additional_notes") or shipment.get("note") or shipment.get("customer_note") or ""
+            shipment["additional_notes"] = note_val
+            shipment["note"] = note_val
+            
+            vol = shipment.get("volume_m3")
+            if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]:
+                shipment["volume_m3"] = "Qeyd edilməyib"
+
+            deadline = shipment.get("deadline")
+            if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
+                shipment["deadline"] = None
+
+        extra = quote.get("extra_details") or {}
+        is_already_submitted = (quote.get("price") is not None) or (extra.get("submitted") == True)
+
+        cleaned_extra = dict(extra)
+        cleaned_extra.pop("submitted", None)
+        quote["extra_details"] = cleaned_extra
+
+        return {
+            "already_submitted": is_already_submitted,
+            "request": shipment,
+            "quote": quote
         }
-
-        function selectAllCarriers(select) {
-            const checkboxes = document.querySelectorAll(".carrier-item-check");
-            checkboxes.forEach(cb => cb.checked = select);
-        }
-
-        async function loadCarriersList() {
-            try {
-                const customerId = getCustomerId();
-                const res = await fetch(`/carriers/customer/${customerId}`);
-                const data = await res.json();
-                const box = document.getElementById("carrierCheckboxList");
+    
+    if target_id.isdigit():
+        req_res = supabase.table("shipment_requests").select("*").eq("id", int(target_id)).execute()
+        if req_res.data:
+            shipment = req_res.data[0]
+            if isinstance(shipment, dict):
+                note_val = shipment.get("additional_notes") or shipment.get("note") or shipment.get("customer_note") or ""
+                shipment["additional_notes"] = note_val
+                shipment["note"] = note_val
                 
-                let carriers = [];
-                if (Array.isArray(data)) {
-                    carriers = data;
-                } else if (data.carriers && Array.isArray(data.carriers)) {
-                    carriers = data.carriers;
-                } else if (data.data && Array.isArray(data.data)) {
-                    carriers = data.data;
-                }
-
-                if (res.ok && carriers.length > 0) {
-                    let html = "";
-                    for (let c of carriers) {
-                        let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
-                        html += `
-                            <div class="carrier-item-row" onclick="document.getElementById('carrier_${carrierId}').click(); event.stopPropagation();">
-                                <div class="form-check mb-0 w-100">
-                                    <input class="form-check-input carrier-item-check me-2" type="checkbox" value="${carrierId}" id="carrier_${carrierId}" onclick="event.stopPropagation();">
-                                    <label class="form-check-label fw-bold text-dark text-break" for="carrier_${carrierId}" style="cursor: pointer;">
-                                        ${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'} <span class="text-muted fw-normal small ms-1">(${c.email || ''})</span>
-                                    </label>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    box.innerHTML = html;
-                } else {
-                    box.innerHTML = `<span class="text-danger small p-2 d-block">Bazada daşıyıcı tapılmadı.</span>`;
-                }
-            } catch (err) {
-                console.error("Daşıyıcılar yüklənmədi:", err);
-                document.getElementById("carrierCheckboxList").innerHTML = `<span class="text-danger small p-2 d-block">Şəbəkə xətası baş verdi.</span>`;
-            }
-        }
-
-        async function loadManageCarriersList() {
-            try {
-                const customerId = getCustomerId();
-                const res = await fetch(`/carriers/customer/${customerId}`);
-                const data = await res.json();
-                
-                let carriers = [];
-                if (Array.isArray(data)) {
-                    carriers = data;
-                } else if (data.carriers && Array.isArray(data.carriers)) {
-                    carriers = data.carriers;
-                } else if (data.data && Array.isArray(data.data)) {
-                    carriers = data.data;
-                }
-
-                if (res.ok) {
-                    globalCarriersCache = carriers;
-                    renderManageCarriers(carriers);
-                } else {
-                    document.getElementById("manageCarriersContainer").innerHTML = `<span class="text-muted small p-3 d-block text-center">Bazada hələ heç bir daşıyıcı yoxdur.</span>`;
-                }
-            } catch (err) {
-                console.error("Daşıyıcılar idarəetmə siyahısı yüklənmədi:", err);
-                document.getElementById("manageCarriersContainer").innerHTML = `<span class="text-danger small p-3 d-block text-center">Məlumatları yükləmək mümkün olmadı.</span>`;
-            }
-        }
-
-        function renderManageCarriers(carriers) {
-            const box = document.getElementById("manageCarriersContainer");
-            if (!carriers || carriers.length === 0) {
-                box.innerHTML = `<span class="text-muted small p-3 d-block text-center">Uyğun daşıyıcı tapılmadı.</span>`;
-                return;
-            }
-
-            let html = "";
-            for (let c of carriers) {
-                let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
-                html += `
-                    <div class="carrier-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div class="text-break" style="max-width: 70%;">
-                            <strong class="text-dark">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
-                            <span class="text-muted small ms-1">(${c.email || 'Email yoxdur'})</span>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 12px;" onclick="deleteCarrier(${carrierId})">
-                            <i class="bi bi-trash3-fill me-1"></i> Sil
-                        </button>
-                    </div>
-                `;
-            }
-            box.innerHTML = html;
-        }
-
-        // YENİLİK: Daşıyıcı filtrləmə funksiyası
-        function filterManageCarriers() {
-            const query = document.getElementById("carrierSearchInput").value.toLowerCase();
-            const filtered = globalCarriersCache.filter(c => {
-                const name = (c.company_name || c.name || c.carrier_name || '').toLowerCase();
-                const email = (c.email || '').toLowerCase();
-                return name.includes(query) || email.includes(query);
-            });
-            renderManageCarriers(filtered);
-        }
-
-        async function deleteCarrier(carrierId) {
-            if (!confirm("Bu daşıyıcını bazanızdan silmək istədiyinizə əminsiniz?")) return;
-            try {
-                const customerId = getCustomerId();
-                const res = await fetch(`/carriers/delete`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ customer_id: customerId, carrier_id: carrierId })
-                });
-
-                if (res.ok) {
-                    alert("Daşıyıcı bazadan uğurla silindi!");
-                    loadManageCarriersList();
-                    loadCarriersList();
-                    loadStats();
-                } else {
-                    const errData = await res.json().catch(() => ({}));
-                    alert("Silinmə zamanı xəta baş verdi: " + formatErrorDetail(errData.detail));
-                }
-            } catch (err) {
-                console.error("Silmə xətası:", err);
-                alert("Serverlə əlaqə qurulmadı!");
-            }
-        }
-
-        async function uploadCarriers(e) {
-            e.preventDefault();
-            const fileInput = document.querySelector("#file-content input[name='file']");
-            if (!fileInput || !fileInput.files.length) {
-                alert("Zəhmət olmasa Excel və ya CSV faylı seçin!");
-                return;
-            }
-
-            const customerId = getCustomerId();
-            const formData = new FormData();
-            formData.append("customer_id", customerId);
-            formData.append("file", fileInput.files[0]);
-
-            try {
-                const res = await fetch("/carriers/upload-excel", {
-                    method: "POST",
-                    body: formData
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert(data.message || "Fayl uğurla yükləndi!");
-                    fileInput.value = "";
-                    loadStats();
-                    loadCarriersList();
-                    loadManageCarriersList();
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                console.error("Yükləmə xətası:", err);
-                alert("Serverlə əlaqə qurulmadı!");
-            }
-        }
-
-        async function addManualCarrier(e) {
-            e.preventDefault();
-            const name = document.getElementById("manual_company_name").value.trim();
-            const email = document.getElementById("manual_email").value.trim();
-
-            if (!name || !email) {
-                alert("Zəhmət olmasa bütün xanaları doldurun!");
-                return;
-            }
-
-            const customerId = getCustomerId();
-
-            try {
-                const res = await fetch("/carriers/manual", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
-                        customer_id: customerId, 
-                        name: name, 
-                        company_name: name, 
-                        carrier_name: name,
-                        email: email 
-                    })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("Daşıyıcı uğurla əlavə edildi!");
-                    document.getElementById("manual_company_name").value = "";
-                    document.getElementById("manual_email").value = "";
-                    loadStats();
-                    loadCarriersList();
-                    loadManageCarriersList();
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                console.error("Daşıyıcı əlavə etmə xətası:", err);
-                alert("Serverlə əlaqə qurulmadı!");
-            }
-        }
-
-        async function addPasteCarrier(e) {
-            e.preventDefault();
-            const text = document.getElementById("paste_raw_text").value.trim();
-            if (!text) {
-                alert("Zəhmət olmasa cədvəl məlumatlarını yapışdırın!");
-                return;
-            }
-
-            const customerId = getCustomerId();
-
-            try {
-                const res = await fetch("/carriers/upload-text", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ 
-                        customer_id: customerId, 
-                        raw_text: text, 
-                        text: text,
-                        content: text
-                    })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("Daşıyıcılar uğurla əlavə edildi!");
-                    document.getElementById("paste_raw_text").value = "";
-                    loadStats();
-                    loadCarriersList();
-                    loadManageCarriersList();
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                console.error("Cədvəldən əlavə etmə xətası:", err);
-                alert("Serverlə əlaqə qurulmadı!");
-            }
-        }
-
-        async function loadStats() {
-            try {
-                const customerId = getCustomerId();
-                const res = await fetch(`/customer/stats/${customerId}`);
-                const data = await res.json();
-                if (res.ok) {
-                    document.getElementById("statActiveRfqs").innerText = data.active_rfqs || 0;
-                    document.getElementById("statCompleted").innerText = data.completed_shipments || 0;
-                    document.getElementById("statCarriersCount").innerText = data.carriers_count || 0;
-                }
-            } catch (err) {
-                console.error("Statistika xətası:", err);
-            }
-        }
-
-        async function createRfq(e) {
-            e.preventDefault();
-
-            const sendToAll = document.getElementById("sendToAllRadio").checked;
-            let selectedCarriers = [];
-            
-            if (!sendToAll) {
-                const checkboxes = document.querySelectorAll(".carrier-item-check:checked");
-                checkboxes.forEach(cb => {
-                    const carrierId = parseInt(cb.value);
-                    if (!isNaN(carrierId)) {
-                        selectedCarriers.push(carrierId);
-                    }
-                });
-
-                if (selectedCarriers.length === 0) {
-                    alert("Zəhmət olmasa siyahıdan ən azı bir daşıyıcı seçin və ya 'Bütün daşıyıcılara göndər' seçin!");
-                    return;
-                }
-            }
-
-            let uploadedAttachmentUrl = null;
-            let fileToUpload = null;
-
-            if (document.getElementById("chk_info")?.checked) {
-                const fileInp = document.getElementById("inp_info_file");
-                if (fileInp && fileInp.files.length > 0) {
-                    fileToUpload = fileInp.files[0];
-                }
-            }
-
-            if (fileToUpload) {
-                const fileData = new FormData();
-                fileData.append("file", fileToUpload);
-
-                try {
-                    const uploadRes = await fetch("/requests/upload-attachment", {
-                        method: "POST",
-                        body: fileData
-                    });
-                    const uploadResult = await uploadRes.json();
-                    if (uploadRes.ok) {
-                        uploadedAttachmentUrl = uploadResult.attachment_url;
-                    } else {
-                        alert("Fayl yüklənərkən xəta baş verdi: " + formatErrorDetail(uploadResult.detail));
-                        return;
-                    }
-                } catch (fileErr) {
-                    console.error("Fayl yükləmə xətası:", fileErr);
-                    alert("Faylı serverə yükləmək mümkün olmadı!");
-                    return;
-                }
-            }
-
-            const requiredFieldsList = [];
-
-            if(document.getElementById("chk_loading_date")?.checked) {
-                let val = document.getElementById("inp_loading_date")?.value.trim();
-                if(val) requiredFieldsList.push(`Loading Date: ${val}`);
-            }
-            if(document.getElementById("chk_truck_type")?.checked) {
-                let val = document.getElementById("inp_truck_type")?.value.trim();
-                if(val) requiredFieldsList.push(`Truck Type: ${val}`);
-            }
-            if(document.getElementById("chk_volume")?.checked) {
-                let val = document.getElementById("inp_volume")?.value.trim();
-                if(val) requiredFieldsList.push(`Volume (CBM): ${val}`);
-            }
-            if(document.getElementById("chk_hs_code")?.checked) {
-                let val = document.getElementById("inp_hs_code")?.value.trim();
-                if(val) requiredFieldsList.push(`HS Code: ${val}`);
-            }
-            if(document.getElementById("chk_stackable")?.checked) {
-                let val = document.getElementById("inp_stackable")?.value;
-                if(val) requiredFieldsList.push(`Stackable / Non-stackable: ${val}`);
-            }
-            if(document.getElementById("chk_shipment_type")?.checked) {
-                let val = document.getElementById("inp_shipment_type")?.value.trim();
-                if(val) requiredFieldsList.push(`Shipment Type: ${val}`);
-            }
-            if(document.getElementById("chk_incoterm")?.checked) {
-                let val = document.getElementById("inp_incoterm")?.value.trim();
-                if(val) requiredFieldsList.push(`Incoterm: ${val}`);
-            }
-            if(document.getElementById("chk_adr")?.checked) {
-                let val = document.getElementById("inp_adr")?.value.trim();
-                if(val) requiredFieldsList.push(`Dangerous Goods (ADR): ${val}`);
-            }
-            if(document.getElementById("chk_temp")?.checked) {
-                let val = document.getElementById("inp_temp")?.value.trim();
-                if(val) requiredFieldsList.push(`Temperature Requirement: ${val}`);
-            }
-            if(document.getElementById("chk_deliv_date")?.checked) {
-                let val = document.getElementById("inp_deliv_date")?.value.trim();
-                if(val) requiredFieldsList.push(`Delivery Deadline: ${val}`);
-            }
-            if(document.getElementById("chk_info")?.checked) {
-                let textVal = document.getElementById("inp_info_text")?.value.trim() || "";
-                let fileInput = document.getElementById("inp_info_file");
-                let infoStr = textVal;
-                if(fileInput && fileInput.files.length > 0) {
-                    infoStr += ` [Fayl: ${fileInput.files[0].name}]`;
-                }
-                if(infoStr) requiredFieldsList.push(`Additional Information: ${infoStr}`);
-            }
-
-            const customerId = getCustomerId();
-            
-            const originVal = document.getElementById("origin")?.value.trim();
-            const destinationVal = document.getElementById("destination")?.value.trim();
-            const cargoTypeVal = document.getElementById("cargo_type")?.value.trim();
-            const weightVal = document.getElementById("weight_kg")?.value;
-            const transportModeVal = document.getElementById("transportation_mode")?.value;
-
-            if (!originVal || !destinationVal || !cargoTypeVal || !weightVal || !transportModeVal) {
-                alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!");
-                return;
-            }
-
-            let additionalNotesCombined = "";
-            if(document.getElementById("chk_info")?.checked) {
-                additionalNotesCombined = document.getElementById("inp_info_text")?.value.trim() || "";
-            }
-
-            const useCustomTemplate = document.getElementById("customTemplateRadio").checked;
-            const customEmailBodyVal = useCustomTemplate ? (document.getElementById("custom_email_body")?.value.trim() || "") : "";
-
-            const payload = {
-                customer_id: customerId,
-                origin: originVal,
-                loading_location: originVal,
-                destination: destinationVal,
-                delivery_location: destinationVal,
-                cargo_type: cargoTypeVal,
-                cargo: cargoTypeVal,
-                weight_kg: parseFloat(weightVal) || 0,
-                weight: parseFloat(weightVal) || 0,
-                volume_m3: document.getElementById("chk_volume")?.checked ? (parseFloat(document.getElementById("inp_volume")?.value) || 0) : 0,
-                volume: document.getElementById("chk_volume")?.checked ? (parseFloat(document.getElementById("inp_volume")?.value) || 0) : 0,
-                deadline: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
-                loading_date: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
-                truck_type: document.getElementById("chk_truck_type")?.checked ? (document.getElementById("inp_truck_type")?.value || "") : "",
-                hs_code: document.getElementById("chk_hs_code")?.checked ? (document.getElementById("inp_hs_code")?.value || "") : "",
-                stackable: document.getElementById("chk_stackable")?.checked ? (document.getElementById("inp_stackable")?.value || "") : "",
-                shipment_type: document.getElementById("chk_shipment_type")?.checked ? (document.getElementById("inp_shipment_type")?.value || "") : "",
-                required_fields: requiredFieldsList,
-                send_to_all: sendToAll,
-                carrier_ids: sendToAll ? [] : selectedCarriers,
-                attachment_url: uploadedAttachmentUrl,
-                additional_notes: additionalNotesCombined,
-                note: additionalNotesCombined,
-                email_template_type: useCustomTemplate ? "custom" : "standard",
-                custom_email_body: customEmailBodyVal,
-                transportation_mode: transportModeVal,
-            };
-
-            try {
-                const res = await fetch("/requests/create", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    let msg = typeof data.message === 'object' ? JSON.stringify(data.message) : (data.message || "Sorğu uğurla yaradıldı!");
-                    alert(msg);
+                vol = shipment.get("volume_m3")
+                if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]:
+                    shipment["volume_m3"] = "Qeyd edilməyib"
                     
-                    document.getElementById("rfqForm").reset();
-                    document.querySelectorAll('.opt-input').forEach(el => el.classList.add('d-none'));
-                    const infoContainer = document.getElementById('inp_info_container');
-                    if(infoContainer) infoContainer.classList.add('d-none');
-                    document.getElementById("sendToAllRadio").checked = true;
-                    document.getElementById("standardTemplateRadio").checked = true;
-                    toggleEmailTemplateFields();
-                    toggleCarrierSelection();
-                    loadStats();
-                    loadRequests();
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Server xətası!");
+                deadline = shipment.get("deadline")
+                if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
+                    shipment["deadline"] = None
+
+            return {"request": shipment, "already_submitted": False}
+
+    raise HTTPException(status_code=404, detail="Sorğu və ya keçərli Token tapılmadı.")
+
+@app.get("/quotes/form/{token}")
+def get_quote_form_details(token: str):
+    res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", token).execute()
+    if not res.data: 
+        raise HTTPException(status_code=404, detail="Keçərsiz link!")
+    
+    quote = res.data[0]
+    shipment = quote.get("shipment_requests")
+    if isinstance(shipment, dict):
+        note_val = shipment.get("additional_notes") or shipment.get("note") or ""
+        
+        vol = shipment.get("volume_m3")
+        if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]:
+            shipment["volume_m3"] = "Qeyd edilməyib"
+            
+        deadline = shipment.get("deadline")
+        if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
+            shipment["deadline"] = None
+
+    return {"already_submitted": quote.get("price") is not None, "quote": quote}
+
+# Yeni: Çatdırılmayan (bounce) mailləri manual yoxlamaq üçün endpoint
+@app.post("/quotes/check-bounces")
+async def check_bounces_endpoint():
+    try:
+        result = await asyncio.to_thread(check_bounced_emails)
+        return {"status": "success", **result}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Yeni: Email oxunduqda avtomatik çağrılan izləmə pikseli endpoint-i
+@app.get("/quotes/track/{token}")
+def track_email_view(token: str):
+    try:
+        supabase.table("quotes").update({"is_viewed": True}).eq("token", token).execute()
+    except Exception:
+        pass
+    
+    # 1x1 şəffaf GIF qayıdır
+    transparent_gif = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+    return Response(content=transparent_gif, media_type="image/gif")
+
+# Yeni: Maili çatdırılmayan daşıyıcıya yenidən göndərmək (Resend)
+@app.post("/quotes/resend/{quote_id}")
+async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks):
+    try:
+        res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").eq("id", quote_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Təklif/daşıyıcı qeydi tapılmadı.")
+        
+        quote = res.data[0]
+        shipment = quote.get("shipment_requests") or {}
+        carrier = quote.get("carriers") or {}
+        sender_company, customer_email = get_sender_info_from_shipment(shipment)
+        
+        token = quote.get("token")
+        carrier_email = carrier.get("email")
+        carrier_name = carrier.get("company_name") or "Daşıyıcı"
+        origin = shipment.get("origin") or ""
+        destination = shipment.get("destination") or ""
+
+        if not carrier_email:
+            raise HTTPException(status_code=400, detail="Daşıyıcı email ünvanı mövcud deyil.")
+
+        # Yenidən göndərilməyə başlayarkən statusu "pending"ə qaytarırıq ki, nəticə düzgün əks olunsun
+        supabase.table("quotes").update({"mail_status": "pending"}).eq("id", quote_id).execute()
+
+        background_tasks.add_task(
+            send_carrier_email_link,
+            carrier_email=carrier_email,
+            carrier_name=carrier_name,
+            origin=origin,
+            destination=destination,
+            token=token,
+            sender_company=sender_company,
+            reply_to_email=customer_email
+        )
+
+        return {"status": "success", "message": f"Mail {carrier_email} ünvanına yenidən göndərilməyə başlandı!"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Yeni: Tək daşıyıcıya Reminder göndərmək
+@app.post("/quotes/reminder/{quote_id}")
+async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks):
+    try:
+        res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").eq("id", quote_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Qeyd tapılmadı.")
+        
+        quote = res.data[0]
+        shipment = quote.get("shipment_requests") or {}
+        carrier = quote.get("carriers") or {}
+        sender_company, customer_email = get_sender_info_from_shipment(shipment)
+        
+        token = quote.get("token")
+        carrier_email = carrier.get("email")
+        carrier_name = carrier.get("company_name") or "Daşıyıcı"
+        origin = shipment.get("origin") or ""
+        destination = shipment.get("destination") or ""
+
+        if not carrier_email:
+            raise HTTPException(status_code=400, detail="Daşıyıcı email ünvanı yoxdur.")
+
+        background_tasks.add_task(
+            send_carrier_email_link,
+            carrier_email=carrier_email,
+            carrier_name=carrier_name,
+            origin=origin,
+            destination=destination,
+            token=token,
+            sender_company=sender_company,
+            is_reminder=True,
+            reply_to_email=customer_email
+        )
+
+        return {"status": "success", "message": f"Reminder {carrier_email} ünvanına göndərildi!"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Yeni: Toplu (Batch) Reminder göndərmək
+@app.post("/quotes/reminder-batch")
+async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: BackgroundTasks):
+    try:
+        if not payload.quote_ids:
+            raise HTTPException(status_code=400, detail="Heç bir ID seçilməyib.")
+
+        res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").in_("id", payload.quote_ids).execute()
+        items = res.data or []
+
+        count = 0
+        for quote in items:
+            shipment = quote.get("shipment_requests") or {}
+            carrier = quote.get("carriers") or {}
+            sender_company, customer_email = get_sender_info_from_shipment(shipment)
+            
+            token = quote.get("token")
+            carrier_email = carrier.get("email")
+            carrier_name = carrier.get("company_name") or "Daşıyıcı"
+            origin = shipment.get("origin") or ""
+            destination = shipment.get("destination") or ""
+
+            if carrier_email:
+                background_tasks.add_task(
+                    send_carrier_email_link,
+                    carrier_email=carrier_email,
+                    carrier_name=carrier_name,
+                    origin=origin,
+                    destination=destination,
+                    token=token,
+                    sender_company=sender_company,
+                    is_reminder=True,
+                    reply_to_email=customer_email
+                )
+                count += 1
+
+        return {"status": "success", "message": f"Seçilmiş {count} daşıyıcıya toplu reminder göndərildi!"}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/quotes/create")
+def create_quote_direct(payload: DynamicQuoteSubmit):
+    if not payload.request_id:
+        raise HTTPException(status_code=400, detail="request_id daxil edilməlidir.")
+        
+    res = supabase.table("quotes").insert({
+        "request_id": payload.request_id,
+        "price": payload.price,
+        "transit_time_days": payload.transit_time_days,
+        "extra_details": payload.extra_details,
+        "currency": "AZN"
+    }).execute()
+
+    return {"status": "success", "message": "Təklif qəbul edildi!", "data": res.data}
+
+@app.post("/quotes/submit/{token}")
+async def submit_quote(
+    token: str,
+    price: Optional[str] = Form(None),
+    transit_time_days: Optional[int] = Form(None),
+    extra_details: Optional[str] = Form("{}"),
+    carrier_file: Optional[UploadFile] = File(None)
+):
+    res = supabase.table("quotes").select("*").eq("token", token).execute()
+    if not res.data: 
+        raise HTTPException(status_code=404, detail="Xətalı link!")
+    
+    quote = res.data[0]
+    
+    existing_extra = quote.get("extra_details") or {}
+    if quote.get("price") is not None or existing_extra.get("submitted") == True:
+        raise HTTPException(status_code=400, detail="Artıq təklif göndərilib!")
+
+    parsed_price = None
+    if price is not None and str(price).strip() != "":
+        try:
+            parsed_price = float(price)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Qiymət düzgün formatda deyil!")
+
+    try:
+        parsed_extra = json.loads(extra_details) if extra_details else {}
+    except:
+        parsed_extra = {}
+
+    parsed_extra["submitted"] = True
+
+    if carrier_file and carrier_file.filename:
+        file_ext = os.path.splitext(carrier_file.filename)[1]
+        unique_filename = f"{uuid.uuid4()}{file_ext}"
+        file_path = os.path.join(UPLOAD_DIR, unique_filename)
+        
+        with open(file_path, "wb") as buffer:
+            buffer.write(await carrier_file.read())
+            
+        parsed_extra["carrier_attachment_url"] = f"/uploads/{unique_filename}"
+        parsed_extra["carrier_attachment_name"] = carrier_file.filename
+
+    update_res = supabase.table("quotes").update({
+        "price": parsed_price,
+        "transit_time_days": transit_time_days,
+        "extra_details": parsed_extra,
+        "currency": "AZN"
+    }).eq("token", token).execute()
+
+    return {"status": "success", "message": "Təklif qəbul edildi!", "data": update_res.data}
+
+@app.get("/quotes/request/{request_id}")
+def get_request_quotes(request_id: int):
+    try:
+        quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
+        quotes_list = []
+        for item in quotes_res.data or []:
+            raw_extra = item.get("extra_details") or {}
+            
+            if item.get("price") is None and raw_extra.get("submitted") != True:
+                continue
+
+            carrier_info = item.get("carriers") or {}
+            
+            filtered_extra = {
+                k: v for k, v in raw_extra.items() 
+                if normalize_text(k) not in ['company', 'sirket', 'firma', 'email', 'mail', 'name', 'ad', 'dasiyici']
             }
-        }
-
-        async function loadRequests() {
-            const container = document.getElementById("requestsContainer");
-            container.innerHTML = `<div class="text-center p-3"><span class="spinner-border spinner-border-sm text-primary me-2"></span><span class="text-muted small">Sorğular yüklənir...</span></div>`;
-            try {
-                const customerId = getCustomerId();
-                const res = await fetch(`/requests/customer/${customerId}`);
-                const data = await res.json();
-                
-                let requestsList = [];
-                if (Array.isArray(data)) {
-                    requestsList = data;
-                } else if (data && Array.isArray(data.requests)) {
-                    requestsList = data.requests;
-                }
-
-                if (res.ok) {
-                    globalRequestsCache = requestsList;
-                    renderRequests(requestsList);
-                } else {
-                    container.innerHTML = `<div class="alert alert-light border text-center p-4 rounded-4"><i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i><span class="text-muted fw-medium small">Hələ heç bir sorğu yaratmamısınız.</span></div>`;
-                }
-            } catch (err) {
-                container.innerHTML = `<p class="text-danger fw-bold small"><i class="bi bi-exclamation-circle-fill me-1"></i> Sorğuları yükləmək mümkün olmadı.</p>`;
-            }
-        }
-
-        function renderRequests(requestsList) {
-            const container = document.getElementById("requestsContainer");
-            if (!requestsList || requestsList.length === 0) {
-                container.innerHTML = `<div class="alert alert-light border text-center p-4 rounded-4"><i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i><span class="text-muted fw-medium small">Uyğun sorğu tapılmadı.</span></div>`;
-                return;
-            }
-
-            let html = "";
-            for (let req of requestsList) {
-                let attachmentBtn = "";
-                if (req.attachment_url) {
-                    attachmentBtn = `<a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-light mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 11.5px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
-                }
-
-                let qCount = req.quotes_count !== undefined && req.quotes_count !== null ? req.quotes_count : 0;
-                let badgeClass = qCount > 0 ? 'bg-info text-dark' : 'bg-secondary';
-                
-                let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
-                let statusText = (req.status || 'Aktiv').toUpperCase();
-
-                let deadlineField = req.deadline ? `<div class="col-12 col-sm-4"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${req.deadline}</strong></div>` : '';
-
-                html += `
-                    <div class="request-card">
-                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
-                            <h6 class="fw-bold text-dark mb-0 d-flex align-items-center fs-6 flex-wrap gap-1">
-                                <span class="badge bg-light text-secondary border shadow-sm">ID: ${req.id}</span> 
-                                <span class="text-break">${req.origin || req.loading_location || ''}</span> 
-                                <i class="bi bi-arrow-right-short mx-1 text-primary fs-5"></i> 
-                                <span class="text-break">${req.destination || req.delivery_location || ''}</span>
-                            </h6>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge ${badgeClass} shadow-sm">${qCount} təklif</span>
-                                <span class="badge ${bgClass} shadow-sm">${statusText}</span>
-                            </div>
-                        </div>
-                        <div class="request-meta-box mb-3">
-                            <div class="row text-muted small fw-medium g-2">
-                                <div class="col-12 col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type || req.cargo || ''}</strong></div>
-                                <div class="col-12 col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg || req.weight || 0} kq</strong></div>
-                                ${deadlineField}
-                            </div>
-                        </div>
-                        <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
-                            <button class="btn btn-sm btn-primary px-3 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12px;" onclick="openRfqDetail(${req.id})">
-                                <i class="bi bi-eye me-1"></i> RFQ-ya Bax (${qCount} təklif)
-                            </button>
-                            ${attachmentBtn}
-                        </div>
-                    </div>
-                `;
-            }
-            container.innerHTML = html;
-        }
-
-        // YENİLİK: Sorğu filtrləmə funksiyası
-        function filterRequests() {
-            const query = document.getElementById("requestSearchInput").value.toLowerCase();
-            const filtered = globalRequestsCache.filter(req => {
-                const origin = (req.origin || req.loading_location || '').toLowerCase();
-                const destination = (req.destination || req.delivery_location || '').toLowerCase();
-                const cargo = (req.cargo_type || req.cargo || '').toLowerCase();
-                const idStr = String(req.id || '').toLowerCase();
-                return origin.includes(query) || destination.includes(query) || cargo.includes(query) || idStr.includes(query);
-            });
-            renderRequests(filtered);
-        }
-
-        window.currentQuotesCache = {};
-
-        function buildQuotesTableHtml(quotesList, requestId) {
-            if (!quotesList || quotesList.length === 0) {
-                return `<div class="alert alert-light mt-2 border rounded-3 p-2.5 w-100"><p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> Hələ bu sorğuya təklif göndərilməyib.</p></div>`;
-            }
-
-            let html = `<div class="table-container-responsive rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
-                <thead style="background: #f8fafc;">
-                    <tr>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Daşıyıcı Şirkət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Qiymət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Müddət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Qeydlər</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-center">Əməliyyat</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-
-            for (let q of quotesList) {
-                let extraStr = "";
-                if (q.extra_details) {
-                    for (let [k, v] of Object.entries(q.extra_details)) {
-                        if (k === 'submitted' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
-
-                        if (v !== null && v !== undefined && v !== "") {
-                            if (k === 'carrier_attachment_url') {
-                                extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${v}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
-                            } else {
-                                extraStr += `<div><strong class="text-dark">${k}:</strong> ${v}</div>`;
-                            }
-                        }
-                    }
-                }
-
-                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") 
-                    ? `${q.transit_time_days} gün` 
-                    : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
-
-                let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") 
-                    ? `${q.price} <span class="text-muted small">${q.currency || 'AZN'}</span>` 
-                    : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
-
-                html += `
-                    <tr class="${q.is_winner ? 'table-success' : ''}">
-                        <td class="px-3 fw-bold text-dark py-2.5" style="min-width: 130px;">${q.carrier_company || 'Daşıyıcı'}</td>
-                        <td class="px-3 text-success fw-bold py-2.5" style="min-width: 100px;">${priceDisplay}</td>
-                        <td class="px-3 fw-medium text-dark py-2.5" style="min-width: 90px;">${transitDisplay}</td>
-                        <td class="px-3 py-2.5" style="min-width: 160px;">
-                            <div class="text-muted mb-1 text-truncate" style="max-width: 180px;">${extraStr || 'Məlumat yoxdur'}</div>
-                            <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none text-nowrap" style="font-size: 11.5px;" onclick="openQuoteModal(${requestId}, ${q.id})">
-                                Daha Ətraflı <i class="bi bi-arrow-right-short"></i>
-                            </button>
-                        </td>
-                        <td class="px-3 text-center py-2.5" style="min-width: 100px;">
-                            ${q.is_winner ? 
-                                '<span class="badge bg-success px-2.5 py-1 rounded-pill"><i class="bi bi-trophy-fill me-1"></i> Qalib</span>' : 
-                                `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`
-                            }
-                        </td>
-                    </tr>
-                `;
-            }
-            html += `</tbody></table></div>`;
-            return html;
-        }
-
-        async function loadQuotesInto(requestId, container) {
-            if (!container) return;
-            container.innerHTML = `<div class="mt-2 p-2 text-center w-100"><span class="spinner-border spinner-border-sm text-primary me-2"></span> <span class="text-muted fw-medium small">Təkliflər yüklənir...</span></div>`;
-
-            try {
-                const res = await fetch(`/quotes/request/${requestId}`);
-                const data = await res.json();
-
-                let quotesList = [];
-                if (Array.isArray(data)) {
-                    quotesList = data;
-                } else if (data && Array.isArray(data.quotes)) {
-                    quotesList = data.quotes;
-                }
-
-                if (res.ok) {
-                    window.currentQuotesCache[requestId] = quotesList;
-                    container.innerHTML = buildQuotesTableHtml(quotesList, requestId);
-                } else {
-                    container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`;
-                }
-                return quotesList;
-            } catch (err) {
-                container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`;
-                return [];
-            }
-        }
-
-        async function loadQuotes(requestId) {
-            const quotesDiv = document.getElementById(`quotes-for-${requestId}`);
-            await loadQuotesInto(requestId, quotesDiv);
-        }
-
-        async function loadDetailQuotes(requestId) {
-            const container = document.getElementById("detailQuotesContainer");
-            const quotesList = await loadQuotesInto(requestId, container);
-            const countEl = document.getElementById("detailQuotesCount");
-            if (countEl) countEl.textContent = quotesList.length;
-        }
-
-        function openQuoteModal(requestId, quoteId) {
-            const quotes = window.currentQuotesCache[requestId] || [];
-            const q = quotes.find(item => item.id === quoteId);
-            if (!q) return;
-
-            let extraHtml = "";
-            if (q.extra_details) {
-                for (let [k, v] of Object.entries(q.extra_details)) {
-                    if (k === 'submitted') continue;
-
-                    if (v !== null && v !== undefined && v !== "" && v !== "null") {
-                        if (k === 'carrier_attachment_url') {
-                            extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <strong class="text-dark small">Qoşulmuş Fayl:</strong>
-                                <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Yüklə</a>
-                            </div>`;
-                        } else {
-                            extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm">
-                                <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 10.5px;">${k}</strong>
-                                <p class="mb-0 text-dark fw-medium small text-break" style="white-space: pre-wrap;">${v}</p>
-                            </div>`;
-                        }
-                    }
-                }
-            }
-
-            let modalTransitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null")
-                ? `${q.transit_time_days} <span class="fs-6 text-muted">gün</span>`
-                : `<span class="fs-6 text-muted fst-italic">Qeyd olunmayıb</span>`;
-
-            let modalPriceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null")
-                ? `${q.price} <span class="fs-6 text-muted">${q.currency || 'AZN'}</span>`
-                : `<span class="fs-6 text-muted fst-italic">Yoxdur</span>`;
-
-            const modalContent = document.getElementById("modalQuoteContent");
-            modalContent.innerHTML = `
-                <div class="mb-3 text-center">
-                    <span class="badge bg-light text-primary mb-1 px-2.5 py-1 border rounded-pill">Daşıyıcı Şirkət</span>
-                    <h4 class="fw-bold text-dark text-break" style="font-size: 1.2rem;">${q.carrier_company || 'Daşıyıcı'}</h4>
-                </div>
-                <div class="row g-2 mb-3">
-                    <div class="col-12 col-sm-6">
-                        <div class="p-3 rounded-4 border bg-light h-100">
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Təklif olunan Qiymət</span>
-                            <h3 class="text-success fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalPriceDisplay}</h3>
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-6">
-                        <div class="p-3 rounded-4 border bg-light h-100">
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Tranzit Müddəti</span>
-                            <h3 class="text-dark fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalTransitDisplay}</h3>
-                        </div>
-                    </div>
-                </div>
-                <div class="p-3 rounded-4 bg-light">
-                    <h6 class="fw-bold text-dark mb-2 small"><i class="bi bi-list-stars text-primary me-2"></i> Əlavə Məlumatlar və Şərtlər:</h6>
-                    ${extraHtml || '<div class="p-2 border rounded-3 bg-white text-muted text-center small">Əlavə detal qeyd olunmayıb.</div>'}
-                </div>
-            `;
-
-            const modal = new bootstrap.Modal(document.getElementById("quoteDetailModal"));
-            modal.show();
-        }
-
-        async function selectWinner(requestId, quoteId) {
-            if (!confirm("Bu təklifi qalib seçmək istədiyinizə əminsiniz?")) return;
-            try {
-                const res = await fetch("/quotes/select-winner", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ request_id: requestId, quote_id: quoteId })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert("Qalib təklif uğurla təsdiqləndi!");
-                    loadRequests();
-                    loadStats();
-                    if (currentDetailRequestId === requestId) {
-                        loadDetailQuotes(requestId);
-                        loadDetailCarriersStatus(requestId);
-                    }
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                alert("Server xətası!");
-            }
-        }
-
-        /* ================================================================
-           RFQ DETAIL SƏHİFƏSİ
-           ================================================================ */
-        let currentDetailRequestId = null;
-        let currentDetailRequestObj = null;
-        let detailCarriersCache = [];
-        let carrierPanelFilter = 'all';
-        let selectedReminderIds = new Set();
-
-        const AVATAR_PALETTE = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
-
-        function getInitials(name) {
-            if (!name) return "?";
-            const parts = String(name).trim().split(/\s+/).filter(Boolean);
-            if (parts.length === 0) return "?";
-            if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
-            return (parts[0][0] + parts[1][0]).toUpperCase();
-        }
-
-        async function openRfqDetail(requestId) {
-            currentDetailRequestId = requestId;
-            selectedReminderIds = new Set();
-
-            document.getElementById("dashboardMain").classList.add("d-none");
-            document.getElementById("rfqDetailPage").classList.remove("d-none");
-            window.scrollTo(0, 0);
-
-            let req = (globalRequestsCache || []).find(r => String(r.id) === String(requestId));
-            if (!req) {
-                try {
-                    const res = await fetch(`/requests/details/${requestId}`);
-                    const data = await res.json();
-                    if (res.ok && data.request) req = data.request;
-                } catch (err) { /* ignore, fallback below */ }
-            }
-            currentDetailRequestObj = req || { id: requestId };
-            renderDetailHeader(currentDetailRequestObj);
-
-            loadDetailQuotes(requestId);
-            loadDetailCarriersStatus(requestId);
-        }
-
-        function closeRfqDetail() {
-            document.getElementById("rfqDetailPage").classList.add("d-none");
-            document.getElementById("dashboardMain").classList.remove("d-none");
-            currentDetailRequestId = null;
-            loadRequests();
-            loadStats();
-        }
-
-        function refreshRfqDetail() {
-            if (!currentDetailRequestId) return;
-            loadDetailQuotes(currentDetailRequestId);
-            loadDetailCarriersStatus(currentDetailRequestId);
-        }
-
-        function renderDetailHeader(req) {
-            document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.id}`;
-            document.getElementById("detailIdBadge").textContent = `ID: ${req.id}`;
-            document.getElementById("detailOrigin").textContent = req.origin || req.loading_location || "—";
-            document.getElementById("detailDestination").textContent = req.destination || req.delivery_location || "—";
-            document.getElementById("detailCargoType").textContent = req.cargo_type || req.cargo || "—";
-
-            const weight = req.weight_kg || req.weight;
-            document.getElementById("detailWeight").textContent = weight ? `${weight} kq` : "Qeyd edilməyib";
-            document.getElementById("detailDeadline").textContent = req.deadline || "Qeyd edilməyib";
-
-            const statusBadge = document.getElementById("detailStatusBadge");
-            const isOpen = (req.status || "open") === "open";
-            statusBadge.textContent = isOpen ? "OPEN" : "CLOSED";
-            statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
-
-            document.getElementById("detailSenderCompany").textContent = (user && (user.company_name || user.name)) || "—";
-            document.getElementById("detailSenderEmail").textContent = (user && user.email) || "—";
-            document.getElementById("detailReplyTo").textContent = (user && user.email) || "—";
-            document.getElementById("detailEmailTemplate").textContent = req.email_template_type === 'custom' ? "Fərdi şablon" : "Standart şablon";
-
-            renderRequestExtraModal(req);
-        }
-
-        function renderRequestExtraModal(req) {
-            const box = document.getElementById("requestExtraModalContent");
-            const rows = [
-                ["Daşınma növü / Truck type", req.truck_type],
-                ["Yük tipi (Shipment type)", req.shipment_type],
-                ["HS Kodu", req.hs_code],
-                ["Həcm (m3)", req.volume_m3],
-                ["Stiflənə bilər (Stackable)", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
-                ["Əlavə qeydlər", req.additional_notes || req.note]
-            ];
-
-            let html = `<div class="d-flex flex-column gap-2">`;
-            let hasAny = false;
-            for (let [label, value] of rows) {
-                if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib") continue;
-                hasAny = true;
-                html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">${label}</strong><span class="text-dark small">${value}</span></div>`;
-            }
-
-            if (Array.isArray(req.required_fields) && req.required_fields.length > 0) {
-                hasAny = true;
-                html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">Tələb olunan sahələr</strong><span class="text-dark small">${req.required_fields.join(", ")}</span></div>`;
-            }
-
-            if (req.attachment_url) {
-                hasAny = true;
-                html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
-            }
-
-            if (!hasAny) {
-                html += `<div class="text-muted small text-center p-3">Əlavə detal qeyd olunmayıb.</div>`;
-            }
-            html += `</div>`;
-            box.innerHTML = html;
-        }
-
-        async function checkBouncesNow() {
-            const btn = document.getElementById("checkBouncesBtn");
-            const originalHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:11px;height:11px;"></span> Yoxlanılır...`;
-
-            try {
-                const res = await fetch(`/quotes/check-bounces`, { method: "POST" });
-                const data = await res.json();
-
-                if (res.ok && data.status === "success") {
-                    const count = (data.updated || []).length;
-                    if (count > 0 && typeof showToast === "function") {
-                        showToast(`${count} mail ünvanı çatdırılmayan olaraq tapıldı və yeniləndi.`, "success");
-                    } else if (count === 0 && typeof showToast === "function") {
-                        showToast("Yeni çatdırılmayan mail tapılmadı.", "info");
-                    }
-                    // Statistikanı təzələ
-                    if (currentDetailRequestId) {
-                        await loadDetailCarriersStatus(currentDetailRequestId);
-                    }
-                } else if (typeof showToast === "function") {
-                    showToast("Bounce yoxlanışı zamanı xəta baş verdi.", "danger");
-                }
-            } catch (err) {
-                if (typeof showToast === "function") {
-                    showToast("Bounce yoxlanışı zamanı xəta baş verdi.", "danger");
-                }
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
-        }
-
-        async function loadDetailCarriersStatus(requestId) {
-            const list = document.getElementById("carriersPanelList");
-            list.innerHTML = `<div class="text-center p-3"><span class="spinner-border spinner-border-sm text-primary me-2"></span><span class="text-muted small">Daşıyıcılar yüklənir...</span></div>`;
-
-            try {
-                const res = await fetch(`/requests/carriers-status/${requestId}`);
-                const data = await res.json();
-                detailCarriersCache = (res.ok && Array.isArray(data.carriers)) ? data.carriers : [];
-
-                selectedReminderIds = new Set(
-                    detailCarriersCache.filter(c => !c.has_submitted).map(c => c.quote_id)
-                );
-                updateSelectedReminderCount();
-
-                const total = detailCarriersCache.length;
-                const delivered = detailCarriersCache.filter(c => c.mail_status === 'delivered').length;
-                const viewed = detailCarriersCache.filter(c => c.is_viewed).length;
-                const quoted = detailCarriersCache.filter(c => c.has_submitted).length;
-                const failed = detailCarriersCache.filter(c => c.mail_status === 'failed').length;
-                const pending = detailCarriersCache.filter(c => !c.has_submitted).length;
-
-                document.getElementById("statSent").textContent = total;
-                document.getElementById("statDelivered").textContent = delivered;
-                document.getElementById("statViewed").textContent = viewed;
-                document.getElementById("statQuoted").textContent = quoted;
-                document.getElementById("statFailed").textContent = failed;
-
-                document.getElementById("mobileCarriersCount").textContent = total;
-                document.getElementById("statBtnCarriersCount").textContent = total;
-                document.getElementById("panelCarriersCount").textContent = total;
-
-                const pendingBanner = document.getElementById("detailNonResponders");
-                document.getElementById("detailPendingCount").textContent = pending;
-                if (pending > 0) {
-                    pendingBanner.classList.remove("d-none");
-                    pendingBanner.classList.add("d-flex");
-                } else {
-                    pendingBanner.classList.remove("d-flex");
-                    pendingBanner.classList.add("d-none");
-                }
-
-                renderCarrierPanel();
-            } catch (err) {
-                list.innerHTML = `<p class="text-danger small fw-bold"><i class="bi bi-x-circle me-1"></i> Daşıyıcıları yükləmək mümkün olmadı.</p>`;
-            }
-        }
-
-        function setCarrierPanelFilter(filter) {
-            carrierPanelFilter = filter;
-            document.getElementById("filterPillAll").classList.toggle("active", filter === 'all');
-            document.getElementById("filterPillResponded").classList.toggle("active", filter === 'responded');
-            document.getElementById("filterPillPending").classList.toggle("active", filter === 'pending');
-            renderCarrierPanel();
-        }
-
-        function renderCarrierPanel() {
-            const list = document.getElementById("carriersPanelList");
-            const searchEl = document.getElementById("carrierPanelSearch");
-            const query = (searchEl ? searchEl.value : "").toLowerCase().trim();
-
-            const respondedCount = detailCarriersCache.filter(c => c.has_submitted).length;
-            const pendingCount = detailCarriersCache.filter(c => !c.has_submitted).length;
-            document.getElementById("tabAllCount").textContent = detailCarriersCache.length;
-            document.getElementById("tabRespondedCount").textContent = respondedCount;
-            document.getElementById("tabPendingCount").textContent = pendingCount;
-
-            let filtered = detailCarriersCache.filter(c => {
-                if (carrierPanelFilter === 'responded' && !c.has_submitted) return false;
-                if (carrierPanelFilter === 'pending' && c.has_submitted) return false;
-                if (query) {
-                    const name = (c.company_name || "").toLowerCase();
-                    const email = (c.email || "").toLowerCase();
-                    if (!name.includes(query) && !email.includes(query)) return false;
-                }
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                list.innerHTML = `<div class="text-center text-muted small p-4"><i class="bi bi-people fs-3 d-block mb-2 opacity-50"></i>Uyğun daşıyıcı tapılmadı.</div>`;
-                return;
-            }
-
-            let html = "";
-            filtered.forEach((c, idx) => {
-                const color = AVATAR_PALETTE[idx % AVATAR_PALETTE.length];
-                const initials = getInitials(c.company_name);
-
-                let deliveryBadge;
-                if (c.mail_status === 'delivered') {
-                    deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`;
-                } else if (c.mail_status === 'failed') {
-                    deliveryBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Çatdırılmadı</span>`;
-                } else {
-                    deliveryBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Göndərilir...</span>`;
-                }
-
-                let quoteStatus = c.has_submitted
-                    ? `<span class="text-success fw-bold" style="font-size: 11.5px;"><i class="bi bi-check-circle-fill me-1"></i>Təklif alındı</span>`
-                    : `<span class="text-warning fw-bold" style="font-size: 11.5px;"><i class="bi bi-hourglass-split me-1"></i>Təklif yoxdur</span>`;
-
-                let actionBtn;
-                if (c.mail_status === 'failed') {
-                    actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="resendCarrierEmail(${c.quote_id})"><i class="bi bi-arrow-clockwise me-1"></i>Yenidən göndər</button>`;
-                } else if (!c.has_submitted) {
-                    actionBtn = `<button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="sendSingleReminder(${c.quote_id})"><i class="bi bi-bell me-1"></i>Reminder göndər</button>`;
-                } else {
-                    actionBtn = "";
-                }
-
-                const checkbox = !c.has_submitted
-                    ? `<input type="checkbox" class="form-check-input flex-shrink-0" style="margin-top:2px;" ${selectedReminderIds.has(c.quote_id) ? 'checked' : ''} onchange="toggleReminderSelect(${c.quote_id}, this.checked)">`
-                    : `<span style="width:1.15em; display:inline-block;"></span>`;
-
-                html += `
-                    <div class="carrier-panel-row d-flex align-items-start gap-2">
-                        ${checkbox}
-                        <div class="avatar-circle" style="background:${color};">${initials}</div>
-                        <div class="flex-grow-1" style="min-width:0;">
-                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
-                                <div style="min-width:0;">
-                                    <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 170px;">${c.company_name || 'Daşıyıcı'}</div>
-                                    <div class="text-muted text-truncate" style="font-size: 11.5px; max-width: 170px;">${c.email || ''}</div>
-                                </div>
-                                ${deliveryBadge}
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-1">
-                                ${quoteStatus}
-                                ${actionBtn}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            list.innerHTML = html;
-        }
-
-        function updateSelectedReminderCount() {
-            const n = selectedReminderIds.size;
-            const el1 = document.getElementById("detailSelectedCount");
-            const el2 = document.getElementById("panelSelectedCount");
-            if (el1) el1.textContent = n;
-            if (el2) el2.textContent = n;
-        }
-
-        function toggleReminderSelect(quoteId, checked) {
-            if (checked) selectedReminderIds.add(quoteId);
-            else selectedReminderIds.delete(quoteId);
-            updateSelectedReminderCount();
-        }
-
-        function selectAllPendingReminders() {
-            detailCarriersCache.filter(c => !c.has_submitted).forEach(c => selectedReminderIds.add(c.quote_id));
-            renderCarrierPanel();
-            updateSelectedReminderCount();
-        }
-
-        function clearAllReminderSelection() {
-            selectedReminderIds.clear();
-            renderCarrierPanel();
-            updateSelectedReminderCount();
-        }
-
-        async function sendSingleReminder(quoteId) {
-            try {
-                const res = await fetch(`/quotes/reminder/${quoteId}`, { method: "POST" });
-                const data = await res.json();
-                if (res.ok) {
-                    alert(data.message || "Reminder göndərildi!");
-                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                alert("Server xətası!");
-            }
-        }
-
-        async function resendCarrierEmail(quoteId) {
-            try {
-                const res = await fetch(`/quotes/resend/${quoteId}`, { method: "POST" });
-                const data = await res.json();
-                if (res.ok) {
-                    alert(data.message || "Mail yenidən göndərildi!");
-                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                alert("Server xətası!");
-            }
-        }
-
-        async function sendSelectedReminders() {
-            const ids = Array.from(selectedReminderIds);
-            if (ids.length === 0) {
-                alert("Zəhmət olmasa Daşıyıcılar panelindən azı bir daşıyıcı seçin.");
-                return;
-            }
-            try {
-                const res = await fetch(`/quotes/reminder-batch`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ quote_ids: ids })
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    alert(data.message || "Reminderlər göndərildi!");
-                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                alert("Server xətası!");
-            }
-        }
-    </script>
-</body>
-</html>
+            
+            quotes_list.append({
+                "id": item.get("id"),
+                "request_id": item.get("request_id"),
+                "carrier_id": item.get("carrier_id"),
+                "carrier_company": carrier_info.get("company_name", f"Daşıyıcı #{item.get('carrier_id')}"),
+                "carrier_email": carrier_info.get("email", ""),
+                "price": item.get("price"),
+                "currency": item.get("currency", "AZN"),
+                "transit_time_days": item.get("transit_time_days"),
+                "is_winner": item.get("is_winner", False),
+                "extra_details": filtered_extra,
+                "extra_responses": filtered_extra
+            })
+        return {"status": "success", "quotes": quotes_list}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/quotes/select-winner/{quote_id}")
+def select_winner_path(quote_id: int):
+    quote_res = supabase.table("quotes").select("request_id").eq("id", quote_id).execute()
+    if not quote_res.data:
+        raise HTTPException(status_code=404, detail="Təklif tapılmadı.")
+    
+    request_id = quote_res.data[0]["request_id"]
+    
+    supabase.table("quotes").update({"is_winner": False}).eq("request_id", request_id).execute()
+    supabase.table("quotes").update({"is_winner": True}).eq("id", quote_id).execute()
+    supabase.table("shipment_requests").update({"status": "closed"}).eq("id", request_id).execute()
+    
+    return {"status": "success", "message": "Təklif qalib olaraq seçildi!"}
+
+@app.post("/quotes/select-winner")
+async def select_winner_body(payload: SelectWinnerRequest):
+    supabase.table("quotes").update({"is_winner": False}).eq("request_id", payload.request_id).execute()
+    supabase.table("quotes").update({"is_winner": True}).eq("id", payload.quote_id).execute()
+    supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
+    return {"status": "success", "message": "Qalib təklif uğurla təsdiqləndi!"}
+
+@app.post("/auth/login")
+async def login(data: LoginRequest):
+    customer = supabase.table("customers").select("*").eq("email", data.email).execute()
+    if customer.data:
+        user = customer.data[0]
+        stored_password = user.get("password")
+        
+        if stored_password and pwd_context.verify(data.password, stored_password):
+            return {"status": "success", "role": "customer", "user": user}
+        else:
+            raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
+    
+    carrier = supabase.table("carriers").select("*").eq("email", data.email).execute()
+    if carrier.data:
+        user = carrier.data[0]
+        stored_password = user.get("password")
+        
+        if stored_password and pwd_context.verify(data.password, stored_password):
+            return {"status": "success", "role": "carrier", "user": user}
+        else:
+            raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
+
+    raise HTTPException(status_code=404, detail="Bu e-poçt ilə qeydiyyatlı hesab tapılmadı.")
