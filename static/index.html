@@ -55,21 +55,10 @@
     display:flex;align-items:center;justify-content:space-between;gap:20px;
   }
   .brand{display:flex;align-items:center;gap:10px;}
-  .brand-mark{width:30px;height:30px;flex-shrink:0;}
-  .brand-word{
-    font-family:var(--font-display);font-weight:700;font-size:20px;
-    color:var(--ink);letter-spacing:-0.01em;
-  }
+  .brand-mark{height:30px;width:auto;flex-shrink:0;}
   .nav-actions{display:flex;align-items:center;gap:10px;}
   .nav-actions>*{margin-left:10px;}
   .nav-actions>*:first-child{margin-left:0;}
-  .nav-contact{
-    display:none;align-items:center;justify-content:center;
-    width:38px;height:38px;border-radius:50%;
-    color:var(--slate);border:1px solid var(--line);
-  }
-  @media(min-width:640px){.nav-contact{display:inline-flex;}}
-  .nav-contact:hover{border-color:var(--brand);color:var(--brand);}
 
   .btn{
     font-family:var(--font-body);font-weight:600;font-size:14.5px;
@@ -297,16 +286,7 @@
     display:flex;flex-direction:column;gap:26px;
     align-items:center;text-align:center;
   }
-  @media(min-width:760px){
-    .foot-grid{flex-direction:row;justify-content:space-between;text-align:left;}
-  }
-  .foot-brand{display:flex;align-items:center;gap:9px;}
-  .foot-brand svg{margin-right:9px;}
-  .foot-brand span{font-family:var(--font-display);font-weight:700;font-size:16px;color:var(--ink);}
-  .foot-links{display:flex;flex-wrap:wrap;gap:22px;justify-content:center;}
-  .foot-links>*{margin:0 11px;}
-  .foot-links a{font-size:14px;color:var(--slate);}
-  .foot-links a:hover{color:var(--brand);}
+  .foot-brand{display:flex;align-items:center;justify-content:center;}
   .foot-copy{font-size:13px;color:var(--slate-soft);margin-top:18px;text-align:center;}
 </style>
 </head>
@@ -316,19 +296,11 @@
 <nav class="nav">
   <div class="nav-inner">
     <a href="/" class="brand" aria-label="Arachi ana səhifə">
-      <svg class="brand-mark" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path d="M100 22 L32 176 L70 176 L100 104 L128 176 L168 176 Z" fill="#1D3686" stroke="#1D3686" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
-        <path d="M70 104 L128 104" stroke="#1D3686" stroke-width="9" stroke-linecap="round"/>
-        <circle cx="100" cy="104" r="7" fill="#7C9CFF"/>
-      </svg>
-      <span class="brand-word">arachi</span>
+      <img class="brand-mark" src="/static/arachi-logo.png" alt="Arachi">
     </a>
     <div class="nav-actions">
-      <a href="mailto:burzuyevrcb@gmail.com?subject=Arachi%20il%C9%99%20maraqlanıram" class="nav-contact" aria-label="Bizimlə əlaqə">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z" opacity="0"/><path d="M22 6l-10 7L2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
-      </a>
       <a href="/login" class="btn btn-ghost">Daxil olun</a>
-      <a href="/login#register" class="btn btn-solid">Qeydiyyatdan keçin</a>
+      <a href="mailto:burzuyevrcb@gmail.com?subject=Arachi%20-%20Qeydiyyat" class="btn btn-solid">Qeydiyyat üçün bizə yazın</a>
     </div>
   </div>
 </nav>
@@ -347,7 +319,7 @@
         Arachi yük sorğularınızı seçdiyiniz daşıyıcılara eyni anda çatdırır, gələn təklifləri tək paneldə toplayır və hansı sorğunun oxunduğunu, hansının cavablanmadığını real vaxtda göstərir.
       </p>
       <div class="hero-ctas">
-        <a href="/login#register" class="btn btn-solid btn-lg">Qeydiyyatdan keçin</a>
+        <a href="mailto:burzuyevrcb@gmail.com?subject=Arachi%20-%20Qeydiyyat" class="btn btn-solid btn-lg">Qeydiyyat üçün bizə yazın</a>
         <a href="#nece-isleyir" class="btn btn-ghost btn-lg">Necə işlədiyini görün</a>
       </div>
       <div class="hero-points">
@@ -482,10 +454,10 @@
     <div class="cta-band">
       <div class="cta-band-inner">
         <h2>Sorğu göndərməyə hazırsınız?</h2>
-        <p>Qeydiyyatdan keçin və ilk sorğunuzu bu gün daşıyıcılara göndərin.</p>
+        <p>Qeydiyyat üçün bizə yazın, ilk sorğunuzu bu gün daşıyıcılara göndərin.</p>
         <div class="cta-band-actions">
-          <a href="/login#register" class="btn btn-on-dark btn-lg">Qeydiyyatdan keçin</a>
-          <a href="mailto:burzuyevrcb@gmail.com?subject=Arachi%20il%C9%99%20maraqlanıram" class="btn btn-ghost-dark btn-lg">Bizimlə əlaqə</a>
+          <a href="/login" class="btn btn-ghost-dark btn-lg">Daxil olun</a>
+          <a href="mailto:burzuyevrcb@gmail.com?subject=Arachi%20-%20Qeydiyyat" class="btn btn-on-dark btn-lg">Qeydiyyat üçün bizə yazın</a>
         </div>
       </div>
     </div>
@@ -497,16 +469,7 @@
   <div class="wrap">
     <div class="foot-grid">
       <div class="foot-brand">
-        <svg width="24" height="24" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M100 22 L32 176 L70 176 L100 104 L128 176 L168 176 Z" fill="#1D3686" stroke="#1D3686" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
-          <path d="M70 104 L128 104" stroke="#1D3686" stroke-width="9" stroke-linecap="round"/>
-        </svg>
-        <span>arachi</span>
-      </div>
-      <div class="foot-links">
-        <a href="/login">Daxil olun</a>
-        <a href="/login#register">Qeydiyyatdan keçin</a>
-        <a href="mailto:burzuyevrcb@gmail.com?subject=Arachi%20il%C9%99%20maraqlanıram">Əlaqə: burzuyevrcb@gmail.com</a>
+        <img src="/static/arachi-logo.png" alt="Arachi" style="height:22px;width:auto;">
       </div>
     </div>
     <div class="foot-copy">© 2026 Arachi. Bütün hüquqlar qorunur.</div>
