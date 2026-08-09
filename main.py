@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from supabase import create_client, Client
@@ -189,11 +189,23 @@ async def send_carrier_email_link(
     destination: str, 
     token: str, 
     custom_body: Optional[str] = None,
-    sender_company: str = "LogiFast"
+    sender_company: str = "LogiFast",
+    is_reminder: bool = False
 ):
     quote_link = f"http://162.35.186.229:8000/carrier_quote/quote?token={token}"
+    tracking_pixel_url = f"http://162.35.186.229:8000/quotes/track/{token}"
 
-    if not custom_body or not custom_body.strip():
+    if is_reminder:
+        text_content = f"""Dear {carrier_name},
+
+This is a gentle reminder regarding the shipment request from {origin} to {destination}. Please kindly submit your quotation using the link below if you haven't already.
+
+Thank you.
+
+Best regards,
+{sender_company}"""
+        subject_prefix = "⏰ Reminder: Submit a Proposal"
+    elif not custom_body or not custom_body.strip():
         text_content = f"""Dear {carrier_name},
 
 Please review the shipment details below and kindly complete the quotation form using the link provided.
@@ -202,12 +214,14 @@ Thank you.
 
 Best regards,
 {sender_company}"""
+        subject_prefix = "📦 Submit a Proposal"
     else:
         text_content = custom_body
         text_content = text_content.replace("{{company_name}}", carrier_name)
         text_content = text_content.replace("{{sender_company}}", sender_company)
         text_content = text_content.replace("{{origin}}", origin)
         text_content = text_content.replace("{{destination}}", destination)
+        subject_prefix = "📦 Submit a Proposal"
 
     formatted_text = text_content.replace("\n", "<br>")
 
@@ -228,18 +242,21 @@ Best regards,
                 </a>
             </div>
         </div>
+        <img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" />
     </div>
     """
     message = MessageSchema(
-        subject=f"📦 Submit a Proposal: {origin} - {destination}",
+        subject=f"{subject_prefix}: {origin} - {destination}",
         recipients=[carrier_email],
         body=html_content,
         subtype=MessageType.html
     )
     try:
         await fastmail.send_message(message)
+        supabase.table("quotes").update({"mail_status": "delivered"}).eq("token", token).execute()
     except Exception:
         traceback.print_exc()
+        supabase.table("quotes").update({"mail_status": "failed"}).eq("token", token).execute()
 
 # ------------------------------------------------------------------
 # PYDANTIC MODELLƏRİ
@@ -284,6 +301,9 @@ class DeleteCarrierRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+class BatchReminderRequest(BaseModel):
+    quote_ids: List[int]
 
 # ------------------------------------------------------------------
 # SƏHİFƏ MARŞRUTLARI (HTML PAGES)
@@ -334,7 +354,6 @@ def get_customer_stats(customer_id: int):
         if req_ids:
             quotes_res = supabase.table("quotes").select("price, extra_details").in_("request_id", req_ids).execute()
             all_quotes = quotes_res.data or []
-            # Yalnız qiyməti olanlar və ya formun submitted bayrağı true olanlar sayılır:
             incoming_quotes_count = sum(1 for q in all_quotes if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True))
 
         carriers_res = supabase.table("carriers").select("id").eq("customer_id", customer_id).execute()
@@ -585,7 +604,9 @@ async def create_shipment_request(
             supabase.table("quotes").insert({
                 "request_id": request_id, 
                 "carrier_id": carrier["id"], 
-                "token": unique_token
+                "token": unique_token,
+                "mail_status": "pending",
+                "is_viewed": False
             }).execute()
             
             carrier_name = carrier.get("company_name") or "Daşıyıcı"
@@ -620,7 +641,6 @@ def get_customer_requests(customer_id: int):
 
     for req in requests:
         quotes_list = req.get("quotes") or []
-        # Yalnız həqiqətən qiymət yazmış və ya formu təqdim etmiş təklifləri sayırıq:
         valid_quotes = [
             q for q in quotes_list 
             if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True)
@@ -631,6 +651,37 @@ def get_customer_requests(customer_id: int):
             del req["quotes"]
 
     return {"status": "success", "requests": requests}
+
+# Yeni: RFQ-ya qoşulmuş daşıyıcıların statuslarını (çatdırıldı, oxundu, təklif gəldi) qaytaran endpoint
+@app.get("/requests/carriers-status/{request_id}")
+def get_request_carriers_status(request_id: int):
+    try:
+        quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
+        items = quotes_res.data or []
+        
+        result_carriers = []
+        for item in items:
+            carrier = item.get("carriers") or {}
+            extra = item.get("extra_details") or {}
+            
+            has_submitted = item.get("price") is not None or extra.get("submitted") == True
+            
+            result_carriers.append({
+                "quote_id": item.get("id"),
+                "carrier_id": item.get("carrier_id"),
+                "company_name": carrier.get("company_name", "Daşıyıcı"),
+                "email": carrier.get("email", ""),
+                "mail_status": item.get("mail_status", "pending"), # delivered, failed, pending
+                "is_viewed": item.get("is_viewed", False),
+                "has_submitted": has_submitted,
+                "token": item.get("token")
+            })
+
+        return {"status": "success", "carriers": result_carriers}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/requests/details/{target_id}")
 def get_request_details(target_id: str):
     quote_res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", target_id).execute()
@@ -643,21 +694,17 @@ def get_request_details(target_id: str):
             shipment["additional_notes"] = note_val
             shipment["note"] = note_val
             
-            # Həcm yoxdursa və ya 0-dırsa "Qeyd edilməyib" yazırıq
             vol = shipment.get("volume_m3")
             if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]:
                 shipment["volume_m3"] = "Qeyd edilməyib"
 
-            # Deadline Loading Date-dirsə təmizləyirik
             deadline = shipment.get("deadline")
             if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()):
                 shipment["deadline"] = None
 
-        # Qiymət olsun və ya olmasın, extra_details içində submitted: true olduqda already_submitted true qayıtsın
         extra = quote.get("extra_details") or {}
         is_already_submitted = (quote.get("price") is not None) or (extra.get("submitted") == True)
 
-        # "submitted" açarını təmizləyirik ki, müştəri panelində (detallarda) görünməsin
         cleaned_extra = dict(extra)
         cleaned_extra.pop("submitted", None)
         quote["extra_details"] = cleaned_extra
@@ -688,6 +735,7 @@ def get_request_details(target_id: str):
             return {"request": shipment, "already_submitted": False}
 
     raise HTTPException(status_code=404, detail="Sorğu və ya keçərli Token tapılmadı.")
+
 @app.get("/quotes/form/{token}")
 def get_quote_form_details(token: str):
     res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", token).execute()
@@ -708,6 +756,130 @@ def get_quote_form_details(token: str):
             shipment["deadline"] = None
 
     return {"already_submitted": quote.get("price") is not None, "quote": quote}
+
+# Yeni: Email oxunduqda avtomatik çağrılan izləmə pikseli endpoint-i
+@app.get("/quotes/track/{token}")
+def track_email_view(token: str):
+    try:
+        supabase.table("quotes").update({"is_viewed": True}).eq("token", token).execute()
+    except Exception:
+        pass
+    
+    # 1x1 şəffaf GIF qayıdır
+    transparent_gif = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
+    return Response(content=transparent_gif, media_type="image/gif")
+
+# Yeni: Maili çatdırılmayan daşıyıcıya yenidən göndərmək (Resend)
+@app.post("/quotes/resend/{quote_id}")
+async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks):
+    try:
+        res = supabase.table("quotes").select("*, shipment_requests(*), carriers(*)").eq("id", quote_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Təklif/daşıyıcı qeydi tapılmadı.")
+        
+        quote = res.data[0]
+        shipment = quote.get("shipment_requests") or {}
+        carrier = quote.get("carriers") or {}
+        
+        token = quote.get("token")
+        carrier_email = carrier.get("email")
+        carrier_name = carrier.get("company_name") or "Daşıyıcı"
+        origin = shipment.get("origin") or ""
+        destination = shipment.get("destination") or ""
+
+        if not carrier_email:
+            raise HTTPException(status_code=400, detail="Daşıyıcı email ünvanı mövcud deyil.")
+
+        background_tasks.add_task(
+            send_carrier_email_link,
+            carrier_email=carrier_email,
+            carrier_name=carrier_name,
+            origin=origin,
+            destination=destination,
+            token=token,
+            sender_company="LogiFast"
+        )
+
+        return {"status": "success", "message": f"Mail {carrier_email} ünvanına yenidən göndərilməyə başlandı!"}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Yeni: Tək daşıyıcıya Reminder göndərmək
+@app.post("/quotes/reminder/{quote_id}")
+async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks):
+    try:
+        res = supabase.table("quotes").select("*, shipment_requests(*), carriers(*)").eq("id", quote_id).execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Qeyd tapılmadı.")
+        
+        quote = res.data[0]
+        shipment = quote.get("shipment_requests") or {}
+        carrier = quote.get("carriers") or {}
+        
+        token = quote.get("token")
+        carrier_email = carrier.get("email")
+        carrier_name = carrier.get("company_name") or "Daşıyıcı"
+        origin = shipment.get("origin") or ""
+        destination = shipment.get("destination") or ""
+
+        if not carrier_email:
+            raise HTTPException(status_code=400, detail="Daşıyıcı email ünvanı yoxdur.")
+
+        background_tasks.add_task(
+            send_carrier_email_link,
+            carrier_email=carrier_email,
+            carrier_name=carrier_name,
+            origin=origin,
+            destination=destination,
+            token=token,
+            sender_company="LogiFast",
+            is_reminder=True
+        )
+
+        return {"status": "success", "message": f"Reminder {carrier_email} ünvanına göndərildi!"}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Yeni: Toplu (Batch) Reminder göndərmək
+@app.post("/quotes/reminder-batch")
+async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: BackgroundTasks):
+    try:
+        if not payload.quote_ids:
+            raise HTTPException(status_code=400, detail="Heç bir ID seçilməyib.")
+
+        res = supabase.table("quotes").select("*, shipment_requests(*), carriers(*)").in_("id", payload.quote_ids).execute()
+        items = res.data or []
+
+        count = 0
+        for quote in items:
+            shipment = quote.get("shipment_requests") or {}
+            carrier = quote.get("carriers") or {}
+            
+            token = quote.get("token")
+            carrier_email = carrier.get("email")
+            carrier_name = carrier.get("company_name") or "Daşıyıcı"
+            origin = shipment.get("origin") or ""
+            destination = shipment.get("destination") or ""
+
+            if carrier_email:
+                background_tasks.add_task(
+                    send_carrier_email_link,
+                    carrier_email=carrier_email,
+                    carrier_name=carrier_name,
+                    origin=origin,
+                    destination=destination,
+                    token=token,
+                    sender_company="LogiFast",
+                    is_reminder=True
+                )
+                count += 1
+
+        return {"status": "success", "message": f"Seçilmiş {count} daşıyıcıya toplu reminder göndərildi!"}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/quotes/create")
 def create_quote_direct(payload: DynamicQuoteSubmit):
@@ -738,7 +910,6 @@ async def submit_quote(
     
     quote = res.data[0]
     
-    # Qiymət yazılıbsa VƏ YA əvvəlcədən extra_details içində submitted: true qeyd olunubsa:
     existing_extra = quote.get("extra_details") or {}
     if quote.get("price") is not None or existing_extra.get("submitted") == True:
         raise HTTPException(status_code=400, detail="Artıq təklif göndərilib!")
@@ -755,7 +926,6 @@ async def submit_quote(
     except:
         parsed_extra = {}
 
-    # Qiymət yazılsın və ya yazılmasın, formun göndərildiyini qeyd edirik
     parsed_extra["submitted"] = True
 
     if carrier_file and carrier_file.filename:
@@ -786,7 +956,6 @@ def get_request_quotes(request_id: int):
         for item in quotes_res.data or []:
             raw_extra = item.get("extra_details") or {}
             
-            # Əgər daşıyıcı hələ qiymət yazmayıbsa və formu təsdiqləməyibsə, siyahıya əlavə etmirik
             if item.get("price") is None and raw_extra.get("submitted") != True:
                 continue
 
