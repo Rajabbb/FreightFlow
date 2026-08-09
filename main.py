@@ -4,6 +4,10 @@ import traceback
 import io
 import json
 import re
+import asyncio
+import imaplib
+import email as email_lib
+from email.header import decode_header
 import pandas as pd
 from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
@@ -36,6 +40,27 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = FastAPI(title="LogiFast Backend API")
 
+# Bounce yoxlaması arasında gözlənilən vaxt (saniyə). Env dəyişəni ilə tənzimlənə bilər.
+BOUNCE_CHECK_INTERVAL_SECONDS = int(os.getenv("BOUNCE_CHECK_INTERVAL_SECONDS", "300"))
+
+async def _bounce_check_loop():
+    """Server işlədiyi müddətdə arxa planda dövri olaraq Gmail inbox-unu
+    bounce mailləri üçün yoxlayır və müvafiq mail_status-ları yeniləyir."""
+    while True:
+        try:
+            result = await asyncio.to_thread(check_bounced_emails)
+            if result.get("updated"):
+                print(f"[bounce-check] {len(result['updated'])} quote(s) 'failed' olaraq yeniləndi: {result['updated']}")
+            if result.get("errors"):
+                print(f"[bounce-check] Xətalar: {result['errors']}")
+        except Exception:
+            traceback.print_exc()
+        await asyncio.sleep(BOUNCE_CHECK_INTERVAL_SECONDS)
+
+@app.on_event("startup")
+async def start_bounce_check_background_task():
+    asyncio.create_task(_bounce_check_loop())
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -66,6 +91,180 @@ conf = ConnectionConfig(
 )
 
 fastmail = FastMail(conf)
+
+# ------------------------------------------------------------------
+# BOUNCE (ÇATDIRILMAYAN MAİL) İZLƏMƏ SİSTEMİ
+# ------------------------------------------------------------------
+# İzah: fastmail.send_message() yalnız SMTP-yə TƏHVİL zamanı baş verən sinxron
+# xətalarda (bağlantı, autentifikasiya və s.) istisna atır. Amma "ünvan mövcud
+# deyil" kimi xətalar adətən Gmail tərəfindən mesaj artıq qəbul edildikdən
+# (250 OK) sonra, bir neçə dəqiqə gecikmə ilə, göndərən qutuya DSN
+# (Delivery Status Notification) maili şəklində geri qayıdır. Bu səbəbdən
+# əvvəlki kod bu cür "gecikmiş" bounce-ları heç vaxt "failed" kimi qeyd etmirdi.
+# Aşağıdakı funksiyalar göndərən Gmail qutusunu IMAP ilə yoxlayıb bu bounce
+# mesajlarını tapır, uğursuz alıcının email ünvanını çıxarır və müvafiq
+# "quotes" sətirlərinin mail_status-unu "failed" olaraq yeniləyir.
+
+IMAP_HOST = "imap.gmail.com"
+IMAP_PORT = 993
+IMAP_USERNAME = conf.MAIL_USERNAME
+IMAP_PASSWORD = conf.MAIL_PASSWORD.get_secret_value() if hasattr(conf.MAIL_PASSWORD, "get_secret_value") else conf.MAIL_PASSWORD
+
+def _decode_mime_str(s: Optional[str]) -> str:
+    if not s:
+        return ""
+    parts = decode_header(s)
+    decoded = ""
+    for text, enc in parts:
+        if isinstance(text, bytes):
+            try:
+                decoded += text.decode(enc or "utf-8", errors="ignore")
+            except LookupError:
+                decoded += text.decode("utf-8", errors="ignore")
+        else:
+            decoded += text
+    return decoded
+
+def _get_message_text(msg) -> str:
+    """Mesajın bütün mətn hissələrini (plain + html) bir string kimi çıxarır."""
+    chunks = []
+    if msg.is_multipart():
+        for part in msg.walk():
+            ctype = part.get_content_type()
+            if ctype in ("text/plain", "text/html", "message/delivery-status"):
+                try:
+                    payload = part.get_payload(decode=True)
+                    if payload:
+                        charset = part.get_content_charset() or "utf-8"
+                        chunks.append(payload.decode(charset, errors="ignore"))
+                except Exception:
+                    continue
+    else:
+        try:
+            payload = msg.get_payload(decode=True)
+            if payload:
+                charset = msg.get_content_charset() or "utf-8"
+                chunks.append(payload.decode(charset, errors="ignore"))
+        except Exception:
+            pass
+    return "\n".join(chunks)
+
+def extract_bounced_recipient(msg) -> Optional[str]:
+    """Bir bounce/DSN mesajından uğursuz alıcının email ünvanını çıxarır."""
+    # 1) Standart DSN: "message/delivery-status" hissəsindəki "Final-Recipient" başlığı
+    if msg.is_multipart():
+        for part in msg.walk():
+            if part.get_content_type() == "message/delivery-status":
+                try:
+                    payload = part.get_payload(decode=True) or b""
+                    text = payload.decode("utf-8", errors="ignore")
+                    m = re.search(r'Final-Recipient:\s*rfc822;\s*([^\s]+)', text, re.IGNORECASE)
+                    if m:
+                        return extract_clean_email(m.group(1))
+                except Exception:
+                    continue
+
+    body_text = _get_message_text(msg)
+
+    # 2) Gmail-in lokallaşdırılmış mətni: "Mesajınız X ünvanına çatdırıla bilmədi"
+    m = re.search(r'Mesajınız\s+([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)\s+ünvanına', body_text)
+    if m:
+        return extract_clean_email(m.group(1))
+
+    # 3) İngilis dilli variant: "reach <email>" və ya "to <email>"
+    m = re.search(r'(?:reach|deliver(?:ing)? (?:your message )?to|to)\s+([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', body_text, re.IGNORECASE)
+    if m:
+        return extract_clean_email(m.group(1))
+
+    # 4) Son çarə: mətndəki ilk email ünvanı (adətən uğursuz alıcı olur)
+    m = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', body_text)
+    if m:
+        return extract_clean_email(m.group(0))
+
+    return None
+
+def _is_bounce_message(msg) -> bool:
+    from_addr = (msg.get("From") or "").lower()
+    subject = _decode_mime_str(msg.get("Subject") or "").lower()
+    content_type = (msg.get("Content-Type") or "").lower()
+
+    bounce_signals = [
+        "mailer-daemon" in from_addr,
+        "mail delivery subsystem" in from_addr,
+        "postmaster" in from_addr,
+        "delivery status notification" in subject,
+        "delivery failure" in subject,
+        "undelivered" in subject,
+        "undeliverable" in subject,
+        "report-type=delivery-status" in content_type,
+    ]
+    return any(bounce_signals)
+
+def check_bounced_emails() -> Dict[str, Any]:
+    """Gmail inbox-unu IMAP ilə yoxlayır, bounce mesajlarını tapır və
+    uyğun 'quotes' sətirlərinin mail_status-unu 'failed' olaraq yeniləyir.
+    Bloklayıcı (sync) funksiyadır - background task / thread içində çağırılmalıdır."""
+    updated = []
+    checked = 0
+    errors = []
+
+    try:
+        imap = imaplib.IMAP4_SSL(IMAP_HOST, IMAP_PORT)
+        imap.login(IMAP_USERNAME, IMAP_PASSWORD)
+        imap.select("INBOX")
+
+        # Yalnız oxunmamış mailləri yoxlayırıq ki, eyni bounce təkrar emal olunmasın
+        status, data = imap.search(None, "UNSEEN")
+        if status != "OK":
+            imap.logout()
+            return {"checked": 0, "updated": [], "errors": ["IMAP search uğursuz oldu."]}
+
+        msg_ids = data[0].split()
+
+        for msg_id in msg_ids:
+            try:
+                status, msg_data = imap.fetch(msg_id, "(RFC822)")
+                if status != "OK" or not msg_data or not msg_data[0]:
+                    continue
+
+                raw_msg = msg_data[0][1]
+                msg = email_lib.message_from_bytes(raw_msg)
+                checked += 1
+
+                if not _is_bounce_message(msg):
+                    continue
+
+                bounced_email = extract_bounced_recipient(msg)
+                if not bounced_email:
+                    continue
+
+                # Bounce olan ünvana uyğun daşıyıcı(lar)ı tap
+                carriers_res = supabase.table("carriers").select("id").eq("email", bounced_email).execute()
+                carrier_ids = [c["id"] for c in (carriers_res.data or [])]
+
+                if not carrier_ids:
+                    continue
+
+                # Bu daşıyıcılara aid, hələ "failed" olaraq qeyd olunmamış quotes sətirlərini yenilə
+                for cid in carrier_ids:
+                    q_res = supabase.table("quotes").select("id, mail_status").eq("carrier_id", cid).execute()
+                    for q in (q_res.data or []):
+                        if q.get("mail_status") in ("delivered", "pending"):
+                            supabase.table("quotes").update({"mail_status": "failed"}).eq("id", q["id"]).execute()
+                            updated.append({"quote_id": q["id"], "carrier_id": cid, "email": bounced_email})
+
+                # Mesajı emal olunmuş kimi işarələ (\Seen), təkrar yoxlanmasın
+                imap.store(msg_id, "+FLAGS", "\\Seen")
+
+            except Exception as inner_e:
+                errors.append(str(inner_e))
+                continue
+
+        imap.logout()
+    except Exception as e:
+        errors.append(str(e))
+
+    return {"checked": checked, "updated": updated, "errors": errors}
 
 def get_sender_info_from_shipment(shipment: Optional[Dict[str, Any]]) -> Tuple[str, Optional[str]]:
     """Shipment_requests qeydinə bağlı customers məlumatından göndərən şirkət adını
@@ -782,6 +981,16 @@ def get_quote_form_details(token: str):
             shipment["deadline"] = None
 
     return {"already_submitted": quote.get("price") is not None, "quote": quote}
+
+# Yeni: Çatdırılmayan (bounce) mailləri manual yoxlamaq üçün endpoint
+@app.post("/quotes/check-bounces")
+async def check_bounces_endpoint():
+    try:
+        result = await asyncio.to_thread(check_bounced_emails)
+        return {"status": "success", **result}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Yeni: Email oxunduqda avtomatik çağrılan izləmə pikseli endpoint-i
 @app.get("/quotes/track/{token}")
