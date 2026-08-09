@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Müştəri Paneli - LogiFast</title>
+    <title>Müştəri Paneli - Arachi</title>
+    <link rel="icon" type="image/png" href="/static/arachi-logo.png">
+    <link rel="apple-touch-icon" href="/static/arachi-logo.png">
+    <link rel="shortcut icon" href="/static/arachi-logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
@@ -471,7 +474,7 @@
     <nav class="navbar navbar-expand-lg navbar-light py-2">
         <div class="container-fluid px-3 px-md-4">
             <a class="navbar-brand fw-bold text-truncate d-flex align-items-center" href="#">
-                <i class="bi bi-lightning-charge-fill me-1" style="color: var(--primary-blue);"></i> LogiFast 
+                <img src="/static/arachi-logo.png" alt="Arachi" style="height: 26px; width: auto;" class="me-1">
                 <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">| Müştəri Paneli</span>
             </a>
             <div class="ms-auto d-flex align-items-center gap-2">
@@ -905,13 +908,8 @@ Best regards,
 
                 <!-- GÖNDƏRİLMƏ STATUSU -->
                 <div class="card mb-3">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                        <div class="section-title mb-0">
-                            <i class="bi bi-graph-up-arrow"></i> Göndərilmə statusu
-                        </div>
-                        <button type="button" id="checkBouncesBtn" class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1 d-inline-flex align-items-center gap-1" style="font-size: 11px;" onclick="checkBouncesNow()" title="Gmail qutusunu çatdırılmayan maillər üçün indi yoxla">
-                            <i class="bi bi-arrow-repeat"></i> Yenilə
-                        </button>
+                    <div class="section-title mb-1">
+                        <i class="bi bi-graph-up-arrow"></i> Göndərilmə statusu
                     </div>
                     <div class="section-desc mb-2">Sorğunun daşıyıcılara çatdırılma və reaksiya statistikası.</div>
 
@@ -1007,8 +1005,8 @@ Best regards,
 
             <div class="d-flex gap-2 mb-3 flex-wrap">
                 <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
-                <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif göndərənlər (<span id="tabRespondedCount">0</span>)</span>
-                <span class="filter-pill" id="filterPillPending" onclick="setCarrierPanelFilter('pending')">Təklif göndərməyənlər (<span id="tabPendingCount">0</span>)</span>
+                <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif alanlar (<span id="tabRespondedCount">0</span>)</span>
+                <span class="filter-pill" id="filterPillPending" onclick="setCarrierPanelFilter('pending')">Təklif almayanlar (<span id="tabPendingCount">0</span>)</span>
             </div>
 
             <div class="d-flex justify-content-between align-items-center mb-2">
@@ -1937,8 +1935,10 @@ Best regards,
             loadStats();
         }
 
-        function refreshRfqDetail() {
+        async function refreshRfqDetail() {
             if (!currentDetailRequestId) return;
+            // Əvvəlcə mail qutusunda yeni bounce (çatdırılmama) bildirişi olub-olmadığını yoxlayırıq
+            try { await fetch(`/mail/check-bounces`, { method: "POST" }); } catch (err) { /* səssizcə keç */ }
             loadDetailQuotes(currentDetailRequestId);
             loadDetailCarriersStatus(currentDetailRequestId);
         }
@@ -2001,40 +2001,6 @@ Best regards,
             }
             html += `</div>`;
             box.innerHTML = html;
-        }
-
-        async function checkBouncesNow() {
-            const btn = document.getElementById("checkBouncesBtn");
-            const originalHtml = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = `<span class="spinner-border spinner-border-sm" style="width:11px;height:11px;"></span> Yoxlanılır...`;
-
-            try {
-                const res = await fetch(`/quotes/check-bounces`, { method: "POST" });
-                const data = await res.json();
-
-                if (res.ok && data.status === "success") {
-                    const count = (data.updated || []).length;
-                    if (count > 0 && typeof showToast === "function") {
-                        showToast(`${count} mail ünvanı çatdırılmayan olaraq tapıldı və yeniləndi.`, "success");
-                    } else if (count === 0 && typeof showToast === "function") {
-                        showToast("Yeni çatdırılmayan mail tapılmadı.", "info");
-                    }
-                    // Statistikanı təzələ
-                    if (currentDetailRequestId) {
-                        await loadDetailCarriersStatus(currentDetailRequestId);
-                    }
-                } else if (typeof showToast === "function") {
-                    showToast("Bounce yoxlanışı zamanı xəta baş verdi.", "danger");
-                }
-            } catch (err) {
-                if (typeof showToast === "function") {
-                    showToast("Bounce yoxlanışı zamanı xəta baş verdi.", "danger");
-                }
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-            }
         }
 
         async function loadDetailCarriersStatus(requestId) {
