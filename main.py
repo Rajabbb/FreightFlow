@@ -5,7 +5,7 @@ import io
 import json
 import re
 import pandas as pd
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -57,6 +57,7 @@ conf = ConnectionConfig(
     MAIL_USERNAME="burzuyevrcb@gmail.com",
     MAIL_PASSWORD="yslb bddm cgyg scns",
     MAIL_FROM="burzuyevrcb@gmail.com",
+    MAIL_FROM_NAME="LogiFast",
     MAIL_PORT=465,
     MAIL_SERVER="smtp.gmail.com",
     MAIL_STARTTLS=False,
@@ -65,6 +66,15 @@ conf = ConnectionConfig(
 )
 
 fastmail = FastMail(conf)
+
+def get_sender_info_from_shipment(shipment: Optional[Dict[str, Any]]) -> Tuple[str, Optional[str]]:
+    """Shipment_requests qeydinə bağlı customers məlumatından göndərən şirkət adını
+    və Reply-To üçün müştərinin öz emailini çıxarır."""
+    shipment = shipment or {}
+    customer = shipment.get("customers") or {}
+    sender_company = customer.get("company_name") or customer.get("name") or "LogiFast"
+    customer_email = customer.get("email")
+    return sender_company, customer_email
 
 # ------------------------------------------------------------------
 # KÖMƏKÇİ FUNKSİYALAR
@@ -190,7 +200,8 @@ async def send_carrier_email_link(
     token: str, 
     custom_body: Optional[str] = None,
     sender_company: str = "LogiFast",
-    is_reminder: bool = False
+    is_reminder: bool = False,
+    reply_to_email: Optional[str] = None
 ):
     quote_link = f"http://162.35.186.229:8000/carrier_quote/quote?token={token}"
     tracking_pixel_url = f"http://162.35.186.229:8000/quotes/track/{token}"
@@ -245,12 +256,19 @@ Best regards,
         <img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" />
     </div>
     """
-    message = MessageSchema(
+    message_kwargs = dict(
         subject=f"{subject_prefix}: {origin} - {destination}",
         recipients=[carrier_email],
         body=html_content,
-        subtype=MessageType.html
+        subtype=MessageType.html,
+        # From başlığında müştərinin şirkət adı göstərilir: "Şirkət adı" <burzuyevrcb@gmail.com>
+        from_name=(sender_company or "LogiFast").strip() or "LogiFast"
     )
+    # Reply-To: cavab müştərinin öz emailinə getsin (əgər varsa)
+    if reply_to_email:
+        message_kwargs["reply_to"] = [reply_to_email]
+
+    message = MessageSchema(**message_kwargs)
     try:
         await fastmail.send_message(message)
         supabase.table("quotes").update({"mail_status": "delivered"}).eq("token", token).execute()
@@ -584,9 +602,11 @@ async def create_shipment_request(
 
         cust_res = supabase.table("customers").select("*").eq("id", payload.customer_id).execute()
         sender_company = "LogiFast"
+        customer_email = None
         if cust_res.data:
             c_data = cust_res.data[0]
             sender_company = c_data.get("company_name") or c_data.get("name") or "LogiFast"
+            customer_email = c_data.get("email")
 
         c_query = supabase.table("carriers").select("*").eq("customer_id", payload.customer_id).range(0, 9999).execute()
         all_customer_carriers = c_query.data or []
@@ -601,16 +621,21 @@ async def create_shipment_request(
 
         for carrier in target_carriers:
             unique_token = str(uuid.uuid4())
+            carrier_name = carrier.get("company_name") or "Daşıyıcı"
+            carrier_email = carrier.get("email")
+
+            # Email ünvanı olmayan daşıyıcı üçün "pending" statusunda əbədi qalıb
+            # yanlış olaraq "göndərildi" kimi göstərilməsinin qarşısını alırıq:
+            # dərhal "failed" olaraq qeyd edirik ki, panel və statistikada düzgün əks olunsun.
+            initial_status = "pending" if carrier_email else "failed"
+
             supabase.table("quotes").insert({
                 "request_id": request_id, 
                 "carrier_id": carrier["id"], 
                 "token": unique_token,
-                "mail_status": "pending",
+                "mail_status": initial_status,
                 "is_viewed": False
             }).execute()
-            
-            carrier_name = carrier.get("company_name") or "Daşıyıcı"
-            carrier_email = carrier.get("email")
 
             if carrier_email:
                 background_tasks.add_task(
@@ -621,7 +646,8 @@ async def create_shipment_request(
                     destination=payload.destination,
                     token=unique_token,
                     custom_body=active_custom_body,
-                    sender_company=sender_company
+                    sender_company=sender_company,
+                    reply_to_email=customer_email
                 )
 
         return {
@@ -773,13 +799,14 @@ def track_email_view(token: str):
 @app.post("/quotes/resend/{quote_id}")
 async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks):
     try:
-        res = supabase.table("quotes").select("*, shipment_requests(*), carriers(*)").eq("id", quote_id).execute()
+        res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").eq("id", quote_id).execute()
         if not res.data:
             raise HTTPException(status_code=404, detail="Təklif/daşıyıcı qeydi tapılmadı.")
         
         quote = res.data[0]
         shipment = quote.get("shipment_requests") or {}
         carrier = quote.get("carriers") or {}
+        sender_company, customer_email = get_sender_info_from_shipment(shipment)
         
         token = quote.get("token")
         carrier_email = carrier.get("email")
@@ -790,6 +817,9 @@ async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks)
         if not carrier_email:
             raise HTTPException(status_code=400, detail="Daşıyıcı email ünvanı mövcud deyil.")
 
+        # Yenidən göndərilməyə başlayarkən statusu "pending"ə qaytarırıq ki, nəticə düzgün əks olunsun
+        supabase.table("quotes").update({"mail_status": "pending"}).eq("id", quote_id).execute()
+
         background_tasks.add_task(
             send_carrier_email_link,
             carrier_email=carrier_email,
@@ -797,10 +827,13 @@ async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks)
             origin=origin,
             destination=destination,
             token=token,
-            sender_company="LogiFast"
+            sender_company=sender_company,
+            reply_to_email=customer_email
         )
 
         return {"status": "success", "message": f"Mail {carrier_email} ünvanına yenidən göndərilməyə başlandı!"}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -809,13 +842,14 @@ async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks)
 @app.post("/quotes/reminder/{quote_id}")
 async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks):
     try:
-        res = supabase.table("quotes").select("*, shipment_requests(*), carriers(*)").eq("id", quote_id).execute()
+        res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").eq("id", quote_id).execute()
         if not res.data:
             raise HTTPException(status_code=404, detail="Qeyd tapılmadı.")
         
         quote = res.data[0]
         shipment = quote.get("shipment_requests") or {}
         carrier = quote.get("carriers") or {}
+        sender_company, customer_email = get_sender_info_from_shipment(shipment)
         
         token = quote.get("token")
         carrier_email = carrier.get("email")
@@ -833,11 +867,14 @@ async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks)
             origin=origin,
             destination=destination,
             token=token,
-            sender_company="LogiFast",
-            is_reminder=True
+            sender_company=sender_company,
+            is_reminder=True,
+            reply_to_email=customer_email
         )
 
         return {"status": "success", "message": f"Reminder {carrier_email} ünvanına göndərildi!"}
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -849,13 +886,14 @@ async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: 
         if not payload.quote_ids:
             raise HTTPException(status_code=400, detail="Heç bir ID seçilməyib.")
 
-        res = supabase.table("quotes").select("*, shipment_requests(*), carriers(*)").in_("id", payload.quote_ids).execute()
+        res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").in_("id", payload.quote_ids).execute()
         items = res.data or []
 
         count = 0
         for quote in items:
             shipment = quote.get("shipment_requests") or {}
             carrier = quote.get("carriers") or {}
+            sender_company, customer_email = get_sender_info_from_shipment(shipment)
             
             token = quote.get("token")
             carrier_email = carrier.get("email")
@@ -871,8 +909,9 @@ async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: 
                     origin=origin,
                     destination=destination,
                     token=token,
-                    sender_company="LogiFast",
-                    is_reminder=True
+                    sender_company=sender_company,
+                    is_reminder=True,
+                    reply_to_email=customer_email
                 )
                 count += 1
 
