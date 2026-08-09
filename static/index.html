@@ -30,8 +30,11 @@
 
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
+  html{overflow-x:hidden;width:100%;}
   body{
     margin:0;
+    overflow-x:hidden;
+    width:100%;
     font-family:var(--font-body);
     background:#ffffff;
     color:var(--ink);
@@ -115,7 +118,9 @@
   }
   .hero-grid{
     display:grid;grid-template-columns:1fr;gap:56px;align-items:center;
+    min-width:0;
   }
+  .hero-grid>*{min-width:0;}
   @media(min-width:980px){
     .hero-grid{grid-template-columns:1.05fr .95fr;}
   }
@@ -161,12 +166,13 @@
   /* --- signature network diagram --- */
   .net-wrap{
     position:relative;
+    min-width:0;
     border-radius:26px;
     background:linear-gradient(165deg, #0E1638 0%, #17225A 55%, #1D3686 130%);
     padding:20px;
     box-shadow:0 30px 60px -24px rgba(13,20,60,.45);
   }
-  .net-wrap svg{width:100%;height:auto;display:block;}
+  .net-wrap svg{width:100%;height:auto;display:block;min-width:0;}
   .net-label{
     position:absolute;font-family:var(--font-mono);font-size:11px;
     color:rgba(255,255,255,.68);letter-spacing:.03em;
@@ -218,7 +224,7 @@
 
   /* ---------- HOW IT WORKS ---------- */
   .flow-wrap{
-    display:grid;grid-template-columns:1fr;gap:16px;
+    display:grid;grid-template-columns:1fr;gap:16px;min-width:0;
   }
   @media(min-width:900px){
     .flow-wrap{grid-template-columns:340px 1fr;gap:0;align-items:stretch;
@@ -262,7 +268,7 @@
   .flow-detail p{font-size:15.5px;line-height:1.7;color:var(--slate);margin:0;max-width:460px;}
 
   /* ---------- VALUE / FEATURES ---------- */
-  .grid-3{display:grid;grid-template-columns:1fr;gap:20px;}
+  .grid-3{display:grid;grid-template-columns:1fr;gap:20px;min-width:0;}
   @media(min-width:760px){.grid-3{grid-template-columns:repeat(3,1fr);}}
   .card{
     border:1px solid var(--line);border-radius:var(--radius-md);
