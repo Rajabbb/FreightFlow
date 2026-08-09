@@ -29,7 +29,8 @@
   }
 
   *{box-sizing:border-box;}
-  html{scroll-behavior:smooth;}
+  html{scroll-behavior:smooth;scroll-padding-top:var(--nav-h, 80px);}
+  section[id]{scroll-margin-top:var(--nav-h, 80px);}
   body{
     margin:0;
     font-family:var(--font-body);
@@ -494,6 +495,21 @@
 </footer>
 
 <script>
+  (function(){
+    // Keep anchor-scroll targets from being hidden under the sticky nav.
+    // The nav wraps to two rows on narrow screens, so its height changes —
+    // measure it live instead of hardcoding a value.
+    function setNavHeight(){
+      var nav = document.querySelector('.nav');
+      if(!nav) return;
+      var h = nav.getBoundingClientRect().height;
+      document.documentElement.style.setProperty('--nav-h', Math.ceil(h + 12) + 'px');
+    }
+    setNavHeight();
+    window.addEventListener('resize', setNavHeight);
+    window.addEventListener('orientationchange', setNavHeight);
+  })();
+
   (function(){
     var steps = {
       1: {
