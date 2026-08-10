@@ -515,6 +515,7 @@ class ShipmentRequestCreate(BaseModel):
 class DynamicQuoteSubmit(BaseModel):
     request_id: Optional[int] = None
     price: Optional[float] = None
+    currency: Optional[str] = "AZN"
     transit_time_days: Optional[int] = None
     extra_details: Optional[Dict[str, Any]] = {}
 
@@ -1150,7 +1151,7 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
         "price": payload.price,
         "transit_time_days": payload.transit_time_days,
         "extra_details": payload.extra_details,
-        "currency": "AZN"
+        "currency": payload.currency or "AZN"
     }).execute()
 
     return {"status": "success", "message": "Təklif qəbul edildi!", "data": res.data}
@@ -1159,6 +1160,7 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
 async def submit_quote(
     token: str,
     price: Optional[str] = Form(None),
+    currency: Optional[str] = Form("AZN"),
     transit_time_days: Optional[int] = Form(None),
     extra_details: Optional[str] = Form("{}"),
     carrier_file: Optional[UploadFile] = File(None)
@@ -1198,11 +1200,15 @@ async def submit_quote(
         parsed_extra["carrier_attachment_url"] = f"/uploads/{unique_filename}"
         parsed_extra["carrier_attachment_name"] = carrier_file.filename
 
+    parsed_currency = (currency or "AZN").strip().upper()
+    if parsed_currency not in ("AZN", "USD", "EUR", "TRY", "RUB", "GBP"):
+        parsed_currency = "AZN"
+
     update_res = supabase.table("quotes").update({
         "price": parsed_price,
         "transit_time_days": transit_time_days,
         "extra_details": parsed_extra,
-        "currency": "AZN"
+        "currency": parsed_currency
     }).eq("token", token).execute()
 
     return {"status": "success", "message": "Təklif qəbul edildi!", "data": update_res.data}
