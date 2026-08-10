@@ -627,6 +627,10 @@
                         <label class="form-label">Weight (Çəki - kq) <span class="text-danger">*</span></label>
                         <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
                     </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Volume (CBM) <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="volume_cbm" required placeholder="məs: 15 m3">
+                    </div>
                     <div class="col-12">
                         <label class="form-label">Transportation Mode (Daşınma Növü) <span class="text-danger">*</span></label>
                         <select class="form-select" id="transportation_mode" required>
@@ -660,14 +664,6 @@
                         <input type="text" class="form-control opt-input d-none mt-2" id="inp_truck_type" placeholder="məs: Tentli / Refrijerator">
                     </div>
                     
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_volume" onchange="toggleOptField('volume')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_volume">Volume (CBM)</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_volume" placeholder="məs: 15 m3">
-                    </div>
-
                     <div class="opt-row">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_hs_code" onchange="toggleOptField('hs_code')">
@@ -1473,10 +1469,6 @@ Best regards,
                 let val = document.getElementById("inp_truck_type")?.value.trim();
                 if(val) requiredFieldsList.push(`Truck Type: ${val}`);
             }
-            if(document.getElementById("chk_volume")?.checked) {
-                let val = document.getElementById("inp_volume")?.value.trim();
-                if(val) requiredFieldsList.push(`Volume (CBM): ${val}`);
-            }
             if(document.getElementById("chk_hs_code")?.checked) {
                 let val = document.getElementById("inp_hs_code")?.value.trim();
                 if(val) requiredFieldsList.push(`HS Code: ${val}`);
@@ -1521,9 +1513,10 @@ Best regards,
             const destinationVal = document.getElementById("destination")?.value.trim();
             const cargoTypeVal = document.getElementById("cargo_type")?.value.trim();
             const weightVal = document.getElementById("weight_kg")?.value;
+            const volumeVal = document.getElementById("volume_cbm")?.value.trim();
             const transportModeVal = document.getElementById("transportation_mode")?.value;
 
-            if (!originVal || !destinationVal || !cargoTypeVal || !weightVal || !transportModeVal) {
+            if (!originVal || !destinationVal || !cargoTypeVal || !weightVal || !volumeVal || !transportModeVal) {
                 alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!");
                 return;
             }
@@ -1546,8 +1539,8 @@ Best regards,
                 cargo: cargoTypeVal,
                 weight_kg: parseFloat(weightVal) || 0,
                 weight: parseFloat(weightVal) || 0,
-                volume_m3: document.getElementById("chk_volume")?.checked ? (parseFloat(document.getElementById("inp_volume")?.value) || 0) : 0,
-                volume: document.getElementById("chk_volume")?.checked ? (parseFloat(document.getElementById("inp_volume")?.value) || 0) : 0,
+                volume_m3: parseFloat(volumeVal) || 0,
+                volume: parseFloat(volumeVal) || 0,
                 deadline: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
                 loading_date: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
                 truck_type: document.getElementById("chk_truck_type")?.checked ? (document.getElementById("inp_truck_type")?.value || "") : "",
