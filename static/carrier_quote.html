@@ -58,8 +58,18 @@
         <!-- Quote Form -->
         <form id="quote_form" onsubmit="submitQuote(event)" class="space-y-4">
             <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">Offered Price (AZN)</label>
-                <input type="number" step="0.01" id="price" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500" placeholder="0.00">
+                <label class="block text-sm font-medium text-slate-300 mb-1">Offered Price</label>
+                <div class="flex gap-2">
+                    <input type="number" step="0.01" id="price" class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500" placeholder="0.00">
+                    <select id="currency" class="w-28 bg-slate-950 border border-slate-700 rounded-lg px-2 py-2.5 text-white focus:outline-none focus:border-indigo-500">
+                        <option value="AZN">AZN</option>
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="TRY">TRY</option>
+                        <option value="RUB">RUB</option>
+                        <option value="GBP">GBP</option>
+                    </select>
+                </div>
             </div>
 
             <div>
@@ -271,10 +281,12 @@
 
             const formData = new FormData();
             const priceEl = document.getElementById("price");
+            const currencyEl = document.getElementById("currency");
             const transitEl = document.getElementById("transit_time_days");
             
             if (priceEl && priceEl.value.trim() !== "") {
                 formData.append("price", priceEl.value);
+                formData.append("currency", currencyEl ? currencyEl.value : "AZN");
             }
             if (transitEl && transitEl.value.trim() !== "") {
                 formData.append("transit_time_days", transitEl.value);
