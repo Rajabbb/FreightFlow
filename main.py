@@ -28,6 +28,17 @@ BASE_DIR = Path(__file__).resolve().parent
 load_dotenv()
 
 # ------------------------------------------------------------------
+# SAYTIN ƏSAS ÜNVANI (BASE URL)
+# ------------------------------------------------------------------
+# Bütün email/link generasiyalarında (carrier quote linki, tracking pixel və s.)
+# istifadə olunan əsas domen. Əvvəllər burada serverin çılpaq IP ünvanı
+# (http://162.35.186.229:8000) sərt kodlanmışdı — bu da brauzerlərdə
+# "Not secure" xəbərdarlığına səbəb olurdu. İndi domen (https://arachi.co)
+# istifadə olunur. Zərurət yaranarsa (məs. test mühiti üçün) .env faylına
+# BASE_URL=... əlavə etməklə override etmək mümkündür.
+BASE_URL = os.getenv("BASE_URL", "https://arachi.co")
+
+# ------------------------------------------------------------------
 # KONFİQURASİYA VƏ BAZA
 # ------------------------------------------------------------------
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -402,8 +413,8 @@ async def send_carrier_email_link(
     is_reminder: bool = False,
     reply_to_email: Optional[str] = None
 ):
-    quote_link = f"http://162.35.186.229:8000/carrier_quote/quote?token={token}"
-    tracking_pixel_url = f"http://162.35.186.229:8000/quotes/track/{token}"
+    quote_link = f"{BASE_URL}/carrier_quote/quote?token={token}"
+    tracking_pixel_url = f"{BASE_URL}/quotes/track/{token}"
 
     if is_reminder:
         text_content = f"""Dear {carrier_name},
