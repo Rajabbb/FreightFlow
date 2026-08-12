@@ -70,7 +70,10 @@ async def _bounce_check_loop():
 
 @app.on_event("startup")
 async def start_bounce_check_background_task():
-    asyncio.create_task(_bounce_check_loop())
+    if ENABLE_BOUNCE_CHECK:
+        asyncio.create_task(_bounce_check_loop())
+    else:
+        print("[bounce-check] Deaktivdir (ENABLE_BOUNCE_CHECK=false). Amazon SES + SNS ilə əvəz olunana qədər söndürülüb.")
 
 app.add_middleware(
     CORSMiddleware,
@@ -89,37 +92,50 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+# ------------------------------------------------------------------
+# MAIL KONFİQURASİYASI (Amazon SES - SMTP interfeysi)
+# ------------------------------------------------------------------
+# Bütün dəyərlər .env faylından oxunur. Lazım olan dəyişənlər:
+#   MAIL_SERVER   -> SES SMTP endpoint, məs: email-smtp.eu-north-1.amazonaws.com
+#                    (region-a görə dəyişir, SES konsolunda "SMTP settings" bölməsində var)
+#   MAIL_PORT     -> adətən 587 (STARTTLS) və ya 465 (SSL)
+#   MAIL_USERNAME -> SES-in yaratdığı SMTP username (AWS access key DEYİL,
+#                    SES konsolu -> "SMTP credentials" -> "Create SMTP credentials")
+#   MAIL_PASSWORD -> SES-in yaratdığı SMTP password
+#   MAIL_FROM     -> SES-də doğrulanmış (verified) göndərən email/domen
+#   MAIL_FROM_NAME-> göndərən adı (məs. Arachi)
+SES_MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
+SES_MAIL_USE_SSL = SES_MAIL_PORT == 465
+
 conf = ConnectionConfig(
-    MAIL_USERNAME="burzuyevrcb@gmail.com",
-    MAIL_PASSWORD="yslb bddm cgyg scns",
-    MAIL_FROM="burzuyevrcb@gmail.com",
-    MAIL_FROM_NAME="Arachi",
-    MAIL_PORT=465,
-    MAIL_SERVER="smtp.gmail.com",
-    MAIL_STARTTLS=False,
-    MAIL_SSL_TLS=True,
+    MAIL_USERNAME=os.getenv("MAIL_USERNAME", ""),
+    MAIL_PASSWORD=os.getenv("MAIL_PASSWORD", ""),
+    MAIL_FROM=os.getenv("MAIL_FROM", ""),
+    MAIL_FROM_NAME=os.getenv("MAIL_FROM_NAME", "Arachi"),
+    MAIL_PORT=SES_MAIL_PORT,
+    MAIL_SERVER=os.getenv("MAIL_SERVER", ""),
+    MAIL_STARTTLS=not SES_MAIL_USE_SSL,
+    MAIL_SSL_TLS=SES_MAIL_USE_SSL,
     USE_CREDENTIALS=True
 )
 
 fastmail = FastMail(conf)
 
 # ------------------------------------------------------------------
-# BOUNCE (ÇATDIRILMAYAN MAİL) İZLƏMƏ SİSTEMİ
+# BOUNCE (ÇATDIRILMAYAN MAİL) İZLƏMƏ SİSTEMİ — HAZIRDA DEAKTİV
 # ------------------------------------------------------------------
-# İzah: fastmail.send_message() yalnız SMTP-yə TƏHVİL zamanı baş verən sinxron
-# xətalarda (bağlantı, autentifikasiya və s.) istisna atır. Amma "ünvan mövcud
-# deyil" kimi xətalar adətən Gmail tərəfindən mesaj artıq qəbul edildikdən
-# (250 OK) sonra, bir neçə dəqiqə gecikmə ilə, göndərən qutuya DSN
-# (Delivery Status Notification) maili şəklində geri qayıdır. Bu səbəbdən
-# əvvəlki kod bu cür "gecikmiş" bounce-ları heç vaxt "failed" kimi qeyd etmirdi.
-# Aşağıdakı funksiyalar göndərən Gmail qutusunu IMAP ilə yoxlayıb bu bounce
-# mesajlarını tapır, uğursuz alıcının email ünvanını çıxarır və müvafiq
-# "quotes" sətirlərinin mail_status-unu "failed" olaraq yeniləyir.
+# Qeyd: bu sistem əvvəllər Gmail IMAP inbox-unu yoxlayaraq bounce mailləri
+# tapırdı. Amazon SES-ə keçdikdən sonra bu üsul artıq işləmir, çünki SES-in
+# göndərən qutusu IMAP ilə əlçatan deyil. Bounce/complaint izləmə Amazon SES +
+# SNS (Simple Notification Service) ilə düzgün qurulana qədər bu funksionallıq
+# ENABLE_BOUNCE_CHECK=false ilə deaktiv saxlanılır. Aşağıdakı IMAP-əsaslı kod
+# gələcəkdə SNS-ə keçid üçün istinad olaraq saxlanılıb, silinməyib.
+ENABLE_BOUNCE_CHECK = os.getenv("ENABLE_BOUNCE_CHECK", "false").lower() == "true"
 
-IMAP_HOST = "imap.gmail.com"
-IMAP_PORT = 993
-IMAP_USERNAME = conf.MAIL_USERNAME
-IMAP_PASSWORD = conf.MAIL_PASSWORD.get_secret_value() if hasattr(conf.MAIL_PASSWORD, "get_secret_value") else conf.MAIL_PASSWORD
+IMAP_HOST = os.getenv("IMAP_HOST", "imap.gmail.com")
+IMAP_PORT = int(os.getenv("IMAP_PORT", "993"))
+IMAP_USERNAME = os.getenv("IMAP_USERNAME", "")
+IMAP_PASSWORD = os.getenv("IMAP_PASSWORD", "")
 
 def _decode_mime_str(s: Optional[str]) -> str:
     if not s:
@@ -214,7 +230,12 @@ def _is_bounce_message(msg) -> bool:
 def check_bounced_emails() -> Dict[str, Any]:
     """Gmail inbox-unu IMAP ilə yoxlayır, bounce mesajlarını tapır və
     uyğun 'quotes' sətirlərinin mail_status-unu 'failed' olaraq yeniləyir.
-    Bloklayıcı (sync) funksiyadır - background task / thread içində çağırılmalıdır."""
+    Bloklayıcı (sync) funksiyadır - background task / thread içində çağırılmalıdır.
+
+    Qeyd: Amazon SES-ə keçiddən sonra deaktivdir (bax: ENABLE_BOUNCE_CHECK)."""
+    if not ENABLE_BOUNCE_CHECK or not IMAP_USERNAME or not IMAP_PASSWORD:
+        return {"checked": 0, "updated": [], "errors": [], "disabled": True}
+
     updated = []
     checked = 0
     errors = []
@@ -471,7 +492,7 @@ Best regards,
         recipients=[carrier_email],
         body=html_content,
         subtype=MessageType.html,
-        # From başlığında müştərinin şirkət adı göstərilir: "Şirkət adı" <burzuyevrcb@gmail.com>
+        # From başlığında müştərinin şirkət adı göstərilir: "Şirkət adı" <MAIL_FROM ünvanı>
         from_name=(sender_company or "Arachi").strip() or "Arachi"
     )
     # Reply-To: cavab müştərinin öz emailinə getsin (əgər varsa)
@@ -997,6 +1018,11 @@ def get_quote_form_details(token: str):
 # Yeni: Çatdırılmayan (bounce) mailləri manual yoxlamaq üçün endpoint
 @app.post("/quotes/check-bounces")
 async def check_bounces_endpoint():
+    if not ENABLE_BOUNCE_CHECK:
+        return {
+            "status": "disabled",
+            "message": "Bounce yoxlaması hazırda deaktivdir (Amazon SES-ə keçid səbəbindən). SNS ilə düzgün quraşdırıldıqdan sonra aktivləşdiriləcək."
+        }
     try:
         result = await asyncio.to_thread(check_bounced_emails)
         return {"status": "success", **result}
