@@ -24,8 +24,18 @@ from pathlib import Path
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 BASE_DIR = Path(__file__).resolve().parent
 
+# Mühit dəyişənlərini yükləyirik (.env faylından)
 load_dotenv()
 
+# ------------------------------------------------------------------
+# SAYTIN ƏSAS ÜNVANI (BASE URL)
+# ------------------------------------------------------------------
+# Bütün email/link generasiyalarında (carrier quote linki, tracking pixel və s.)
+# istifadə olunan əsas domen. Əvvəllər burada serverin çılpaq IP ünvanı
+# (http://162.35.186.229:8000) sərt kodlanmışdı — bu da brauzerlərdə
+# "Not secure" xəbərdarlığına səbəb olurdu. İndi domen (https://arachi.co)
+# istifadə olunur. Zərurət yaranarsa (məs. test mühiti üçün) .env faylına
+# BASE_URL=... əlavə etməklə override etmək mümkündür.
 BASE_URL = os.getenv("BASE_URL", "https://arachi.co")
 
 # ------------------------------------------------------------------
@@ -41,9 +51,12 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 app = FastAPI(title="Arachi Backend API")
 
+# Bounce yoxlaması arasında gözlənilən vaxt (saniyə). Env dəyişəni ilə tənzimlənə bilər.
 BOUNCE_CHECK_INTERVAL_SECONDS = int(os.getenv("BOUNCE_CHECK_INTERVAL_SECONDS", "300"))
 
 async def _bounce_check_loop():
+    """Server işlədiyi müddətdə arxa planda dövri olaraq Gmail inbox-unu
+    bounce mailləri üçün yoxlayır və müvafiq mail_status-ları yeniləyir."""
     while True:
         try:
             result = await asyncio.to_thread(check_bounced_emails)
@@ -59,6 +72,8 @@ async def _bounce_check_loop():
 async def start_bounce_check_background_task():
     if ENABLE_BOUNCE_CHECK:
         asyncio.create_task(_bounce_check_loop())
+    else:
+        print("[bounce-check] Deaktivdir (ENABLE_BOUNCE_CHECK=false). Amazon SES + SNS ilə əvəz olunana qədər söndürülüb.")
 
 app.add_middleware(
     CORSMiddleware,
@@ -68,13 +83,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Qovluqların yaradılması
 os.makedirs("static", exist_ok=True)
 UPLOAD_DIR = "static/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+# Statik faylların və uploads qovluğunun montajı
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
+# ------------------------------------------------------------------
+# MAIL KONFİQURASİYASI (Amazon SES - SMTP interfeysi)
+# ------------------------------------------------------------------
+# Bütün dəyərlər .env faylından oxunur. Lazım olan dəyişənlər:
+#   MAIL_SERVER   -> SES SMTP endpoint, məs: email-smtp.eu-north-1.amazonaws.com
+#                    (region-a görə dəyişir, SES konsolunda "SMTP settings" bölməsində var)
+#   MAIL_PORT     -> adətən 587 (STARTTLS) və ya 465 (SSL)
+#   MAIL_USERNAME -> SES-in yaratdığı SMTP username (AWS access key DEYİL,
+#                    SES konsolu -> "SMTP credentials" -> "Create SMTP credentials")
+#   MAIL_PASSWORD -> SES-in yaratdığı SMTP password
+#   MAIL_FROM     -> SES-də doğrulanmış (verified) göndərən email/domen
+#   MAIL_FROM_NAME-> göndərən adı (məs. Arachi)
 SES_MAIL_PORT = int(os.getenv("MAIL_PORT", "587"))
 SES_MAIL_USE_SSL = SES_MAIL_PORT == 465
 
@@ -92,6 +121,15 @@ conf = ConnectionConfig(
 
 fastmail = FastMail(conf)
 
+# ------------------------------------------------------------------
+# BOUNCE (ÇATDIRILMAYAN MAİL) İZLƏMƏ SİSTEMİ — HAZIRDA DEAKTİV
+# ------------------------------------------------------------------
+# Qeyd: bu sistem əvvəllər Gmail IMAP inbox-unu yoxlayaraq bounce mailləri
+# tapırdı. Amazon SES-ə keçdikdən sonra bu üsul artıq işləmir, çünki SES-in
+# göndərən qutusu IMAP ilə əlçatan deyil. Bounce/complaint izləmə Amazon SES +
+# SNS (Simple Notification Service) ilə düzgün qurulana qədər bu funksionallıq
+# ENABLE_BOUNCE_CHECK=false ilə deaktiv saxlanılır. Aşağıdakı IMAP-əsaslı kod
+# gələcəkdə SNS-ə keçid üçün istinad olaraq saxlanılıb, silinməyib.
 ENABLE_BOUNCE_CHECK = os.getenv("ENABLE_BOUNCE_CHECK", "false").lower() == "true"
 
 IMAP_HOST = os.getenv("IMAP_HOST", "imap.gmail.com")
@@ -115,6 +153,7 @@ def _decode_mime_str(s: Optional[str]) -> str:
     return decoded
 
 def _get_message_text(msg) -> str:
+    """Mesajın bütün mətn hissələrini (plain + html) bir string kimi çıxarır."""
     chunks = []
     if msg.is_multipart():
         for part in msg.walk():
@@ -138,6 +177,8 @@ def _get_message_text(msg) -> str:
     return "\n".join(chunks)
 
 def extract_bounced_recipient(msg) -> Optional[str]:
+    """Bir bounce/DSN mesajından uğursuz alıcının email ünvanını çıxarır."""
+    # 1) Standart DSN: "message/delivery-status" hissəsindəki "Final-Recipient" başlığı
     if msg.is_multipart():
         for part in msg.walk():
             if part.get_content_type() == "message/delivery-status":
@@ -151,14 +192,18 @@ def extract_bounced_recipient(msg) -> Optional[str]:
                     continue
 
     body_text = _get_message_text(msg)
+
+    # 2) Gmail-in lokallaşdırılmış mətni: "Mesajınız X ünvanına çatdırıla bilmədi"
     m = re.search(r'Mesajınız\s+([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)\s+ünvanına', body_text)
     if m:
         return extract_clean_email(m.group(1))
 
+    # 3) İngilis dilli variant: "reach <email>" və ya "to <email>"
     m = re.search(r'(?:reach|deliver(?:ing)? (?:your message )?to|to)\s+([a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)', body_text, re.IGNORECASE)
     if m:
         return extract_clean_email(m.group(1))
 
+    # 4) Son çarə: mətndəki ilk email ünvanı (adətən uğursuz alıcı olur)
     m = re.search(r'[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+', body_text)
     if m:
         return extract_clean_email(m.group(0))
@@ -183,6 +228,11 @@ def _is_bounce_message(msg) -> bool:
     return any(bounce_signals)
 
 def check_bounced_emails() -> Dict[str, Any]:
+    """Gmail inbox-unu IMAP ilə yoxlayır, bounce mesajlarını tapır və
+    uyğun 'quotes' sətirlərinin mail_status-unu 'failed' olaraq yeniləyir.
+    Bloklayıcı (sync) funksiyadır - background task / thread içində çağırılmalıdır.
+
+    Qeyd: Amazon SES-ə keçiddən sonra deaktivdir (bax: ENABLE_BOUNCE_CHECK)."""
     if not ENABLE_BOUNCE_CHECK or not IMAP_USERNAME or not IMAP_PASSWORD:
         return {"checked": 0, "updated": [], "errors": [], "disabled": True}
 
@@ -195,6 +245,7 @@ def check_bounced_emails() -> Dict[str, Any]:
         imap.login(IMAP_USERNAME, IMAP_PASSWORD)
         imap.select("INBOX")
 
+        # Yalnız oxunmamış mailləri yoxlayırıq ki, eyni bounce təkrar emal olunmasın
         status, data = imap.search(None, "UNSEEN")
         if status != "OK":
             imap.logout()
@@ -219,12 +270,14 @@ def check_bounced_emails() -> Dict[str, Any]:
                 if not bounced_email:
                     continue
 
+                # Bounce olan ünvana uyğun daşıyıcı(lar)ı tap
                 carriers_res = supabase.table("carriers").select("id").eq("email", bounced_email).execute()
                 carrier_ids = [c["id"] for c in (carriers_res.data or [])]
 
                 if not carrier_ids:
                     continue
 
+                # Bu daşıyıcılara aid, hələ "failed" olaraq qeyd olunmamış quotes sətirlərini yenilə
                 for cid in carrier_ids:
                     q_res = supabase.table("quotes").select("id, mail_status").eq("carrier_id", cid).execute()
                     for q in (q_res.data or []):
@@ -232,6 +285,7 @@ def check_bounced_emails() -> Dict[str, Any]:
                             supabase.table("quotes").update({"mail_status": "failed"}).eq("id", q["id"]).execute()
                             updated.append({"quote_id": q["id"], "carrier_id": cid, "email": bounced_email})
 
+                # Mesajı emal olunmuş kimi işarələ (\Seen), təkrar yoxlanmasın
                 imap.store(msg_id, "+FLAGS", "\\Seen")
 
             except Exception as inner_e:
@@ -245,6 +299,8 @@ def check_bounced_emails() -> Dict[str, Any]:
     return {"checked": checked, "updated": updated, "errors": errors}
 
 def get_sender_info_from_shipment(shipment: Optional[Dict[str, Any]]) -> Tuple[str, Optional[str]]:
+    """Shipment_requests qeydinə bağlı customers məlumatından göndərən şirkət adını
+    və Reply-To üçün müştərinin öz emailini çıxarır."""
     shipment = shipment or {}
     customer = shipment.get("customers") or {}
     sender_company = customer.get("company_name") or customer.get("name") or "Arachi"
@@ -436,8 +492,10 @@ Best regards,
         recipients=[carrier_email],
         body=html_content,
         subtype=MessageType.html,
+        # From başlığında müştərinin şirkət adı göstərilir: "Şirkət adı" <MAIL_FROM ünvanı>
         from_name=(sender_company or "Arachi").strip() or "Arachi"
     )
+    # Reply-To: cavab müştərinin öz emailinə getsin (əgər varsa)
     if reply_to_email:
         message_kwargs["reply_to"] = [reply_to_email]
 
@@ -465,14 +523,7 @@ class ShipmentRequestCreate(BaseModel):
     stackable: Optional[Any] = None
     shipment_type: Optional[str] = ""
     required_fields: Optional[List[Any]] = []
-    
-    # RFQ Göndərmə Rejimləri:
-    # 1. send_to_all = True (Bütün daşıyıcılara)
-    # 2. send_mode = 'category' və category_ids (Kateqoriyalar üzrə)
-    # 3. send_mode = 'custom' və carrier_ids (Seçilmiş daşıyıcılara)
     send_to_all: bool = True
-    send_mode: Optional[str] = "all" # 'all', 'category', 'custom'
-    category_ids: Optional[List[int]] = []
     carrier_ids: Optional[List[int]] = []
     
     attachment_url: Optional[str] = None
@@ -503,16 +554,6 @@ class LoginRequest(BaseModel):
 
 class BatchReminderRequest(BaseModel):
     quote_ids: List[int]
-
-# KATEQORİYA MODELİ
-class CategoryCreateRequest(BaseModel):
-    customer_id: int
-    name: str
-
-class SetCarrierCategoriesRequest(BaseModel):
-    customer_id: int
-    carrier_id: int
-    category_ids: List[int]
 
 # ------------------------------------------------------------------
 # SƏHİFƏ MARŞRUTLARI (HTML PAGES)
@@ -545,63 +586,7 @@ def get_carrier_quote_page(token: str):
     return FileResponse(file_path)
 
 # ------------------------------------------------------------------
-# API ENDPOINT-LƏRİ - KATEQORİYALAR VƏ QRUPLAŞDIRMA (YENİ)
-# ------------------------------------------------------------------
-
-@app.get("/categories/customer/{customer_id}")
-def get_customer_categories(customer_id: int):
-    """Müştəriyə aid bütün kateqoriyaları gətirir."""
-    try:
-        res = supabase.table("carrier_categories").select("*").eq("customer_id", customer_id).order("name").execute()
-        return res.data or []
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/categories/create")
-def create_category(payload: CategoryCreateRequest):
-    """Yeni kateqoriya yaradır."""
-    try:
-        cat_name = payload.name.strip()
-        if not cat_name:
-            raise HTTPException(status_code=400, detail="Kateqoriya adı boş ola bilməz.")
-
-        res = supabase.table("carrier_categories").insert({
-            "customer_id": payload.customer_id,
-            "name": cat_name
-        }).execute()
-        return {"status": "success", "category": res.data[0]}
-    except Exception as e:
-        if "unique" in str(e).lower():
-            raise HTTPException(status_code=400, detail="Bu adda kateqoriya artıq mövcuddur.")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.delete("/categories/{customer_id}/{category_id}")
-def delete_category(customer_id: int, category_id: int):
-    """Kateqoriyanı silir."""
-    try:
-        supabase.table("carrier_categories").delete().eq("id", category_id).eq("customer_id", customer_id).execute()
-        return {"status": "success", "message": "Kateqoriya silindi."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/carriers/set-categories")
-def set_carrier_categories(payload: SetCarrierCategoriesRequest):
-    """Bir daşıyıcını kateqoriyalara təyin edir və ya mövcud təyinatları yeniləyir."""
-    try:
-        # Əvvəlki əlaqələri təmizləyirik
-        supabase.table("carrier_category_mapping").delete().eq("carrier_id", payload.carrier_id).execute()
-
-        # Yeni əlaqələri əlavə edirik
-        if payload.category_ids:
-            mappings = [{"category_id": cid, "carrier_id": payload.carrier_id} for cid in payload.category_ids]
-            supabase.table("carrier_category_mapping").insert(mappings).execute()
-
-        return {"status": "success", "message": "Daşıyıcının kateqoriyaları yeniləndi."}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-# ------------------------------------------------------------------
-# DİGƏR API ENDPOINT-LƏRİ
+# API ENDPOINT-LƏRİ
 # ------------------------------------------------------------------
 
 @app.get("/customer/stats/{customer_id}")
@@ -767,19 +752,9 @@ def delete_customer_carrier(payload: DeleteCarrierRequest):
 
 @app.get("/carriers/customer/{customer_id}")
 def get_customer_carriers(customer_id: int):
-    """Müştəriyə aid daşıyıcıları kateqoriya məlumatları ilə birlikdə qaytarır."""
     try:
-        res = supabase.table("carriers").select("*, carrier_category_mapping(category_id)").eq("customer_id", customer_id).range(0, 9999).execute()
-        carriers = res.data or []
-        
-        # Məlumat strukturunu təmizləyirik
-        for c in carriers:
-            mappings = c.get("carrier_category_mapping") or []
-            c["category_ids"] = [m["category_id"] for m in mappings if isinstance(m, dict) and "category_id" in m]
-            if "carrier_category_mapping" in c:
-                del c["carrier_category_mapping"]
-
-        return carriers
+        res = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute()
+        return res.data if res.data is not None else []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -868,23 +843,10 @@ async def create_shipment_request(
         c_query = supabase.table("carriers").select("*").eq("customer_id", payload.customer_id).range(0, 9999).execute()
         all_customer_carriers = c_query.data or []
 
-        # Daşıyıcıların seçim rejimi üzrə filtri
-        target_carriers = []
-        
-        # 1. Bütün daşıyıcılara
-        if payload.send_to_all or payload.send_mode == "all":
+        if payload.send_to_all:
             target_carriers = all_customer_carriers
-            
-        # 2. Seçilmiş kateqoriyadakı daşıyıcılara
-        elif payload.send_mode == "category" and payload.category_ids:
-            cat_ids = set(payload.category_ids)
-            map_res = supabase.table("carrier_category_mapping").select("carrier_id").in_("category_id", list(cat_ids)).execute()
-            mapped_carrier_ids = set(m["carrier_id"] for m in (map_res.data or []))
-            target_carriers = [c for c in all_customer_carriers if c["id"] in mapped_carrier_ids]
-            
-        # 3. Fərdi seçilmiş daşıyıcılara (Custom)
-        elif payload.carrier_ids:
-            selected_ids = set(payload.carrier_ids)
+        else:
+            selected_ids = set(payload.carrier_ids or [])
             target_carriers = [c for c in all_customer_carriers if c["id"] in selected_ids]
 
         active_custom_body = payload.custom_email_body or payload.email_body
@@ -894,6 +856,9 @@ async def create_shipment_request(
             carrier_name = carrier.get("company_name") or "Daşıyıcı"
             carrier_email = carrier.get("email")
 
+            # Email ünvanı olmayan daşıyıcı üçün "pending" statusunda əbədi qalıb
+            # yanlış olaraq "göndərildi" kimi göstərilməsinin qarşısını alırıq:
+            # dərhal "failed" olaraq qeyd edirik ki, panel və statistikada düzgün əks olunsun.
             initial_status = "pending" if carrier_email else "failed"
 
             supabase.table("quotes").insert({
@@ -945,6 +910,7 @@ def get_customer_requests(customer_id: int):
 
     return {"status": "success", "requests": requests}
 
+# Yeni: RFQ-ya qoşulmuş daşıyıcıların statuslarını (çatdırıldı, oxundu, təklif gəldi) qaytaran endpoint
 @app.get("/requests/carriers-status/{request_id}")
 def get_request_carriers_status(request_id: int):
     try:
@@ -963,7 +929,7 @@ def get_request_carriers_status(request_id: int):
                 "carrier_id": item.get("carrier_id"),
                 "company_name": carrier.get("company_name", "Daşıyıcı"),
                 "email": carrier.get("email", ""),
-                "mail_status": item.get("mail_status", "pending"),
+                "mail_status": item.get("mail_status", "pending"), # delivered, failed, pending
                 "is_viewed": item.get("is_viewed", False),
                 "has_submitted": has_submitted,
                 "token": item.get("token")
@@ -1049,12 +1015,13 @@ def get_quote_form_details(token: str):
 
     return {"already_submitted": quote.get("price") is not None, "quote": quote}
 
+# Yeni: Çatdırılmayan (bounce) mailləri manual yoxlamaq üçün endpoint
 @app.post("/quotes/check-bounces")
 async def check_bounces_endpoint():
     if not ENABLE_BOUNCE_CHECK:
         return {
             "status": "disabled",
-            "message": "Bounce yoxlaması hazırda deaktivdir."
+            "message": "Bounce yoxlaması hazırda deaktivdir (Amazon SES-ə keçid səbəbindən). SNS ilə düzgün quraşdırıldıqdan sonra aktivləşdiriləcək."
         }
     try:
         result = await asyncio.to_thread(check_bounced_emails)
@@ -1063,6 +1030,7 @@ async def check_bounces_endpoint():
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# Yeni: Email oxunduqda avtomatik çağrılan izləmə pikseli endpoint-i
 @app.get("/quotes/track/{token}")
 def track_email_view(token: str):
     try:
@@ -1070,9 +1038,11 @@ def track_email_view(token: str):
     except Exception:
         pass
     
+    # 1x1 şəffaf GIF qayıdır
     transparent_gif = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x80\x00\x00\xff\xff\xff\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;'
     return Response(content=transparent_gif, media_type="image/gif")
 
+# Yeni: Maili çatdırılmayan daşıyıcıya yenidən göndərmək (Resend)
 @app.post("/quotes/resend/{quote_id}")
 async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks):
     try:
@@ -1094,6 +1064,7 @@ async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks)
         if not carrier_email:
             raise HTTPException(status_code=400, detail="Daşıyıcı email ünvanı mövcud deyil.")
 
+        # Yenidən göndərilməyə başlayarkən statusu "pending"ə qaytarırıq ki, nəticə düzgün əks olunsun
         supabase.table("quotes").update({"mail_status": "pending"}).eq("id", quote_id).execute()
 
         background_tasks.add_task(
@@ -1114,6 +1085,7 @@ async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# Yeni: Tək daşıyıcıya Reminder göndərmək
 @app.post("/quotes/reminder/{quote_id}")
 async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks):
     try:
@@ -1154,6 +1126,7 @@ async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks)
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# Yeni: Toplu (Batch) Reminder göndərmək
 @app.post("/quotes/reminder-batch")
 async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: BackgroundTasks):
     try:
