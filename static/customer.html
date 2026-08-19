@@ -130,6 +130,27 @@
         @media (max-width: 576px) {
             .main-app-tabs .nav-link { font-size: 12px; padding: 9px 12px; }
         }
+        /* Mobil ekranda 4 tab bir sətirdə sığmır və scroll üçün heç bir vizual
+           işarə olmadığı üçün istifadəçi 4-cü tabı görmürdü. Kiçik ekranlarda
+           tabları 2x2 grid-ə çeviririk ki, hamısı scroll etmədən görünsün. */
+        @media (max-width: 640px) {
+            .main-app-tabs {
+                display: grid !important;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+                overflow: visible !important;
+            }
+            .main-app-tabs .nav-item { width: 100%; }
+            .main-app-tabs .nav-link {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                text-align: center;
+                white-space: normal;
+                line-height: 1.2;
+            }
+        }
 
         .form-control, .form-select {
             padding: 10px 14px;
