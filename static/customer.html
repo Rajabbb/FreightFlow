@@ -98,6 +98,39 @@
             font-weight: 500;
         }
 
+        /* ƏSAS NAVİQASİYA TAB-LARI (Dashboard / Vendors / RFQ Builder / Tracking) */
+        .main-app-tabs {
+            border-bottom: none;
+            gap: 6px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .main-app-tabs::-webkit-scrollbar { display: none; }
+        .main-app-tabs .nav-link {
+            border: 1px solid transparent;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--text-muted);
+            padding: 10px 16px;
+            white-space: nowrap;
+            background: rgba(255, 255, 255, 0.6);
+            transition: all 0.25s ease;
+        }
+        .main-app-tabs .nav-link:hover {
+            color: var(--primary-blue);
+            background: rgba(255, 255, 255, 0.9);
+        }
+        .main-app-tabs .nav-link.active {
+            color: #fff;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%);
+            box-shadow: 0 8px 16px -8px rgba(79, 70, 229, 0.5);
+            border-color: transparent;
+        }
+        @media (max-width: 576px) {
+            .main-app-tabs .nav-link { font-size: 12px; padding: 9px 12px; }
+        }
+
         .form-control, .form-select {
             padding: 10px 14px;
             border-radius: var(--radius-md);
@@ -487,6 +520,35 @@
     </nav>
 
     <div class="container-fluid px-2 px-sm-3 px-md-4 py-3 py-md-4" id="dashboardMain">
+
+        <!-- ƏSAS NAVİQASİYA (4 TAB) -->
+        <ul class="nav nav-tabs main-app-tabs mb-4 flex-nowrap overflow-auto" id="mainAppTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="tab-dashboard-btn" data-bs-toggle="tab" data-bs-target="#tab-dashboard" type="button" role="tab" aria-controls="tab-dashboard" aria-selected="true">
+                    <i class="bi bi-speedometer2 me-1"></i> Analitika və Panel
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-vendors-btn" data-bs-toggle="tab" data-bs-target="#tab-vendors" type="button" role="tab" aria-controls="tab-vendors" aria-selected="false">
+                    <i class="bi bi-people-fill me-1"></i> Daşıyıcı Bazası
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-builder-btn" data-bs-toggle="tab" data-bs-target="#tab-builder" type="button" role="tab" aria-controls="tab-builder" aria-selected="false">
+                    <i class="bi bi-box-seam-fill me-1"></i> Yeni RFQ Yarat
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tab-tracking-btn" data-bs-toggle="tab" data-bs-target="#tab-tracking" type="button" role="tab" aria-controls="tab-tracking" aria-selected="false">
+                    <i class="bi bi-ui-checks-grid me-1"></i> Sorğular və Müqayisə
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainAppTabsContent">
+
+        <!-- ================= TAB 1: ANALİTİKA VƏ PANEL (DASHBOARD) ================= -->
+        <div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel" aria-labelledby="tab-dashboard-btn">
         
         <!-- STATS ROW -->
         <div class="row g-2 g-md-3 mb-4">
@@ -509,6 +571,12 @@
                 </div>
             </div>
         </div>
+
+        </div>
+        <!-- ================= /TAB 1 ================= -->
+
+        <!-- ================= TAB 2: DAŞIYICI BAZASI VƏ QRUPLAŞDIRMA (VENDOR MANAGEMENT) ================= -->
+        <div class="tab-pane fade" id="tab-vendors" role="tabpanel" aria-labelledby="tab-vendors-btn">
 
         <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
         <div class="card shadow-sm border-0 mb-4">
@@ -601,6 +669,12 @@
                 <span class="text-muted small">Daşıyıcılar yüklənir...</span>
             </div>
         </div>
+
+        </div>
+        <!-- ================= /TAB 2 ================= -->
+
+        <!-- ================= TAB 3: YENİ RFQ YARAT (RFQ BUILDER) ================= -->
+        <div class="tab-pane fade" id="tab-builder" role="tabpanel" aria-labelledby="tab-builder-btn">
 
         <!-- YENİ YÜK SORĞUSU (RFQ) YARAT -->
         <div class="card">
@@ -811,6 +885,12 @@ Best regards,
             </form>
         </div>
 
+        </div>
+        <!-- ================= /TAB 3 ================= -->
+
+        <!-- ================= TAB 4: SORĞULARIN İZLƏNMƏSİ VƏ QİYMƏT MÜQAYİSƏSİ ================= -->
+        <div class="tab-pane fade" id="tab-tracking" role="tabpanel" aria-labelledby="tab-tracking-btn">
+
         <!-- AKTİV VƏ KEÇMİŞ SORĞULAR -->
         <div class="card">
             <div class="section-title">
@@ -833,6 +913,12 @@ Best regards,
                 <p class="text-muted small">Sorğular yüklənir...</p>
             </div>
         </div>
+
+        </div>
+        <!-- ================= /TAB 4 ================= -->
+
+        </div>
+        <!-- /mainAppTabsContent -->
 
     </div>
 
@@ -1924,6 +2010,13 @@ Best regards,
             document.getElementById("rfqDetailPage").classList.add("d-none");
             document.getElementById("dashboardMain").classList.remove("d-none");
             currentDetailRequestId = null;
+            // Geri qayıdanda "Sorğular və Müqayisə" tab-ını aktiv et
+            try {
+                const trackingTabBtn = document.getElementById("tab-tracking-btn");
+                if (trackingTabBtn && window.bootstrap) {
+                    bootstrap.Tab.getOrCreateInstance(trackingTabBtn).show();
+                }
+            } catch (err) { /* səssizcə keç */ }
             loadRequests();
             loadStats();
         }
