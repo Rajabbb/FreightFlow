@@ -296,6 +296,8 @@
             background: #f8fafc;
         }
 
+        .history-item:hover { filter: brightness(0.95); }
+
         .request-card {
             border: 1px solid rgba(226, 232, 240, 0.9);
             border-radius: var(--radius-lg);
@@ -2148,46 +2150,22 @@ Best regards,
             if (countEl) countEl.textContent = quotesList.length;
         }
 
+        // ==========================================
+        // YENİ: KLİKLƏNƏ BİLƏN (İnteraktiv) MODAL
+        // ==========================================
         function openQuoteModal(requestId, quoteId) {
             const quotes = window.currentQuotesCache[requestId] || [];
             const q = quotes.find(item => item.id === quoteId);
             if (!q) return;
 
-            let extraHtml = "";
-            if (q.extra_details) {
-                for (let [k, v] of Object.entries(q.extra_details)) {
-                    if (k === 'submitted') continue;
-
-                    if (v !== null && v !== undefined && v !== "" && v !== "null") {
-                        if (k === 'carrier_attachment_url') {
-                            extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
-                                <strong class="text-dark small">Qoşulmuş Fayl:</strong>
-                                <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Yüklə</a>
-                            </div>`;
-                        } else {
-                            extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm">
-                                <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 10.5px;">${k}</strong>
-                                <p class="mb-0 text-dark fw-medium small text-break" style="white-space: pre-wrap;">${v}</p>
-                            </div>`;
-                        }
-                    }
-                }
-            }
-
-            let modalTransitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null")
-                ? `${q.transit_time_days} <span class="fs-6 text-muted">gün</span>`
-                : `<span class="fs-6 text-muted fst-italic">Qeyd olunmayıb</span>`;
-
-            let modalPriceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null")
-                ? `${q.price} <span class="fs-6 text-muted">${q.currency || 'AZN'}</span>`
-                : `<span class="fs-6 text-muted fst-italic">Yoxdur</span>`;
-
             let historyHtml = "";
-            if (q.quote_history && q.quote_history.length > 0) {
+            let totalVersions = (q.quote_history ? q.quote_history.length : 0) + 1;
+
+            if (totalVersions > 1) {
                 historyHtml += `
                 <div class="p-3 rounded-4 bg-white border shadow-sm mt-3">
                     <h6 class="fw-bold text-dark mb-2 small"><i class="bi bi-clock-history text-primary me-2"></i> Təklif Tarixçəsi (Audit Log):</h6>
-                    <div class="d-flex flex-column gap-2">
+                    <div class="d-flex flex-column gap-2" id="quoteHistoryList">
                 `;
                 
                 q.quote_history.forEach((hist, index) => {
@@ -2195,19 +2173,26 @@ Best regards,
                     let hTransit = hist.transit_time_days ? `${hist.transit_time_days} gün` : "Yoxdur";
                     
                     historyHtml += `
-                        <div class="p-2 border rounded bg-light text-muted small d-flex justify-content-between flex-wrap gap-1">
+                        <div class="p-2 border rounded small d-flex justify-content-between flex-wrap gap-1 history-item" 
+                             id="hist_item_${index}"
+                             onclick="renderQuoteVersion(${requestId}, ${quoteId}, ${index})"
+                             style="cursor: pointer; transition: 0.2s;">
                             <span><strong>Təklif v${index + 1}:</strong> ${hPrice}</span>
                             <span>Tranzit: ${hTransit}</span>
                         </div>
                     `;
                 });
                 
-                // Cari təklif
                 let currPrice = q.price !== null ? `${q.price} ${q.currency || 'AZN'}` : "Yoxdur";
                 let currTransit = q.transit_time_days ? `${q.transit_time_days} gün` : "Yoxdur";
+                let lastIndex = q.quote_history.length;
+                
                 historyHtml += `
-                        <div class="p-2 border border-primary rounded bg-primary bg-opacity-10 text-dark small d-flex justify-content-between flex-wrap gap-1">
-                            <span><strong>Təklif v${q.quote_history.length + 1} (Sonuncu):</strong> ${currPrice}</span>
+                        <div class="p-2 border rounded small d-flex justify-content-between flex-wrap gap-1 history-item" 
+                             id="hist_item_${lastIndex}"
+                             onclick="renderQuoteVersion(${requestId}, ${quoteId}, ${lastIndex})"
+                             style="cursor: pointer; transition: 0.2s;">
+                            <span><strong>Təklif v${lastIndex + 1} (Sonuncu):</strong> ${currPrice}</span>
                             <span>Tranzit: ${currTransit}</span>
                         </div>
                     </div>
@@ -2221,29 +2206,106 @@ Best regards,
                     <span class="badge bg-light text-primary mb-1 px-2.5 py-1 border rounded-pill">Daşıyıcı Şirkət</span>
                     <h4 class="fw-bold text-dark text-break" style="font-size: 1.2rem;">${q.carrier_company || 'Daşıyıcı'}</h4>
                 </div>
+                
+                <!-- Seçilən versiyanın detallarının görünəcəyi yer -->
+                <div id="quoteVersionDetails"></div>
+
+                <!-- Tarixçə / Log qutusu -->
+                ${historyHtml}
+            `;
+
+            // Varsayılan olaraq ən son (ən yeni) təklifi ekranda göstər
+            renderQuoteVersion(requestId, quoteId, totalVersions - 1);
+
+            const modal = new bootstrap.Modal(document.getElementById("quoteDetailModal"));
+            modal.show();
+        }
+
+        window.renderQuoteVersion = function(requestId, quoteId, versionIndex) {
+            const quotes = window.currentQuotesCache[requestId] || [];
+            const q = quotes.find(item => item.id === quoteId);
+            if (!q) return;
+
+            let targetData;
+            let versionLabel = "";
+
+            if (q.quote_history && versionIndex < q.quote_history.length) {
+                targetData = q.quote_history[versionIndex];
+                versionLabel = `v${versionIndex + 1}`;
+            } else {
+                targetData = q; 
+                versionLabel = `v${(q.quote_history ? q.quote_history.length : 0) + 1} (Sonuncu)`;
+            }
+
+            // Seçilmiş tarixi vurğulamaq üçün Styling (Active state)
+            document.querySelectorAll(".history-item").forEach(el => {
+                el.classList.remove("border-primary", "bg-primary", "bg-opacity-10", "text-primary");
+                el.classList.add("bg-light", "text-muted");
+            });
+            
+            let activeItem = document.getElementById(`hist_item_${versionIndex}`);
+            if(activeItem) {
+                activeItem.classList.remove("bg-light", "text-muted");
+                activeItem.classList.add("border-primary", "bg-primary", "bg-opacity-10", "text-primary");
+            }
+
+            let extraHtml = "";
+            let extraObj = targetData.extra_details || {};
+            
+            for (let [k, v] of Object.entries(extraObj)) {
+                if (k === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
+                if (v !== null && v !== undefined && v !== "" && v !== "null") {
+                    if (k === 'carrier_attachment_url') {
+                        extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <strong class="text-dark small">Qoşulmuş Fayl:</strong>
+                            <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Yüklə</a>
+                        </div>`;
+                    } else {
+                        extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm">
+                            <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 10.5px;">${k}</strong>
+                            <p class="mb-0 text-dark fw-medium small text-break" style="white-space: pre-wrap;">${v}</p>
+                        </div>`;
+                    }
+                }
+            }
+
+            let modalTransitDisplay = (targetData.transit_time_days !== null && targetData.transit_time_days !== undefined && targetData.transit_time_days !== "null")
+                ? `${targetData.transit_time_days} <span class="fs-6 text-muted">gün</span>`
+                : `<span class="fs-6 text-muted fst-italic">Qeyd olunmayıb</span>`;
+
+            let modalPriceDisplay = (targetData.price !== null && targetData.price !== undefined && targetData.price !== "null")
+                ? `${targetData.price} <span class="fs-6 text-muted">${targetData.currency || 'AZN'}</span>`
+                : `<span class="fs-6 text-muted fst-italic">Yoxdur</span>`;
+
+            let detailsDiv = document.getElementById("quoteVersionDetails");
+            
+            let headerHtml = (q.quote_history && q.quote_history.length > 0) 
+                ? `<div class="d-flex justify-content-center mb-3">
+                     <span class="badge bg-warning text-dark px-3 py-1 shadow-sm border border-warning" style="font-size: 12px;">Hazırda baxılır: Təklif ${versionLabel}</span>
+                   </div>` 
+                : "";
+
+            detailsDiv.innerHTML = `
+                ${headerHtml}
                 <div class="row g-2 mb-3">
                     <div class="col-12 col-sm-6">
-                        <div class="p-3 rounded-4 border bg-light h-100">
+                        <div class="p-3 rounded-4 border bg-light h-100 shadow-sm transition">
                             <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Təklif olunan Qiymət</span>
                             <h3 class="text-success fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalPriceDisplay}</h3>
                         </div>
                     </div>
                     <div class="col-12 col-sm-6">
-                        <div class="p-3 rounded-4 border bg-light h-100">
+                        <div class="p-3 rounded-4 border bg-light h-100 shadow-sm transition">
                             <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Tranzit Müddəti</span>
                             <h3 class="text-dark fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalTransitDisplay}</h3>
                         </div>
                     </div>
                 </div>
-                <div class="p-3 rounded-4 bg-light">
+                <div class="p-3 rounded-4 bg-light shadow-sm">
                     <h6 class="fw-bold text-dark mb-2 small"><i class="bi bi-list-stars text-primary me-2"></i> Əlavə Məlumatlar və Şərtlər:</h6>
                     ${extraHtml || '<div class="p-2 border rounded-3 bg-white text-muted text-center small">Əlavə detal qeyd olunmayıb.</div>'}
                 </div>
-                ${historyHtml}
             `;
-
-            const modal = new bootstrap.Modal(document.getElementById("quoteDetailModal"));
-            modal.show();
         }
 
         async function selectWinner(requestId, quoteId) {
