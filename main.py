@@ -7,6 +7,7 @@ import re
 import asyncio
 import imaplib
 import email as email_lib
+from datetime import datetime
 from email.header import decode_header
 import pandas as pd
 from typing import Optional, Dict, Any, List, Tuple
@@ -660,7 +661,8 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
 
 @app.get("/requests/customer/{customer_id}")
 def get_customer_requests(customer_id: int):
-    res = supabase.table("shipment_requests").select("*, quotes(id, price, extra_details)").eq("customer_id", customer_id).order("id", desc=True).execute()
+    # DİQQƏT: quote_history buraya da daxil edildi
+    res = supabase.table("shipment_requests").select("*, quotes(id, price, extra_details, quote_history)").eq("customer_id", customer_id).order("id", desc=True).execute()
     requests = res.data or []
     for req in requests:
         valid_quotes = [q for q in (req.get("quotes") or []) if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True)]
@@ -705,6 +707,8 @@ def get_request_details(target_id: str):
         cleaned_extra = dict(extra)
         cleaned_extra.pop("submitted", None)
         quote["extra_details"] = cleaned_extra
+        
+        # Cari təklifin məlumatlarını göndəririk ki, frontend onu oxuyub formu doldura bilsin
         return {"already_submitted": is_already_submitted, "request": shipment, "quote": quote}
     
     if target_id.isdigit():
@@ -817,8 +821,7 @@ async def submit_quote(token: str, price: Optional[str] = Form(None), currency: 
     res = supabase.table("quotes").select("*").eq("token", token).execute()
     if not res.data: raise HTTPException(status_code=404, detail="Xətalı link!")
     quote = res.data[0]
-    if quote.get("price") is not None or (quote.get("extra_details") or {}).get("submitted") == True: raise HTTPException(status_code=400, detail="Artıq təklif göndərilib!")
-
+    
     parsed_price = float(price) if price and str(price).strip() else None
     parsed_extra = json.loads(extra_details) if extra_details else {}
     parsed_extra["submitted"] = True
@@ -833,12 +836,36 @@ async def submit_quote(token: str, price: Optional[str] = Form(None), currency: 
     parsed_currency = (currency or "AZN").strip().upper()
     if parsed_currency not in ("AZN", "USD", "EUR", "TRY", "RUB", "GBP"): parsed_currency = "AZN"
 
-    update_res = supabase.table("quotes").update({"price": parsed_price, "transit_time_days": transit_time_days, "extra_details": parsed_extra, "currency": parsed_currency}).eq("token", token).execute()
+    # YENİ MƏNTİQ: Əgər artıq təklif veribsə, köhnəni `quote_history` massivinə atırıq
+    history = quote.get("quote_history") or []
+    existing_price = quote.get("price")
+    existing_extra = quote.get("extra_details") or {}
+
+    if existing_price is not None or existing_extra.get("submitted"):
+        old_state = {
+            "version": len(history) + 1,
+            "price": existing_price,
+            "currency": quote.get("currency"),
+            "transit_time_days": quote.get("transit_time_days"),
+            "extra_details": existing_extra,
+            "date": datetime.utcnow().isoformat()
+        }
+        history.append(old_state)
+
+    update_res = supabase.table("quotes").update({
+        "price": parsed_price, 
+        "transit_time_days": transit_time_days, 
+        "extra_details": parsed_extra, 
+        "currency": parsed_currency,
+        "quote_history": history
+    }).eq("token", token).execute()
+    
     return {"status": "success", "message": "Təklif qəbul edildi!", "data": update_res.data}
 
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int):
     try:
+        # quote_history daxil edildi
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
         quotes_list = []
         for item in quotes_res.data or []:
@@ -849,7 +876,8 @@ def get_request_quotes(request_id: int):
                 "id": item.get("id"), "request_id": item.get("request_id"), "carrier_id": item.get("carrier_id"),
                 "carrier_company": item.get("carriers", {}).get("company_name", f"Daşıyıcı #{item.get('carrier_id')}"), "carrier_email": item.get("carriers", {}).get("email", ""),
                 "price": item.get("price"), "currency": item.get("currency", "AZN"), "transit_time_days": item.get("transit_time_days"),
-                "is_winner": item.get("is_winner", False), "extra_details": filtered_extra, "extra_responses": filtered_extra
+                "is_winner": item.get("is_winner", False), "extra_details": filtered_extra, "extra_responses": filtered_extra,
+                "quote_history": item.get("quote_history", [])
             })
         return {"status": "success", "quotes": quotes_list}
     except Exception as e:
