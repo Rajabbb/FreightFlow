@@ -279,29 +279,21 @@
         }
 
         .carrier-select-box {
-            max-height: 220px;
+            max-height: 250px;
             overflow-y: auto;
             border: 1px solid #e2e8f0;
             border-radius: var(--radius-md);
-            padding: 8px;
             background: #ffffff;
             box-shadow: inset 0 2px 8px rgba(0,0,0,0.01);
         }
 
         .carrier-item-row {
-            display: flex;
-            align-items: center;
-            padding: 8px 10px;
-            border-radius: var(--radius-sm);
             transition: all 0.2s ease;
-            cursor: pointer;
             border: 1px solid transparent;
-            margin-bottom: 3px;
         }
 
         .carrier-item-row:hover {
             background: #f8fafc;
-            border-color: #e2e8f0;
         }
 
         .request-card {
@@ -638,7 +630,6 @@
             </ul>
 
             <div class="tab-content mb-3" id="carrierTabsContent">
-                
                 <div class="tab-pane fade show active" id="file-content" role="tabpanel">
                     <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
                         <div class="row align-items-end g-3">
@@ -682,38 +673,42 @@
                         </button>
                     </form>
                 </div>
-
             </div>
 
-            <hr class="my-3 text-muted opacity-25">
+            <hr class="my-4 text-muted opacity-25">
 
-            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+            <!-- YENİ DİZAYN: BAŞLIQ VƏ AXTARIŞ/YENİLƏ PANELLƏRİ AYRILDI -->
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <span class="fw-bold text-dark small text-uppercase tracking-wider">
                     <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
                 </span>
                 <div class="d-flex align-items-center gap-2">
-                    
-                    <!-- YENİ: Toplu Əməliyyatlar -->
-                    <select id="bulkCategorySelect" class="form-select form-select-sm" style="width: 130px; font-size: 11px;">
-                        <option value="">Toplu Kateqoriya...</option>
-                    </select>
-                    <button type="button" class="btn btn-sm btn-primary py-1 px-2" style="font-size: 11px;" onclick="applyBulkCategory()">Tətbiq Et</button>
-                    
-                    <input type="text" id="carrierSearchInput" class="form-control form-control-sm" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="width: 140px; font-size: 12px;">
-                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="loadManageCarriersList()" style="font-size: 11px;">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
+                    <div class="input-group input-group-sm shadow-sm" style="width: auto;">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" id="carrierSearchInput" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="max-width: 160px; font-size: 12px;">
+                    </div>
+                    <button type="button" class="btn btn-sm btn-light border shadow-sm px-3" onclick="loadManageCarriersList()" title="Yenilə">
+                        <i class="bi bi-arrow-clockwise"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- YENİ: Hamısını Seç düyməsi -->
-            <div class="d-flex align-items-center mb-2 px-2 bg-white rounded py-1 border shadow-sm" style="font-size: 12px;">
-                <input type="checkbox" id="selectAllManageCarriers" class="form-check-input me-2 mt-0 border-secondary" style="width: 1.2em; height: 1.2em; cursor: pointer;" onchange="toggleAllManageCarriers(this)">
-                <label for="selectAllManageCarriers" class="fw-bold text-dark cursor-pointer mb-0">Bütün görünənləri seç</label>
+            <!-- YENİ DİZAYN: TOPLU ƏMƏLİYYATLAR TOOLBAR -->
+            <div class="bg-light border rounded-3 p-2 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm">
+                <div class="form-check mb-0 ms-2">
+                    <input type="checkbox" id="selectAllManageCarriers" class="form-check-input border-secondary shadow-sm" style="width: 1.1em; height: 1.1em; cursor: pointer; margin-top: 0.15em;" onchange="toggleAllManageCarriers(this)">
+                    <label for="selectAllManageCarriers" class="form-check-label fw-bold text-dark ms-1" style="font-size: 13px; cursor: pointer;">Hamısını seç</label>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <select id="bulkCategorySelect" class="form-select form-select-sm shadow-sm" style="min-width: 180px; font-size: 12px;">
+                        <option value="">-- Kateqoriya Seçin --</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-primary px-3 shadow-sm fw-bold" style="font-size: 12px;" onclick="applyBulkCategory()">Tətbiq et</button>
+                </div>
             </div>
 
-            <div class="carrier-select-box" id="manageCarriersContainer">
-                <span class="text-muted small">Daşıyıcılar yüklənir...</span>
+            <div class="carrier-select-box p-0" id="manageCarriersContainer">
+                <span class="text-muted small p-3 d-block">Daşıyıcılar yüklənir...</span>
             </div>
         </div>
 
@@ -920,7 +915,7 @@ Best regards,
                     <!-- Kateqoriya Seçim Qutusu -->
                     <div id="categorySelectionContainer" class="d-none mt-2 p-2 p-sm-3 bg-light rounded-4 border mb-3">
                         <small class="text-muted fw-bold text-uppercase tracking-wider d-block mb-2" style="font-size: 11px;">Aşağıdan göndəriləcək kateqoriyaları seçin:</small>
-                        <div class="carrier-select-box" id="categoryCheckboxList">
+                        <div class="carrier-select-box p-2" id="categoryCheckboxList">
                             <span class="text-muted small">Kateqoriyalar yüklənir...</span>
                         </div>
                     </div>
@@ -930,11 +925,11 @@ Best regards,
                         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                             <small class="text-muted fw-bold text-uppercase tracking-wider" style="font-size: 11px;">Daşıyıcıları seçin:</small>
                             <div>
-                                <button type="button" class="btn btn-sm btn-light fw-bold me-1 px-2 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(true)">Hamısını Seç</button>
+                                <button type="button" class="btn btn-sm btn-light border fw-bold me-1 px-2 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(true)">Hamısını Seç</button>
                                 <button type="button" class="btn btn-sm btn-link text-muted fw-semibold text-decoration-none px-1 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(false)">Təmizlə</button>
                             </div>
                         </div>
-                        <div class="carrier-select-box" id="carrierCheckboxList">
+                        <div class="carrier-select-box p-2" id="carrierCheckboxList">
                             <span class="text-muted small">Daşıyıcılar yüklənir...</span>
                         </div>
                     </div>
@@ -1265,10 +1260,10 @@ Best regards,
         function updateBulkCategoryDropdown() {
             const bulkSelect = document.getElementById("bulkCategorySelect");
             if(!bulkSelect) return;
-            let options = `<option value="">Toplu Kateqoriya...</option>`;
-            options += `<option value="remove">Kateqoriyadan Çıxar</option>`;
+            let options = `<option value="">-- Kateqoriya Seçin --</option>`;
+            options += `<option value="remove">❌ Kateqoriyadan çıxar</option>`;
             for(let cat of globalCategoriesCache) {
-                options += `<option value="${cat.id}">${cat.name}</option>`;
+                options += `<option value="${cat.id}">📁 ${cat.name}</option>`;
             }
             bulkSelect.innerHTML = options;
         }
@@ -1352,9 +1347,9 @@ Best regards,
             let html = "";
             for (let cat of globalCategoriesCache) {
                 html += `
-                    <div class="carrier-item-row" onclick="document.getElementById('cat_${cat.id}').click(); event.stopPropagation();">
+                    <div class="carrier-item-row mb-1 p-2" onclick="document.getElementById('cat_${cat.id}').click(); event.stopPropagation();">
                         <div class="form-check mb-0 w-100">
-                            <input class="form-check-input cat-item-check me-2" type="checkbox" value="${cat.id}" id="cat_${cat.id}" onclick="event.stopPropagation();">
+                            <input class="form-check-input cat-item-check me-2 shadow-sm border-secondary" type="checkbox" value="${cat.id}" id="cat_${cat.id}" onclick="event.stopPropagation();" style="cursor: pointer; width:1.15em; height:1.15em;">
                             <label class="form-check-label fw-bold text-dark" for="cat_${cat.id}" style="cursor: pointer;">${cat.name}</label>
                         </div>
                     </div>`;
@@ -1366,7 +1361,6 @@ Best regards,
         function toggleAllManageCarriers(checkbox) {
             const checkboxes = document.querySelectorAll(".manage-carrier-cb");
             checkboxes.forEach(cb => {
-                // Əgər sətir ekranda görünürsə seç
                 if (cb.closest('.carrier-item-row').style.display !== 'none') {
                     cb.checked = checkbox.checked;
                 }
@@ -1507,9 +1501,9 @@ Best regards,
                     for (let c of carriers) {
                         let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
                         html += `
-                            <div class="carrier-item-row" onclick="document.getElementById('carrier_${carrierId}').click(); event.stopPropagation();">
+                            <div class="carrier-item-row mb-1 p-2" onclick="document.getElementById('carrier_${carrierId}').click(); event.stopPropagation();">
                                 <div class="form-check mb-0 w-100">
-                                    <input class="form-check-input carrier-item-check me-2" type="checkbox" value="${carrierId}" id="carrier_${carrierId}" onclick="event.stopPropagation();">
+                                    <input class="form-check-input carrier-item-check me-2 shadow-sm border-secondary" type="checkbox" value="${carrierId}" id="carrier_${carrierId}" onclick="event.stopPropagation();" style="cursor: pointer; width:1.15em; height:1.15em;">
                                     <label class="form-check-label fw-bold text-dark text-break" for="carrier_${carrierId}" style="cursor: pointer;">
                                         ${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'} <span class="text-muted fw-normal small ms-1">(${c.email || ''})</span>
                                     </label>
@@ -1565,27 +1559,26 @@ Best regards,
             for (let c of carriers) {
                 let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
                 
-                let catOptions = `<option value="">Kateqoriyasız</option>`;
+                let catOptions = `<option value="">-- Kateqoriyasız --</option>`;
                 for(let cat of globalCategoriesCache) {
                     let selected = (c.category_id == cat.id) ? "selected" : "";
                     catOptions += `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
                 }
 
-                // CHECKBOX ƏLAVƏ EDİLDİ (manage-carrier-cb)
                 html += `
-                    <div class="carrier-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div class="d-flex align-items-center gap-2 text-break" style="max-width: 55%;">
-                            <input type="checkbox" class="form-check-input manage-carrier-cb mt-0 border-secondary" style="width: 1.1em; height: 1.1em; cursor: pointer;" value="${carrierId}">
+                    <div class="carrier-item-row d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 p-2 border-bottom">
+                        <div class="d-flex align-items-start gap-2 text-break w-100">
+                            <input type="checkbox" class="form-check-input manage-carrier-cb mt-1 border-secondary shadow-sm" style="width: 1.15em; height: 1.15em; cursor: pointer; flex-shrink: 0;" value="${carrierId}">
                             <div>
-                                <strong class="text-dark">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
-                                <span class="text-muted small ms-1">(${c.email || 'Email yoxdur'})</span>
+                                <strong class="text-dark d-block mb-1" style="line-height: 1.1;">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
+                                <span class="text-muted small">(${c.email || 'Email yoxdur'})</span>
                             </div>
                         </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <select class="form-select form-select-sm shadow-sm" style="width: 130px; font-size: 11.5px;" onchange="setCarrierCategory(${carrierId}, this.value)">
+                        <div class="d-flex align-items-center gap-2 w-100 justify-content-sm-end mt-2 mt-sm-0">
+                            <select class="form-select form-select-sm shadow-sm" style="max-width: 160px; font-size: 11.5px;" onchange="setCarrierCategory(${carrierId}, this.value)">
                                 ${catOptions}
                             </select>
-                            <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2" style="font-size: 12px;" onclick="deleteCarrier(${carrierId})">
+                            <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 shadow-sm" onclick="deleteCarrier(${carrierId})" title="Sil">
                                 <i class="bi bi-trash3-fill"></i>
                             </button>
                         </div>
@@ -1593,7 +1586,7 @@ Best regards,
                 `;
             }
             box.innerHTML = html;
-            document.getElementById("selectAllManageCarriers").checked = false; // Yenilənəndə checkboxu sıfırla
+            document.getElementById("selectAllManageCarriers").checked = false; 
         }
 
         function filterManageCarriers() {
