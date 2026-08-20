@@ -98,7 +98,6 @@
             font-weight: 500;
         }
 
-        /* ƏSAS NAVİQASİYA TAB-LARI (Dashboard / Vendors / RFQ Builder / Tracking) */
         .main-app-tabs {
             border-bottom: none;
             gap: 6px;
@@ -596,7 +595,7 @@
         <!-- ================= TAB 2: DAŞIYICI BAZASI VƏ QRUPLAŞDIRMA (VENDOR MANAGEMENT) ================= -->
         <div class="tab-pane fade" id="tab-vendors" role="tabpanel" aria-labelledby="tab-vendors-btn">
 
-        <!-- KATEQORİYALARIN İDARƏ EDİLMƏSİ (YENİ HİSSƏ) -->
+        <!-- KATEQORİYALARIN İDARƏ EDİLMƏSİ -->
         <div class="card shadow-sm border-0 mb-4 bg-light">
             <div class="section-title mb-1">
                 <i class="bi bi-tags-fill text-primary"></i> Daşıyıcı Kateqoriyaları
@@ -693,12 +692,26 @@
                     <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
                 </span>
                 <div class="d-flex align-items-center gap-2">
-                    <input type="text" id="carrierSearchInput" class="form-control form-control-sm" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="width: 160px; font-size: 12px;">
+                    
+                    <!-- YENİ: Toplu Əməliyyatlar -->
+                    <select id="bulkCategorySelect" class="form-select form-select-sm" style="width: 130px; font-size: 11px;">
+                        <option value="">Toplu Kateqoriya...</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-primary py-1 px-2" style="font-size: 11px;" onclick="applyBulkCategory()">Tətbiq Et</button>
+                    
+                    <input type="text" id="carrierSearchInput" class="form-control form-control-sm" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="width: 140px; font-size: 12px;">
                     <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 py-1" onclick="loadManageCarriersList()" style="font-size: 11px;">
                         <i class="bi bi-arrow-clockwise me-1"></i> Yenilə
                     </button>
                 </div>
             </div>
+
+            <!-- YENİ: Hamısını Seç düyməsi -->
+            <div class="d-flex align-items-center mb-2 px-2 bg-white rounded py-1 border shadow-sm" style="font-size: 12px;">
+                <input type="checkbox" id="selectAllManageCarriers" class="form-check-input me-2 mt-0 border-secondary" style="width: 1.2em; height: 1.2em; cursor: pointer;" onchange="toggleAllManageCarriers(this)">
+                <label for="selectAllManageCarriers" class="fw-bold text-dark cursor-pointer mb-0">Bütün görünənləri seç</label>
+            </div>
+
             <div class="carrier-select-box" id="manageCarriersContainer">
                 <span class="text-muted small">Daşıyıcılar yüklənir...</span>
             </div>
@@ -1090,7 +1103,7 @@ Best regards,
                 <!-- RFQ PAYLAŞIM MƏLUMATI -->
                 <div class="card mb-3">
                     <div class="section-title mb-1">
-                        <i class="bi bi-envelope-fill"></i> RFQ paylaşım məlumat
+                        <i class="bi bi-envelope-fill"></i> RFQ paylaşım məlumatı
                     </div>
                     <div class="row g-3 align-items-center">
                         <div class="col-12 col-md-7">
@@ -1193,7 +1206,7 @@ Best regards,
 
         let globalRequestsCache = [];
         let globalCarriersCache = [];
-        let globalCategoriesCache = []; // YENİ KATEQORİYA KEŞİ
+        let globalCategoriesCache = [];
 
         function getCustomerId() {
             let u = null;
@@ -1232,7 +1245,7 @@ Best regards,
         // Səhifə yüklənəndə çağırırıq
         initData();
 
-        // ------------------ KATEQORİYALAR ÜÇÜN JAVASCRIPT (YENİ) ------------------
+        // ------------------ KATEQORİYALAR ÜÇÜN JAVASCRIPT ------------------
         async function loadCategories() {
             const customerId = getCustomerId();
             try {
@@ -1242,10 +1255,22 @@ Best regards,
                     globalCategoriesCache = data.categories || [];
                     renderCategoriesManage();
                     renderCategoryCheckboxList();
+                    updateBulkCategoryDropdown();
                 }
             } catch(err) {
                 console.error("Kateqoriyalar yüklənmədi:", err);
             }
+        }
+
+        function updateBulkCategoryDropdown() {
+            const bulkSelect = document.getElementById("bulkCategorySelect");
+            if(!bulkSelect) return;
+            let options = `<option value="">Toplu Kateqoriya...</option>`;
+            options += `<option value="remove">Kateqoriyadan Çıxar</option>`;
+            for(let cat of globalCategoriesCache) {
+                options += `<option value="${cat.id}">${cat.name}</option>`;
+            }
+            bulkSelect.innerHTML = options;
         }
 
         function renderCategoriesManage() {
@@ -1276,7 +1301,7 @@ Best regards,
                 if(res.ok) {
                     nameInput.value = "";
                     await loadCategories();
-                    loadManageCarriersList(); // Dropdownları yeniləmək üçün
+                    loadManageCarriersList();
                 } else {
                     alert("Kateqoriya yaradıla bilmədi");
                 }
@@ -1335,6 +1360,63 @@ Best regards,
                     </div>`;
             }
             box.innerHTML = html;
+        }
+
+        // ------------------ TOPLU ƏMƏLİYYATLAR ------------------
+        function toggleAllManageCarriers(checkbox) {
+            const checkboxes = document.querySelectorAll(".manage-carrier-cb");
+            checkboxes.forEach(cb => {
+                // Əgər sətir ekranda görünürsə seç
+                if (cb.closest('.carrier-item-row').style.display !== 'none') {
+                    cb.checked = checkbox.checked;
+                }
+            });
+        }
+
+        async function applyBulkCategory() {
+            const bulkSelect = document.getElementById("bulkCategorySelect");
+            const val = bulkSelect.value;
+            if(!val) {
+                alert("Zəhmət olmasa tətbiq etmək üçün kateqoriya seçin!");
+                return;
+            }
+
+            const selectedCheckboxes = document.querySelectorAll(".manage-carrier-cb:checked");
+            const carrierIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+
+            if(carrierIds.length === 0) {
+                alert("Zəhmət olmasa ən azı bir daşıyıcı seçin!");
+                return;
+            }
+
+            let categoryId = null;
+            if(val !== "remove") {
+                categoryId = parseInt(val);
+            }
+
+            try {
+                const res = await fetch("/carriers/bulk-set-category", {
+                    method: "POST",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify({
+                        customer_id: getCustomerId(),
+                        carrier_ids: carrierIds,
+                        category_id: categoryId
+                    })
+                });
+
+                if(res.ok) {
+                    alert("Kateqoriya seçilmiş daşıyıcılara tətbiq edildi!");
+                    bulkSelect.value = "";
+                    document.getElementById("selectAllManageCarriers").checked = false;
+                    loadManageCarriersList();
+                } else {
+                    alert("Xəta baş verdi");
+                }
+            } catch(err) {
+                console.error(err);
+                alert("Server xətası");
+            }
         }
         // -------------------------------------------------------------------------
 
@@ -1483,18 +1565,21 @@ Best regards,
             for (let c of carriers) {
                 let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
                 
-                // Kateqoriya Dropdownu əlavə olunur
                 let catOptions = `<option value="">Kateqoriyasız</option>`;
                 for(let cat of globalCategoriesCache) {
                     let selected = (c.category_id == cat.id) ? "selected" : "";
                     catOptions += `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
                 }
 
+                // CHECKBOX ƏLAVƏ EDİLDİ (manage-carrier-cb)
                 html += `
                     <div class="carrier-item-row d-flex justify-content-between align-items-center flex-wrap gap-2">
-                        <div class="text-break" style="max-width: 55%;">
-                            <strong class="text-dark">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
-                            <span class="text-muted small ms-1">(${c.email || 'Email yoxdur'})</span>
+                        <div class="d-flex align-items-center gap-2 text-break" style="max-width: 55%;">
+                            <input type="checkbox" class="form-check-input manage-carrier-cb mt-0 border-secondary" style="width: 1.1em; height: 1.1em; cursor: pointer;" value="${carrierId}">
+                            <div>
+                                <strong class="text-dark">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
+                                <span class="text-muted small ms-1">(${c.email || 'Email yoxdur'})</span>
+                            </div>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <select class="form-select form-select-sm shadow-sm" style="width: 130px; font-size: 11.5px;" onchange="setCarrierCategory(${carrierId}, this.value)">
@@ -1508,6 +1593,7 @@ Best regards,
                 `;
             }
             box.innerHTML = html;
+            document.getElementById("selectAllManageCarriers").checked = false; // Yenilənəndə checkboxu sıfırla
         }
 
         function filterManageCarriers() {
@@ -1675,7 +1761,6 @@ Best regards,
         async function createRfq(e) {
             e.preventDefault();
 
-            // YENİ: KATEQORİYA VƏ DAŞIYICI SEÇİMİNİN YOXLANILMASI
             const sendOptElement = document.querySelector('input[name="carrierOption"]:checked');
             const sendOpt = sendOptElement ? sendOptElement.value : 'all';
             
@@ -1829,7 +1914,6 @@ Best regards,
                 custom_email_body: customEmailBodyVal,
                 transportation_mode: transportModeVal,
                 
-                // YENİ ƏLAVƏLƏR: Müştəri paylama seçimləri
                 send_to_all: (sendOpt === 'all'),
                 send_option: sendOpt,
                 carrier_ids: selectedCarriers,
@@ -1856,7 +1940,6 @@ Best regards,
                     toggleEmailTemplateFields();
                     toggleCarrierSelection();
                     
-                    // Səhifə datalarını yeniləyirik
                     initData(); 
                 } else {
                     alert("Xəta: " + formatErrorDetail(data.detail));
