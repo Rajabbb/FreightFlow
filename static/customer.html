@@ -4,12 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Müştəri Paneli - Arachi</title>
+    <meta name="robots" content="noindex, nofollow"> <!-- Google və digər axtarış sistemlərinə bu səhifəni indexləməyi qadağan edir -->
     <link rel="icon" type="image/png" href="/static/arachi-logo.png">
     <link rel="apple-touch-icon" href="/static/arachi-logo.png">
     <link rel="shortcut icon" href="/static/arachi-logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <!-- TƏHLÜKƏSİZLİK YOXLAMASI: Səhifə vizual olaraq yüklənməzdən əvvəl login olub-olmadığını yoxlayır -->
+    <script>
+        let checkUser = null;
+        try {
+            checkUser = JSON.parse(localStorage.getItem("user"));
+        } catch (e) {}
+        
+        // Əgər user yoxdursa və ya ID-si yoxdursa, anında login səhifəsinə at
+        if (!checkUser || !checkUser.id) {
+            window.location.replace("/login");
+        }
+    </script>
+
     <style>
         :root {
             --primary-blue: #4f46e5;
@@ -480,17 +495,30 @@
         }
         .carrier-panel-row:hover { border-color: #c7d2fe; background: #f8fafc; }
 
+        .filter-pills-wrapper {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 6px;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .filter-pills-wrapper::-webkit-scrollbar {
+            display: none;
+        }
         .filter-pill {
             border: 1px solid #e2e8f0;
             background: #fff;
             border-radius: 30px;
-            padding: 6px 12px;
+            padding: 6px 14px;
             font-size: 12px;
             font-weight: 700;
             color: var(--text-muted);
             white-space: nowrap;
             cursor: pointer;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
         .filter-pill.active {
             background: var(--primary-blue);
@@ -632,7 +660,6 @@
             </ul>
 
             <div class="tab-content mb-3" id="carrierTabsContent">
-                
                 <div class="tab-pane fade show active" id="file-content" role="tabpanel">
                     <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
                         <div class="row align-items-end g-3">
@@ -648,7 +675,6 @@
                         </div>
                     </form>
                 </div>
-
                 <div class="tab-pane fade" id="manual-content" role="tabpanel">
                     <form onsubmit="addManualCarrier(event)" class="p-3 border rounded bg-light">
                         <div class="mb-3">
@@ -664,7 +690,6 @@
                         </button>
                     </form>
                 </div>
-
                 <div class="tab-pane fade" id="paste-content" role="tabpanel">
                     <form onsubmit="addPasteCarrier(event)" class="p-3 border rounded bg-light">
                         <div class="mb-3">
@@ -676,7 +701,6 @@
                         </button>
                     </form>
                 </div>
-
             </div>
 
             <hr class="my-4 text-muted opacity-25">
@@ -719,7 +743,7 @@
         </div>
         <!-- ================= /TAB 2 ================= -->
 
-        <!-- ================= TAB 3: YENİ RFQ YARAT (RFQ BUILDER) ================= -->
+        <!-- ================= TAB 3: YENİ RFQ YARAT ================= -->
         <div class="tab-pane fade" id="tab-builder" role="tabpanel" aria-labelledby="tab-builder-btn">
 
         <!-- YENİ YÜK SORĞUSU (RFQ) YARAT -->
@@ -1145,7 +1169,8 @@ Best regards,
                 <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
             </div>
 
-            <div class="d-flex gap-2 mb-3 flex-wrap">
+            <!-- DƏYİŞDİRİLMİŞ: YENİ DİZAYNLı FILTER DÜYMƏLƏRİ -->
+            <div class="d-flex gap-2 mb-3 flex-nowrap overflow-auto filter-pills-container" style="padding-bottom: 5px;">
                 <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
                 <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif verənlər (<span id="tabRespondedCount">0</span>)</span>
                 <span class="filter-pill" id="filterPillPending" onclick="setCarrierPanelFilter('pending')">Gözlənilir (<span id="tabPendingCount">0</span>)</span>
@@ -1167,40 +1192,13 @@ Best regards,
         </div>
     </div>
 
-    <!-- RFQ ƏLAVƏ DETALLAR MODALI -->
-    <div class="modal fade" id="requestExtraModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable mx-2 mx-sm-auto">
-            <div class="modal-content">
-                <div class="modal-header d-flex justify-content-between align-items-center">
-                    <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.05rem;">
-                        <i class="bi bi-info-circle-fill text-primary me-2"></i> RFQ-nun Əlavə Detalları
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body" id="requestExtraModalContent"></div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary px-3 py-1.5 fw-semibold rounded-pill w-100 w-sm-auto" style="font-size: 13px;" data-bs-dismiss="modal">Bağla</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        let user = null;
-        try {
-            user = JSON.parse(localStorage.getItem("user"));
-        } catch (e) {
-            user = null;
-        }
-
-        const currentUserId = (user && user.id) ? user.id : 1;
+        const currentUserId = (checkUser && checkUser.id) ? checkUser.id : 1;
         
-        if (user && user.id) {
-            document.getElementById("userCompanyName").innerText = user.company_name || user.email || "Müştəri";
-        } else {
-            document.getElementById("userCompanyName").innerText = "Test Müştəri (ID: 1)";
+        if (checkUser && checkUser.id) {
+            document.getElementById("userCompanyName").innerText = checkUser.company_name || checkUser.email || "Müştəri";
         }
 
         let globalRequestsCache = [];
@@ -1210,9 +1208,11 @@ Best regards,
         function getCustomerId() {
             let u = null;
             try { u = JSON.parse(localStorage.getItem("user")); } catch(e) {}
-            let rawId = (u && u.id) ? u.id : (typeof currentUserId !== 'undefined' ? currentUserId : 1);
-            let cleaned = parseInt(String(rawId).replace(/[^0-9]/g, ''));
-            return isNaN(cleaned) ? 1 : cleaned;
+            if (!u || !u.id) {
+                window.location.replace("/login");
+                return null;
+            }
+            return parseInt(String(u.id).replace(/[^0-9]/g, ''));
         }
 
         function formatErrorDetail(errDetail) {
@@ -1246,6 +1246,7 @@ Best regards,
         // ------------------ KATEQORİYALAR ÜÇÜN JAVASCRIPT ------------------
         async function loadCategories() {
             const customerId = getCustomerId();
+            if(!customerId) return;
             try {
                 const res = await fetch(`/categories/customer/${customerId}`);
                 const data = await res.json();
@@ -1486,6 +1487,7 @@ Best regards,
         async function loadCarriersList() {
             try {
                 const customerId = getCustomerId();
+                if(!customerId) return;
                 const res = await fetch(`/carriers/customer/${customerId}`);
                 const data = await res.json();
                 const box = document.getElementById("carrierCheckboxList");
@@ -1527,6 +1529,7 @@ Best regards,
         async function loadManageCarriersList() {
             try {
                 const customerId = getCustomerId();
+                if(!customerId) return;
                 const res = await fetch(`/carriers/customer/${customerId}`);
                 const data = await res.json();
                 
@@ -1742,6 +1745,7 @@ Best regards,
         async function loadStats() {
             try {
                 const customerId = getCustomerId();
+                if(!customerId) return;
                 const res = await fetch(`/customer/stats/${customerId}`);
                 const data = await res.json();
                 if (res.ok) {
@@ -1951,6 +1955,7 @@ Best regards,
             container.innerHTML = `<div class="text-center p-3"><span class="spinner-border spinner-border-sm text-primary me-2"></span><span class="text-muted small">Sorğular yüklənir...</span></div>`;
             try {
                 const customerId = getCustomerId();
+                if(!customerId) return;
                 const res = await fetch(`/requests/customer/${customerId}`);
                 const data = await res.json();
                 
@@ -2151,7 +2156,7 @@ Best regards,
         }
 
         // ==========================================
-        // YENİ: KLİKLƏNƏ BİLƏN (İnteraktiv) MODAL
+        // KLİKLƏNƏ BİLƏN (İnteraktiv) MODAL
         // ==========================================
         function openQuoteModal(requestId, quoteId) {
             const quotes = window.currentQuotesCache[requestId] || [];
@@ -2207,14 +2212,10 @@ Best regards,
                     <h4 class="fw-bold text-dark text-break" style="font-size: 1.2rem;">${q.carrier_company || 'Daşıyıcı'}</h4>
                 </div>
                 
-                <!-- Seçilən versiyanın detallarının görünəcəyi yer -->
                 <div id="quoteVersionDetails"></div>
-
-                <!-- Tarixçə / Log qutusu -->
                 ${historyHtml}
             `;
 
-            // Varsayılan olaraq ən son (ən yeni) təklifi ekranda göstər
             renderQuoteVersion(requestId, quoteId, totalVersions - 1);
 
             const modal = new bootstrap.Modal(document.getElementById("quoteDetailModal"));
@@ -2237,7 +2238,6 @@ Best regards,
                 versionLabel = `v${(q.quote_history ? q.quote_history.length : 0) + 1} (Sonuncu)`;
             }
 
-            // Seçilmiş tarixi vurğulamaq üçün Styling
             document.querySelectorAll(".history-item").forEach(el => {
                 el.classList.remove("border-primary", "bg-primary", "bg-opacity-10", "text-primary");
                 el.classList.add("bg-light", "text-muted");
@@ -2369,7 +2369,13 @@ Best regards,
                 } catch (err) { /* ignore, fallback below */ }
             }
             currentDetailRequestObj = req || { id: requestId };
-            renderDetailHeader(currentDetailRequestObj);
+            
+            // Dəyişiklik: try-catch bloku ilə əhatə olundu ki, hər hansı sətir xəta versə ekran donmasın
+            try {
+                renderDetailHeader(currentDetailRequestObj);
+            } catch(e) {
+                console.error("Məlumat başlıqlarını göstərərkən xəta:", e);
+            }
 
             loadDetailQuotes(requestId);
             loadDetailCarriersStatus(requestId);
@@ -2384,20 +2390,20 @@ Best regards,
                 if (trackingTabBtn && window.bootstrap) {
                     bootstrap.Tab.getOrCreateInstance(trackingTabBtn).show();
                 }
-            } catch (err) { /* səssizcə keç */ }
+            } catch (err) { /* ignore */ }
             loadRequests();
             loadStats();
         }
 
         async function refreshRfqDetail() {
             if (!currentDetailRequestId) return;
-            try { await fetch(`/mail/check-bounces`, { method: "POST" }); } catch (err) { /* səssizcə keç */ }
+            try { await fetch(`/mail/check-bounces`, { method: "POST" }); } catch (err) { /* ignore */ }
             loadDetailQuotes(currentDetailRequestId);
             loadDetailCarriersStatus(currentDetailRequestId);
         }
 
         // ==========================================
-        // YENİ: DAHA SƏLİQƏLİ "TƏLƏB OLUNAN SAHƏLƏR" 
+        // DÜZƏLDİLMİŞ: "TƏLƏB OLUNAN SAHƏLƏR" (Crash ehtimalı silinib)
         // ==========================================
         function renderDetailHeader(req) {
             document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.id}`;
@@ -2425,60 +2431,68 @@ Best regards,
 
         function renderRequestExtraModal(req) {
             const box = document.getElementById("requestExtraModalContent");
-            const rows = [
-                ["Daşınma növü / Truck type", req.truck_type],
-                ["Yük tipi (Shipment type)", req.shipment_type],
-                ["HS Kodu", req.hs_code],
-                ["Həcm (m3)", req.volume_m3],
-                ["Stiflənə bilər (Stackable)", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
-                ["Əlavə qeydlər", req.additional_notes || req.note]
-            ];
+            try {
+                const rows = [
+                    ["Daşınma növü / Truck type", req.truck_type],
+                    ["Yük tipi (Shipment type)", req.shipment_type],
+                    ["HS Kodu", req.hs_code],
+                    ["Həcm (m3)", req.volume_m3],
+                    ["Stiflənə bilər (Stackable)", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
+                    ["Əlavə qeydlər", req.additional_notes || req.note]
+                ];
 
-            let html = `<div class="d-flex flex-column gap-2">`;
-            let hasAny = false;
-            
-            for (let [label, value] of rows) {
-                if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib") continue;
-                hasAny = true;
-                html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">${label}</strong><span class="text-dark small">${value}</span></div>`;
-            }
-
-            if (Array.isArray(req.required_fields) && req.required_fields.length > 0) {
-                hasAny = true;
-                let fieldsHtml = req.required_fields.map(f => {
-                    let parts = f.split(":");
-                    if(parts.length > 1) {
-                        let key = parts.shift().trim();
-                        let val = parts.join(":").trim();
-                        return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0">
-                                  <span class="text-muted d-block" style="font-size:10px; font-weight:700; text-transform:uppercase;">${key}</span>
-                                  <span class="text-dark fw-medium">${val}</span>
-                                </div>`;
-                    }
-                    return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0"><i class="bi bi-check2 text-success me-1"></i> <span class="text-dark fw-medium">${f}</span></div>`;
-                }).join("");
+                let html = `<div class="d-flex flex-column gap-2">`;
+                let hasAny = false;
                 
-                html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1">
-                            <strong class="text-primary small d-flex align-items-center mb-3 border-bottom pb-2">
-                                <i class="bi bi-card-checklist fs-5 me-2"></i> İxtiyari Parametrlər
-                            </strong>
-                            <div class="text-dark small">${fieldsHtml}</div>
-                         </div>`;
-            }
+                for (let [label, value] of rows) {
+                    if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib") continue;
+                    hasAny = true;
+                    html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">${label}</strong><span class="text-dark small">${value}</span></div>`;
+                }
 
-            if (req.attachment_url) {
-                hasAny = true;
-                html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
-            }
+                if (Array.isArray(req.required_fields) && req.required_fields.length > 0) {
+                    hasAny = true;
+                    let fieldsHtml = req.required_fields.map(f => {
+                        if (!f) return '';
+                        // Crash qarşısını almaq üçün təhlükəsiz çevirmə:
+                        let fStr = typeof f === 'object' ? JSON.stringify(f) : String(f);
+                        let parts = fStr.split(":");
+                        if(parts.length > 1) {
+                            let key = parts.shift().trim();
+                            let val = parts.join(":").trim();
+                            return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0">
+                                      <span class="text-muted d-block" style="font-size:10px; font-weight:700; text-transform:uppercase;">${key}</span>
+                                      <span class="text-dark fw-medium">${val}</span>
+                                    </div>`;
+                        }
+                        return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0"><i class="bi bi-check2 text-success me-1"></i> <span class="text-dark fw-medium">${fStr}</span></div>`;
+                    }).join("");
+                    
+                    html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1">
+                                <strong class="text-primary small d-flex align-items-center mb-3 border-bottom pb-2">
+                                    <i class="bi bi-card-checklist fs-5 me-2"></i> İxtiyari Parametrlər
+                                </strong>
+                                <div class="text-dark small">${fieldsHtml}</div>
+                             </div>`;
+                }
 
-            if (!hasAny) {
-                html += `<div class="text-muted small text-center p-3">Əlavə detal qeyd olunmayıb.</div>`;
+                if (req.attachment_url) {
+                    hasAny = true;
+                    html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
+                }
+
+                if (!hasAny) {
+                    html += `<div class="text-muted small text-center p-3">Əlavə detal qeyd olunmayıb.</div>`;
+                }
+                html += `</div>`;
+                
+                html += `<style>.last-child-border-0:last-child { border-bottom: none !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }</style>`;
+                
+                box.innerHTML = html;
+            } catch (e) {
+                console.error("Xəta: Modal render edilə bilmədi:", e);
+                box.innerHTML = `<div class="text-danger small p-3">Məlumatları göstərərkən xəta baş verdi.</div>`;
             }
-            html += `</div>`;
-            
-            html += `<style>.last-child-border-0:last-child { border-bottom: none !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }</style>`;
-            
-            box.innerHTML = html;
         }
 
         async function loadDetailCarriersStatus(requestId) {
