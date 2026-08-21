@@ -4,27 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Müştəri Paneli - Arachi</title>
-    <meta name="robots" content="noindex, nofollow"> <!-- Google və digər axtarış sistemlərinə bu səhifəni indexləməyi qadağan edir -->
+    
+    <!-- GOOGLE BOTA QADAĞA: Səhifə axtarışa düşməyəcək -->
+    <meta name="robots" content="noindex, nofollow"> 
+
     <link rel="icon" type="image/png" href="/static/arachi-logo.png">
     <link rel="apple-touch-icon" href="/static/arachi-logo.png">
     <link rel="shortcut icon" href="/static/arachi-logo.png">
+    
+    <!-- QƏTİ TƏHLÜKƏSİZLİK YOXLAMASI: Ekran açılmamış giriş yoxlanılır -->
+    <script>
+        (function() {
+            var sessionUser = localStorage.getItem("user");
+            if (!sessionUser) {
+                window.location.replace("/login");
+            } else {
+                try {
+                    var parsedUser = JSON.parse(sessionUser);
+                    if (!parsedUser || !parsedUser.id) {
+                        window.location.replace("/login");
+                    }
+                } catch(e) {
+                    window.location.replace("/login");
+                }
+            }
+        })();
+    </script>
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
-    <!-- TƏHLÜKƏSİZLİK YOXLAMASI: Səhifə vizual olaraq yüklənməzdən əvvəl login olub-olmadığını yoxlayır -->
-    <script>
-        let checkUser = null;
-        try {
-            checkUser = JSON.parse(localStorage.getItem("user"));
-        } catch (e) {}
-        
-        // Əgər user yoxdursa və ya ID-si yoxdursa, anında login səhifəsinə at
-        if (!checkUser || !checkUser.id) {
-            window.location.replace("/login");
-        }
-    </script>
-
     <style>
         :root {
             --primary-blue: #4f46e5;
@@ -495,6 +504,7 @@
         }
         .carrier-panel-row:hover { border-color: #c7d2fe; background: #f8fafc; }
 
+        /* YENİLƏNMİŞ DİZAYN: FILTER PILLS ÜÇÜN (Sürüşdürüle bilən) */
         .filter-pills-wrapper {
             display: flex;
             gap: 8px;
@@ -1192,13 +1202,46 @@ Best regards,
         </div>
     </div>
 
+    <!-- RFQ ƏLAVƏ DETALLAR MODALI -->
+    <div class="modal fade" id="requestExtraModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable mx-2 mx-sm-auto">
+            <div class="modal-content">
+                <div class="modal-header d-flex justify-content-between align-items-center">
+                    <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.05rem;">
+                        <i class="bi bi-info-circle-fill text-primary me-2"></i> RFQ-nun Əlavə Detalları
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="requestExtraModalContent"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary px-3 py-1.5 fw-semibold rounded-pill w-100 w-sm-auto" style="font-size: 13px;" data-bs-dismiss="modal">Bağla</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        const currentUserId = (checkUser && checkUser.id) ? checkUser.id : 1;
+        // MÜTLƏQ TƏHLÜKƏSİZLİK YOXLAMASI VƏ USER ID TƏYİNİ
+        let activeUser = null;
+        try {
+            activeUser = JSON.parse(localStorage.getItem("user"));
+        } catch (e) {}
+
+        if (!activeUser || !activeUser.id) {
+            window.location.replace("/login");
+            throw new Error("Təhlükəsizlik: Giriş qadağandır.");
+        }
+
+        const currentUserId = activeUser.id;
         
-        if (checkUser && checkUser.id) {
-            document.getElementById("userCompanyName").innerText = checkUser.company_name || checkUser.email || "Müştəri";
+        if (activeUser.company_name) {
+            document.getElementById("userCompanyName").innerText = activeUser.company_name;
+        } else if (activeUser.email) {
+            document.getElementById("userCompanyName").innerText = activeUser.email;
+        } else {
+            document.getElementById("userCompanyName").innerText = "Müştəri";
         }
 
         let globalRequestsCache = [];
@@ -1206,13 +1249,11 @@ Best regards,
         let globalCategoriesCache = [];
 
         function getCustomerId() {
-            let u = null;
-            try { u = JSON.parse(localStorage.getItem("user")); } catch(e) {}
-            if (!u || !u.id) {
+            if (!currentUserId) {
                 window.location.replace("/login");
                 return null;
             }
-            return parseInt(String(u.id).replace(/[^0-9]/g, ''));
+            return parseInt(String(currentUserId).replace(/[^0-9]/g, ''));
         }
 
         function formatErrorDetail(errDetail) {
@@ -1232,7 +1273,6 @@ Best regards,
             window.location.replace("/login");
         }
 
-        // BÜTÜN MƏLUMATLARIN BAŞLANĞIC YÜKLƏNMƏSİ
         async function initData() {
             await loadCategories(); 
             loadStats();
@@ -1246,7 +1286,7 @@ Best regards,
         // ------------------ KATEQORİYALAR ÜÇÜN JAVASCRIPT ------------------
         async function loadCategories() {
             const customerId = getCustomerId();
-            if(!customerId) return;
+            if (!customerId) return;
             try {
                 const res = await fetch(`/categories/customer/${customerId}`);
                 const data = await res.json();
@@ -2366,11 +2406,10 @@ Best regards,
                     const res = await fetch(`/requests/details/${requestId}`);
                     const data = await res.json();
                     if (res.ok && data.request) req = data.request;
-                } catch (err) { /* ignore, fallback below */ }
+                } catch (err) { /* ignore */ }
             }
             currentDetailRequestObj = req || { id: requestId };
             
-            // Dəyişiklik: try-catch bloku ilə əhatə olundu ki, hər hansı sətir xəta versə ekran donmasın
             try {
                 renderDetailHeader(currentDetailRequestObj);
             } catch(e) {
@@ -2402,9 +2441,6 @@ Best regards,
             loadDetailCarriersStatus(currentDetailRequestId);
         }
 
-        // ==========================================
-        // DÜZƏLDİLMİŞ: "TƏLƏB OLUNAN SAHƏLƏR" (Crash ehtimalı silinib)
-        // ==========================================
         function renderDetailHeader(req) {
             document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.id}`;
             document.getElementById("detailIdBadge").textContent = `ID: ${req.id}`;
@@ -2421,9 +2457,9 @@ Best regards,
             statusBadge.textContent = isOpen ? "OPEN" : "CLOSED";
             statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
 
-            document.getElementById("detailSenderCompany").textContent = (user && (user.company_name || user.name)) || "—";
-            document.getElementById("detailSenderEmail").textContent = (user && user.email) || "—";
-            document.getElementById("detailReplyTo").textContent = (user && user.email) || "—";
+            document.getElementById("detailSenderCompany").textContent = (activeUser && (activeUser.company_name || activeUser.name)) || "—";
+            document.getElementById("detailSenderEmail").textContent = (activeUser && activeUser.email) || "—";
+            document.getElementById("detailReplyTo").textContent = (activeUser && activeUser.email) || "—";
             document.getElementById("detailEmailTemplate").textContent = req.email_template_type === 'custom' ? "Fərdi şablon" : "Standart şablon";
 
             renderRequestExtraModal(req);
@@ -2454,7 +2490,6 @@ Best regards,
                     hasAny = true;
                     let fieldsHtml = req.required_fields.map(f => {
                         if (!f) return '';
-                        // Crash qarşısını almaq üçün təhlükəsiz çevirmə:
                         let fStr = typeof f === 'object' ? JSON.stringify(f) : String(f);
                         let parts = fStr.split(":");
                         if(parts.length > 1) {
