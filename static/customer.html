@@ -480,17 +480,27 @@
         }
         .carrier-panel-row:hover { border-color: #c7d2fe; background: #f8fafc; }
 
+        /* YENİLƏNMİŞ DİZAYN: FILTER PILLS ÜÇÜN */
+        .filter-pills-container {
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none;    /* Firefox */
+        }
+        .filter-pills-container::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+        
         .filter-pill {
             border: 1px solid #e2e8f0;
             background: #fff;
             border-radius: 30px;
-            padding: 6px 12px;
-            font-size: 12px;
+            padding: 5px 12px;
+            font-size: 11.5px;
             font-weight: 700;
             color: var(--text-muted);
             white-space: nowrap;
             cursor: pointer;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
         .filter-pill.active {
             background: var(--primary-blue);
@@ -632,7 +642,6 @@
             </ul>
 
             <div class="tab-content mb-3" id="carrierTabsContent">
-                
                 <div class="tab-pane fade show active" id="file-content" role="tabpanel">
                     <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
                         <div class="row align-items-end g-3">
@@ -648,7 +657,6 @@
                         </div>
                     </form>
                 </div>
-
                 <div class="tab-pane fade" id="manual-content" role="tabpanel">
                     <form onsubmit="addManualCarrier(event)" class="p-3 border rounded bg-light">
                         <div class="mb-3">
@@ -664,7 +672,6 @@
                         </button>
                     </form>
                 </div>
-
                 <div class="tab-pane fade" id="paste-content" role="tabpanel">
                     <form onsubmit="addPasteCarrier(event)" class="p-3 border rounded bg-light">
                         <div class="mb-3">
@@ -676,7 +683,6 @@
                         </button>
                     </form>
                 </div>
-
             </div>
 
             <hr class="my-4 text-muted opacity-25">
@@ -719,7 +725,7 @@
         </div>
         <!-- ================= /TAB 2 ================= -->
 
-        <!-- ================= TAB 3: YENİ RFQ YARAT (RFQ BUILDER) ================= -->
+        <!-- ================= TAB 3: YENİ RFQ YARAT ================= -->
         <div class="tab-pane fade" id="tab-builder" role="tabpanel" aria-labelledby="tab-builder-btn">
 
         <!-- YENİ YÜK SORĞUSU (RFQ) YARAT -->
@@ -916,7 +922,6 @@ Best regards,
                         </label>
                     </div>
 
-                    <!-- Kateqoriya Seçim Qutusu -->
                     <div id="categorySelectionContainer" class="d-none mt-2 p-2 p-sm-3 bg-light rounded-4 border mb-3">
                         <small class="text-muted fw-bold text-uppercase tracking-wider d-block mb-2" style="font-size: 11px;">Aşağıdan göndəriləcək kateqoriyaları seçin:</small>
                         <div class="carrier-select-box p-2" id="categoryCheckboxList">
@@ -924,7 +929,6 @@ Best regards,
                         </div>
                     </div>
 
-                    <!-- Fərdi Daşıyıcı Seçim Qutusu -->
                     <div id="carrierSelectionContainer" class="d-none mt-2 p-2 p-sm-3 bg-light rounded-4 border">
                         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                             <small class="text-muted fw-bold text-uppercase tracking-wider" style="font-size: 11px;">Daşıyıcıları seçin:</small>
@@ -1145,7 +1149,8 @@ Best regards,
                 <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
             </div>
 
-            <div class="d-flex gap-2 mb-3 flex-wrap">
+            <!-- DƏYİŞDİRİLMİŞ: YENİ DİZAYNLı FILTER DÜYMƏLƏRİ -->
+            <div class="d-flex gap-2 mb-3 flex-nowrap overflow-auto filter-pills-container" style="padding-bottom: 5px;">
                 <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
                 <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif göndərənlər (<span id="tabRespondedCount">0</span>)</span>
                 <span class="filter-pill" id="filterPillPending" onclick="setCarrierPanelFilter('pending')">Təklif göndərməyənlər (<span id="tabPendingCount">0</span>)</span>
@@ -1232,7 +1237,6 @@ Best regards,
             window.location.replace("/login");
         }
 
-        // BÜTÜN MƏLUMATLARIN BAŞLANĞIC YÜKLƏNMƏSİ
         async function initData() {
             await loadCategories(); 
             loadStats();
@@ -1360,7 +1364,6 @@ Best regards,
             box.innerHTML = html;
         }
 
-        // ------------------ TOPLU ƏMƏLİYYATLAR ------------------
         function toggleAllManageCarriers(checkbox) {
             const checkboxes = document.querySelectorAll(".manage-carrier-cb");
             checkboxes.forEach(cb => {
@@ -1415,7 +1418,6 @@ Best regards,
                 alert("Server xətası");
             }
         }
-        // -------------------------------------------------------------------------
 
         function toggleCarrierSelection() {
             const sendOptElement = document.querySelector('input[name="carrierOption"]:checked');
@@ -2078,7 +2080,6 @@ Best regards,
                     ? `${q.transit_time_days} gün` 
                     : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
 
-                // Yenilənmiş (Revised) badge
                 let isRevised = q.quote_history && q.quote_history.length > 0;
                 let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">Yenilənib (v${q.quote_history.length + 1})</span>` : "";
 
@@ -2150,9 +2151,6 @@ Best regards,
             if (countEl) countEl.textContent = quotesList.length;
         }
 
-        // ==========================================
-        // YENİ: KLİKLƏNƏ BİLƏN (İnteraktiv) MODAL
-        // ==========================================
         function openQuoteModal(requestId, quoteId) {
             const quotes = window.currentQuotesCache[requestId] || [];
             const q = quotes.find(item => item.id === quoteId);
@@ -2207,14 +2205,10 @@ Best regards,
                     <h4 class="fw-bold text-dark text-break" style="font-size: 1.2rem;">${q.carrier_company || 'Daşıyıcı'}</h4>
                 </div>
                 
-                <!-- Seçilən versiyanın detallarının görünəcəyi yer -->
                 <div id="quoteVersionDetails"></div>
-
-                <!-- Tarixçə / Log qutusu -->
                 ${historyHtml}
             `;
 
-            // Varsayılan olaraq ən son (ən yeni) təklifi ekranda göstər
             renderQuoteVersion(requestId, quoteId, totalVersions - 1);
 
             const modal = new bootstrap.Modal(document.getElementById("quoteDetailModal"));
@@ -2237,7 +2231,6 @@ Best regards,
                 versionLabel = `v${(q.quote_history ? q.quote_history.length : 0) + 1} (Sonuncu)`;
             }
 
-            // Seçilmiş tarixi vurğulamaq üçün Styling
             document.querySelectorAll(".history-item").forEach(el => {
                 el.classList.remove("border-primary", "bg-primary", "bg-opacity-10", "text-primary");
                 el.classList.add("bg-light", "text-muted");
@@ -2369,6 +2362,7 @@ Best regards,
                 } catch (err) { /* ignore, fallback below */ }
             }
             currentDetailRequestObj = req || { id: requestId };
+            
             renderDetailHeader(currentDetailRequestObj);
 
             loadDetailQuotes(requestId);
@@ -2394,91 +2388,6 @@ Best regards,
             try { await fetch(`/mail/check-bounces`, { method: "POST" }); } catch (err) { /* səssizcə keç */ }
             loadDetailQuotes(currentDetailRequestId);
             loadDetailCarriersStatus(currentDetailRequestId);
-        }
-
-        // ==========================================
-        // YENİ: DAHA SƏLİQƏLİ "TƏLƏB OLUNAN SAHƏLƏR" 
-        // ==========================================
-        function renderDetailHeader(req) {
-            document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.id}`;
-            document.getElementById("detailIdBadge").textContent = `ID: ${req.id}`;
-            document.getElementById("detailOrigin").textContent = req.origin || req.loading_location || "—";
-            document.getElementById("detailDestination").textContent = req.destination || req.delivery_location || "—";
-            document.getElementById("detailCargoType").textContent = req.cargo_type || req.cargo || "—";
-
-            const weight = req.weight_kg || req.weight;
-            document.getElementById("detailWeight").textContent = weight ? `${weight} kq` : "Qeyd edilməyib";
-            document.getElementById("detailDeadline").textContent = req.deadline || "Qeyd edilməyib";
-
-            const statusBadge = document.getElementById("detailStatusBadge");
-            const isOpen = (req.status || "open") === "open";
-            statusBadge.textContent = isOpen ? "OPEN" : "CLOSED";
-            statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
-
-            document.getElementById("detailSenderCompany").textContent = (user && (user.company_name || user.name)) || "—";
-            document.getElementById("detailSenderEmail").textContent = (user && user.email) || "—";
-            document.getElementById("detailReplyTo").textContent = (user && user.email) || "—";
-            document.getElementById("detailEmailTemplate").textContent = req.email_template_type === 'custom' ? "Fərdi şablon" : "Standart şablon";
-
-            renderRequestExtraModal(req);
-        }
-
-        function renderRequestExtraModal(req) {
-            const box = document.getElementById("requestExtraModalContent");
-            const rows = [
-                ["Daşınma növü / Truck type", req.truck_type],
-                ["Yük tipi (Shipment type)", req.shipment_type],
-                ["HS Kodu", req.hs_code],
-                ["Həcm (m3)", req.volume_m3],
-                ["Stiflənə bilər (Stackable)", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
-                ["Əlavə qeydlər", req.additional_notes || req.note]
-            ];
-
-            let html = `<div class="d-flex flex-column gap-2">`;
-            let hasAny = false;
-            
-            for (let [label, value] of rows) {
-                if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib") continue;
-                hasAny = true;
-                html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">${label}</strong><span class="text-dark small">${value}</span></div>`;
-            }
-
-            if (Array.isArray(req.required_fields) && req.required_fields.length > 0) {
-                hasAny = true;
-                let fieldsHtml = req.required_fields.map(f => {
-                    let parts = f.split(":");
-                    if(parts.length > 1) {
-                        let key = parts.shift().trim();
-                        let val = parts.join(":").trim();
-                        return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0">
-                                  <span class="text-muted d-block" style="font-size:10px; font-weight:700; text-transform:uppercase;">${key}</span>
-                                  <span class="text-dark fw-medium">${val}</span>
-                                </div>`;
-                    }
-                    return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0"><i class="bi bi-check2 text-success me-1"></i> <span class="text-dark fw-medium">${f}</span></div>`;
-                }).join("");
-                
-                html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1">
-                            <strong class="text-primary small d-flex align-items-center mb-3 border-bottom pb-2">
-                                <i class="bi bi-card-checklist fs-5 me-2"></i> İxtiyari Parametrlər
-                            </strong>
-                            <div class="text-dark small">${fieldsHtml}</div>
-                         </div>`;
-            }
-
-            if (req.attachment_url) {
-                hasAny = true;
-                html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
-            }
-
-            if (!hasAny) {
-                html += `<div class="text-muted small text-center p-3">Əlavə detal qeyd olunmayıb.</div>`;
-            }
-            html += `</div>`;
-            
-            html += `<style>.last-child-border-0:last-child { border-bottom: none !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }</style>`;
-            
-            box.innerHTML = html;
         }
 
         async function loadDetailCarriersStatus(requestId) {
