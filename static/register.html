@@ -3,158 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Qeydiyyat - LogiFast</title>
-    <!-- Bootstrap 5 CSS -->
+    <title>Qeydiyyat - Arachi</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8f9fa;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(145deg, #f0f4f8 0%, #e2e8f0 100%);
             height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0;
         }
-        .card {
-            border: none;
-            border-radius: 24px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.06);
-            background: #ffffff;
-            width: 100%;
-            max-width: 440px;
+        .register-card {
+            background: #fff;
+            border-radius: 20px;
             padding: 40px;
-        }
-        .icon-box {
-            width: 56px;
-            height: 56px;
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            border-radius: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px auto;
-            color: white;
-            font-size: 26px;
-            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.25);
-        }
-        .form-control {
-            padding: 12px 16px;
-            border-radius: 12px;
-            border: 1px solid #e2e8f0;
-            font-size: 14px;
-            background-color: #fafafa;
-        }
-        .form-control:focus {
-            background-color: #fff;
-            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
-            border-color: #3b82f6;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
         }
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
             border: none;
-            padding: 12px 16px;
-            border-radius: 12px;
+            padding: 12px;
+            border-radius: 10px;
             font-weight: 600;
-            font-size: 15px;
-            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
-            transition: all 0.2s ease-in-out;
-        }
-        .btn-primary:hover {
-            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.35);
-        }
-        .form-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: #334155;
-            margin-bottom: 6px;
-        }
-        .text-muted {
-            color: #64748b !important;
-        }
-        hr {
-            border-color: #f1f5f9;
-            opacity: 1;
         }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <div class="icon-box">
-            <i class="bi bi-lightning-charge-fill"></i>
-        </div>
-        
+    <div class="register-card">
         <div class="text-center mb-4">
-            <h3 class="fw-bold text-dark mb-1" style="font-size: 22px;">Yeni Hesab Yaradın</h3>
-            <p class="text-muted small">Məlumatlarınızı daxil edin, platformaya qoşulun</p>
+            <img src="/static/arachi-logo.png" alt="Arachi" height="40">
+            <h4 class="fw-bold text-dark mt-3">Hesabınızı Yaradın</h4>
+            <p class="text-muted small">Təhlükəsiz qeydiyyat paneli</p>
         </div>
-        
-        <form id="registerForm" onsubmit="handleRegister(event)">
+
+        <form id="registerForm" onsubmit="submitRegistration(event)">
+            <!-- Tokeni URL-dən alıb gizli şəkildə saxlayırıq -->
+            <input type="hidden" id="token" value="{{ token }}">
+            
             <div class="mb-3">
-                <label for="name" class="form-label">Şirkət və ya Ad Soyad</label>
-                <div class="input-group">
-                    <input type="text" class="form-control" id="name" required placeholder="Məs: Logistika MMC">
-                </div>
+                <label class="form-label text-muted fw-bold small">Şirkətin Adı</label>
+                <input type="text" class="form-control" id="company_name" required placeholder="Məs: Arachi Logistics">
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label text-muted fw-bold small">E-poçt (Giriş üçün)</label>
+                <input type="email" class="form-control" id="email" required placeholder="info@shirketiniz.com">
             </div>
             
             <div class="mb-4">
-                <label for="email" class="form-label">E-poçt ünvanı</label>
-                <div class="input-group">
-                    <input type="email" class="form-control" id="email" required placeholder="ornek@sirket.az">
-                </div>
+                <label class="form-label text-muted fw-bold small">Şifrə təyin edin</label>
+                <input type="password" class="form-control" id="password" required placeholder="••••••••">
+                <small class="text-success" style="font-size: 11px;">Şifrəniz xüsusi alqoritmlə (Hash) qorunur və bizim tərəfimizdən görülə bilməz.</small>
             </div>
-
-            <button type="submit" class="btn btn-primary w-100 mb-3">
-                Qeydiyyatdan keç <i class="bi bi-arrow-right ms-1"></i>
-            </button>
+            
+            <button type="submit" class="btn btn-primary w-100" id="submitBtn">Qeydiyyatı Tamamla</button>
+            <div id="errorMsg" class="text-danger small mt-3 text-center d-none"></div>
         </form>
-
-        <hr class="my-4">
-
-        <div class="text-center">
-            <small class="text-muted">Artıq hesabınız var? <a href="/login" class="text-primary text-decoration-none fw-semibold">Daxil olun</a></small>
-            <div class="mt-2">
-                <a href="/" class="text-muted text-decoration-none small">← Əsas səhifəyə qayıt</a>
-            </div>
-        </div>
     </div>
 
     <script>
-        async function handleRegister(e) {
+        async function submitRegistration(e) {
             e.preventDefault();
-            const name = document.getElementById("name").value;
-            const email = document.getElementById("email").value;
+            const btn = document.getElementById('submitBtn');
+            const errorMsg = document.getElementById('errorMsg');
+            
+            btn.disabled = true;
+            btn.innerText = "Gözləyin...";
+            errorMsg.classList.add('d-none');
 
             const payload = {
-                company_name: name,
-                email: email
+                token: document.getElementById('token').value,
+                company_name: document.getElementById('company_name').value,
+                email: document.getElementById('email').value,
+                password: document.getElementById('password').value
             };
 
             try {
-                const res = await fetch("/auth/register/customer", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-
                 const data = await res.json();
-                
+
                 if (res.ok) {
-                    const userData = data.user || data.customer;
-                    userData.role = "customer";
-                    localStorage.setItem("user", JSON.stringify(userData));
-                    window.location.replace("/customer");
+                    alert("Hesabınız uğurla yaradıldı! İndi daxil ola bilərsiniz.");
+                    window.location.href = "/login"; // Qeydiyyatdan sonra loginə yönləndir
                 } else {
-                    alert(data.detail || "Qeydiyyat zamanı xəta baş verdi!");
+                    errorMsg.innerText = data.detail || "Xəta baş verdi";
+                    errorMsg.classList.remove('d-none');
+                    btn.disabled = false;
+                    btn.innerText = "Qeydiyyatı Tamamla";
                 }
             } catch (err) {
-                console.error("Xəta:", err);
-                alert("Serverlə əlaqə qurulmadı!");
+                errorMsg.innerText = "Sistemlə əlaqə kəsildi.";
+                errorMsg.classList.remove('d-none');
+                btn.disabled = false;
+                btn.innerText = "Qeydiyyatı Tamamla";
             }
         }
     </script>
