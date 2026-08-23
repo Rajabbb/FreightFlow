@@ -320,7 +320,6 @@ async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin:
         traceback.print_exc()
         supabase.table("quotes").update({"mail_status": "failed"}).eq("token", token).execute()
 
-# --- PYDANTIC MODELLƏRİ ---
 class ShipmentRequestCreate(BaseModel):
     customer_id: int
     origin: str
@@ -393,8 +392,6 @@ class RegisterRequest(BaseModel):
     password: str
     company_name: str
 
-# --- ROUTELAR (API və Səhifələr) ---
-
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
     if os.path.exists("static/index.html"): return FileResponse("static/index.html")
@@ -420,99 +417,6 @@ def get_customer_dashboard():
 def get_carrier_quote_page(token: str):
     file_path = BASE_DIR / "static" / "carrier_quote.html"
     return FileResponse(file_path)
-
-# --- INVITE & REGISTRATION LİNK MƏNTİQİ ---
-
-@app.get("/admin/generate-invite")
-def generate_invite_link(secret: str = None):
-    # DİQQƏT: Bu gizli parolu kimsə bilməsə link yarada bilməz
-    ADMIN_SECRET_KEY = "arachi_super_gizli_recebvusal2026" 
-    
-    if secret != ADMIN_SECRET_KEY:
-        raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir.")
-        
-    # Təxmin edilməsi qeyri-mümkün olan unikal token (kod)
-    new_token = str(uuid.uuid4())
-    
-    try:
-        supabase.table("registration_tokens").insert({"token": new_token, "is_used": False}).execute()
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Baza xətası! registration_tokens cədvəlinin olduğuna əmin olun: {str(e)}")
-        
-    invite_link = f"{BASE_URL}/register?token={new_token}"
-    return {
-        "mesaj": "Link yaradıldı! Bütün yazını kopyalayıb müştəriyə WhatsApp-da və ya E-poçtla göndərin:", 
-        "musteri_linki": invite_link
-    }
-
-@app.get("/register", response_class=HTMLResponse)
-def register_page(request: Request, token: str = None):
-    if not token:
-        return HTMLResponse("<h1>Xəta: Token tapılmadı. Zəhmət olmasa etibarlı linkdən istifadə edin.</h1>", status_code=400)
-        
-    try:
-        res = supabase.table("registration_tokens").select("*").eq("token", token).execute()
-        token_record = res.data[0] if res.data else None
-        
-        if not token_record:
-            return HTMLResponse("<h1>Xəta: Bu link mövcud deyil və ya səhvdir.</h1>", status_code=404)
-            
-        if token_record.get('is_used'):
-            return HTMLResponse("<h1>Xəta: Bu qeydiyyat linki artıq istifadə edilib! Hər link yalnız 1 dəfə keçərlidir.</h1>", status_code=403)
-            
-        # register.html faylını oxuyur və içindəki {{ token }} sözünü əsl tokenlə əvəzləyib müştəriyə göstərir
-        file_path = os.path.join("static", "register.html")
-        with open(file_path, "r", encoding="utf-8") as f:
-            html_content = f.read()
-            
-        html_content = html_content.replace("{{ token }}", token)
-        return HTMLResponse(content=html_content)
-        
-    except Exception as e:
-        traceback.print_exc()
-        return HTMLResponse("<h1>Xəta: register.html faylı tapılmadı! Zəhmət olmasa static/ qovluğunda yaradın.</h1>", status_code=404)
-
-@app.post("/api/register")
-def process_registration(data: RegisterRequest):
-    try:
-        # Tokeni yenidən yoxla
-        res = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
-        valid_token = res.data[0] if res.data else None
-        
-        if not valid_token:
-            raise HTTPException(status_code=400, detail="Qeydiyyat linki etibarsızdır və ya artıq istifadə edilib.")
-            
-        # Emailin artıq olub-olmadığını yoxla
-        existing = supabase.table("customers").select("id").eq("email", data.email).execute()
-        if existing.data:
-            raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq mövcuddur.")
-        
-        # Parolu şifrələ
-        hashed_password = pwd_context.hash(data.password)
-        
-        # 1. YENİ MÜŞTƏRİNİ BAZAYA YAZ
-        insert_res = supabase.table("customers").insert({
-            "email": data.email,
-            "password": hashed_password,       # Əgər bazada add fərqlidirsə, xəta atacaq
-            "company_name": data.name  # Əgər bazada add fərqlidirsə, xəta atacaq
-        }).execute()
-        
-        # 2. TOKENİ İSTİFADƏ EDİLMİŞ KİMİ QEYD ET
-        supabase.table("registration_tokens").update({"is_used": True}).eq("token", data.token).execute()
-        
-        return {"message": "Qeydiyyat uğurla tamamlandı!"}
-        
-    except HTTPException as he:
-        raise he
-    except Exception as e:
-        traceback.print_exc()
-        # XƏTANIN ƏSL SƏBƏBİNİ EKRANDA GÖSTƏRİRİK (Supabase-in cavabı):
-        error_msg = str(e)
-        raise HTTPException(status_code=500, detail=f"Baza xətası: {error_msg}")
-
-        
-# --- ƏSAS TƏTBİQ ROUTELARI ---
 
 @app.get("/categories/customer/{customer_id}")
 def get_customer_categories(customer_id: int):
@@ -998,6 +902,96 @@ async def select_winner_body(payload: SelectWinnerRequest):
     supabase.table("quotes").update({"is_winner": True}).eq("id", payload.quote_id).execute()
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
     return {"status": "success", "message": "Qalib təklif uğurla təsdiqləndi!"}
+
+# --- INVITE & REGISTRATION LİNK MƏNTİQİ ---
+
+@app.get("/admin/generate-invite")
+def generate_invite_link(secret: str = None):
+    # DİQQƏT: Bu gizli parolu kimsə bilməsə link yarada bilməz
+    ADMIN_SECRET_KEY = "arachi_admin_2026" 
+    
+    if secret != ADMIN_SECRET_KEY:
+        raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir.")
+        
+    # Təxmin edilməsi qeyri-mümkün olan unikal token (kod)
+    new_token = str(uuid.uuid4())
+    
+    try:
+        supabase.table("registration_tokens").insert({"token": new_token, "is_used": False}).execute()
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Baza xətası! registration_tokens cədvəlinin olduğuna əmin olun: {str(e)}")
+        
+    invite_link = f"{BASE_URL}/register?token={new_token}"
+    return {
+        "mesaj": "Link yaradıldı! Bütün yazını kopyalayıb müştəriyə WhatsApp-da və ya E-poçtla göndərin:", 
+        "musteri_linki": invite_link
+    }
+
+@app.get("/register", response_class=HTMLResponse)
+def register_page(request: Request, token: str = None):
+    if not token:
+        return HTMLResponse("<h1>Xəta: Token tapılmadı. Zəhmət olmasa etibarlı linkdən istifadə edin.</h1>", status_code=400)
+        
+    try:
+        res = supabase.table("registration_tokens").select("*").eq("token", token).execute()
+        token_record = res.data[0] if res.data else None
+        
+        if not token_record:
+            return HTMLResponse("<h1>Xəta: Bu link mövcud deyil və ya səhvdir.</h1>", status_code=404)
+            
+        if token_record.get('is_used'):
+            return HTMLResponse("<h1>Xəta: Bu qeydiyyat linki artıq istifadə edilib! Hər link yalnız 1 dəfə keçərlidir.</h1>", status_code=403)
+            
+        # register.html faylını oxuyur və içindəki {{ token }} sözünü əsl tokenlə əvəzləyib müştəriyə göstərir
+        file_path = os.path.join("static", "register.html")
+        with open(file_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+            
+        html_content = html_content.replace("{{ token }}", token)
+        return HTMLResponse(content=html_content)
+        
+    except Exception as e:
+        traceback.print_exc()
+        return HTMLResponse("<h1>Xəta: register.html faylı tapılmadı! Zəhmət olmasa static/ qovluğunda yaradın.</h1>", status_code=404)
+
+@app.post("/api/register")
+def process_registration(data: RegisterRequest):
+    try:
+        # Tokeni yenidən yoxla
+        res = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
+        valid_token = res.data[0] if res.data else None
+        
+        if not valid_token:
+            raise HTTPException(status_code=400, detail="Qeydiyyat linki etibarsızdır və ya artıq istifadə edilib.")
+            
+        # Emailin artıq olub-olmadığını yoxla
+        existing = supabase.table("customers").select("id").eq("email", data.email).execute()
+        if existing.data:
+            raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq mövcuddur.")
+        
+        # Parolu şifrələ
+        hashed_password = pwd_context.hash(data.password)
+        
+        # 1. YENİ MÜŞTƏRİNİ BAZAYA YAZ
+        insert_res = supabase.table("customers").insert({
+            "email": data.email,
+            "password": hashed_password,       
+            "company_name": data.company_name  
+        }).execute()
+        
+        # 2. TOKENİ İSTİFADƏ EDİLMİŞ KİMİ QEYD ET
+        supabase.table("registration_tokens").update({"is_used": True}).eq("token", data.token).execute()
+        
+        return {"message": "Qeydiyyat uğurla tamamlandı!"}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        traceback.print_exc()
+        error_msg = str(e)
+        raise HTTPException(status_code=500, detail=f"Baza xətası: {error_msg}")
+
 
 @app.post("/auth/login")
 async def login(data: LoginRequest):
