@@ -320,6 +320,7 @@ async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin:
         traceback.print_exc()
         supabase.table("quotes").update({"mail_status": "failed"}).eq("token", token).execute()
 
+# --- PYDANTIC MODELLƏRİ ---
 class ShipmentRequestCreate(BaseModel):
     customer_id: int
     origin: str
@@ -386,6 +387,14 @@ class CarrierBulkSetCategory(BaseModel):
     carrier_ids: List[int]
     category_id: Optional[int] = None
 
+class RegisterRequest(BaseModel):
+    token: str
+    email: EmailStr
+    password: str
+    company_name: str
+
+# --- ROUTELAR (API və Səhifələr) ---
+
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
     if os.path.exists("static/index.html"): return FileResponse("static/index.html")
@@ -411,6 +420,98 @@ def get_customer_dashboard():
 def get_carrier_quote_page(token: str):
     file_path = BASE_DIR / "static" / "carrier_quote.html"
     return FileResponse(file_path)
+
+# --- INVITE & REGISTRATION LİNK MƏNTİQİ ---
+
+@app.get("/admin/generate-invite")
+def generate_invite_link(secret: str = None):
+    # DİQQƏT: Bu gizli parolu kimsə bilməsə link yarada bilməz
+    ADMIN_SECRET_KEY = "arachi_super_gizli_2026_!#" 
+    
+    if secret != ADMIN_SECRET_KEY:
+        raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir.")
+        
+    # Təxmin edilməsi qeyri-mümkün olan unikal token (kod)
+    new_token = str(uuid.uuid4())
+    
+    try:
+        supabase.table("registration_tokens").insert({"token": new_token, "is_used": False}).execute()
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Baza xətası! registration_tokens cədvəlinin olduğuna əmin olun: {str(e)}")
+        
+    invite_link = f"{BASE_URL}/register?token={new_token}"
+    return {
+        "mesaj": "Link yaradıldı! Bütün yazını kopyalayıb müştəriyə WhatsApp-da və ya E-poçtla göndərin:", 
+        "musteri_linki": invite_link
+    }
+
+@app.get("/register", response_class=HTMLResponse)
+def register_page(request: Request, token: str = None):
+    if not token:
+        return HTMLResponse("<h1>Xəta: Token tapılmadı. Zəhmət olmasa etibarlı linkdən istifadə edin.</h1>", status_code=400)
+        
+    try:
+        res = supabase.table("registration_tokens").select("*").eq("token", token).execute()
+        token_record = res.data[0] if res.data else None
+        
+        if not token_record:
+            return HTMLResponse("<h1>Xəta: Bu link mövcud deyil və ya səhvdir.</h1>", status_code=404)
+            
+        if token_record.get('is_used'):
+            return HTMLResponse("<h1>Xəta: Bu qeydiyyat linki artıq istifadə edilib! Hər link yalnız 1 dəfə keçərlidir.</h1>", status_code=403)
+            
+        # register.html faylını oxuyur və içindəki {{ token }} sözünü əsl tokenlə əvəzləyib müştəriyə göstərir
+        file_path = os.path.join("static", "register.html")
+        with open(file_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+            
+        html_content = html_content.replace("{{ token }}", token)
+        return HTMLResponse(content=html_content)
+        
+    except Exception as e:
+        traceback.print_exc()
+        return HTMLResponse("<h1>Xəta: register.html faylı tapılmadı! Zəhmət olmasa static/ qovluğunda yaradın.</h1>", status_code=404)
+
+@app.post("/api/register")
+def process_registration(data: RegisterRequest):
+    try:
+        # Tokeni yenidən yoxla
+        res = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
+        valid_token = res.data[0] if res.data else None
+        
+        if not valid_token:
+            raise HTTPException(status_code=400, detail="Qeydiyyat linki etibarsızdır və ya artıq istifadə edilib.")
+            
+        # Emailin artıq olub-olmadığını yoxla
+        existing = supabase.table("customers").select("id").eq("email", data.email).execute()
+        if existing.data:
+            raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq mövcuddur.")
+        
+        # Mövcud Passlib (bcrypt) ilə parolu gizlət
+        hashed_password = pwd_context.hash(data.password)
+        
+        # Yeni müştərini cədvələ əlavə et
+        insert_res = supabase.table("customers").insert({
+            "email": data.email,
+            "password": hashed_password,
+            "company_name": data.company_name
+        }).execute()
+        
+        new_user_id = insert_res.data[0]['id']
+        
+        # Və ən əsası tokeni "istifadə edildi" kimi qeyd et
+        supabase.table("registration_tokens").update({"is_used": True}).eq("token", data.token).execute()
+        
+        return {"message": "Qeydiyyat uğurla tamamlandı!", "user_id": new_user_id}
+        
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Sistem xətası baş verdi.")
+
+# --- ƏSAS TƏTBİQ ROUTELARI ---
 
 @app.get("/categories/customer/{customer_id}")
 def get_customer_categories(customer_id: int):
@@ -529,7 +630,7 @@ async def upload_carriers_text(request: Request):
         customer_id = body.get("customer_id") or request.query_params.get("customer_id")
         raw_text = body.get("raw_text") or body.get("text") or request.query_params.get("raw_text") or request.query_params.get("text") or ""
 
-        if not customer_id or not str(raw_text).strip(): raise HTTPException(status_code=400, detail="customer_id və ya raw_text tələb olunur.")
+        if not customer_id or not str(raw_text).strip(): raise HTTPException(status_code=400, detail="customer_id və raw_text tələb olunur.")
         customer_id = int(customer_id)
 
         lines = raw_text.strip().split("\n")
@@ -661,7 +762,6 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
 
 @app.get("/requests/customer/{customer_id}")
 def get_customer_requests(customer_id: int):
-    # DİQQƏT: quote_history buraya da daxil edildi
     res = supabase.table("shipment_requests").select("*, quotes(id, price, extra_details, quote_history)").eq("customer_id", customer_id).order("id", desc=True).execute()
     requests = res.data or []
     for req in requests:
@@ -708,7 +808,6 @@ def get_request_details(target_id: str):
         cleaned_extra.pop("submitted", None)
         quote["extra_details"] = cleaned_extra
         
-        # Cari təklifin məlumatlarını göndəririk ki, frontend onu oxuyub formu doldura bilsin
         return {"already_submitted": is_already_submitted, "request": shipment, "quote": quote}
     
     if target_id.isdigit():
@@ -836,7 +935,6 @@ async def submit_quote(token: str, price: Optional[str] = Form(None), currency: 
     parsed_currency = (currency or "AZN").strip().upper()
     if parsed_currency not in ("AZN", "USD", "EUR", "TRY", "RUB", "GBP"): parsed_currency = "AZN"
 
-    # YENİ MƏNTİQ: Əgər artıq təklif veribsə, köhnəni `quote_history` massivinə atırıq
     history = quote.get("quote_history") or []
     existing_price = quote.get("price")
     existing_extra = quote.get("extra_details") or {}
@@ -865,7 +963,6 @@ async def submit_quote(token: str, price: Optional[str] = Form(None), currency: 
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int):
     try:
-        # quote_history daxil edildi
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
         quotes_list = []
         for item in quotes_res.data or []:
