@@ -504,7 +504,6 @@
         }
         .carrier-panel-row:hover { border-color: #c7d2fe; background: #f8fafc; }
 
-        /* YENİLƏNMİŞ DİZAYN: FILTER PILLS ÜÇÜN (Sürüşdürüle bilən) */
         .filter-pills-wrapper {
             display: flex;
             gap: 8px;
@@ -738,6 +737,11 @@
                     <label for="selectAllManageCarriers" class="form-check-label fw-bold text-dark ms-1" style="font-size: 13px; cursor: pointer;">Hamısını seç</label>
                 </div>
                 <div class="d-flex align-items-center gap-2">
+                    <!-- YENİ ƏLAVƏ EDİLƏN TOPLU SİL DÜYMƏSİ -->
+                    <button id="bulkDeleteBtn" type="button" class="btn btn-sm btn-danger px-3 shadow-sm fw-bold d-none" style="font-size: 12px;" onclick="bulkDeleteCarriers()">
+                        <i class="bi bi-trash"></i> Seçilmişləri Sil (<span id="selectedCount">0</span>)
+                    </button>
+
                     <select id="bulkCategorySelect" class="form-select form-select-sm shadow-sm" style="min-width: 180px; font-size: 12px;">
                         <option value="">-- Kateqoriya Seçin --</option>
                     </select>
@@ -997,6 +1001,18 @@ Best regards,
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider">Sorğu Siyahısı</h5>
                 <div class="d-flex align-items-center gap-2">
+                    <!-- YENİ ƏLAVƏ EDİLƏN STATUS FİLTER DÜYMƏLƏRİ -->
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="statusFilter" id="filterAll" value="all" checked onchange="filterRequests()">
+                        <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterAll">Hamısı</label>
+
+                        <input type="radio" class="btn-check" name="statusFilter" id="filterOpen" value="open" onchange="filterRequests()">
+                        <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterOpen">Açıq</label>
+
+                        <input type="radio" class="btn-check" name="statusFilter" id="filterClosed" value="closed" onchange="filterRequests()">
+                        <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterClosed">Bağlı</label>
+                    </div>
+
                     <input type="text" id="requestSearchInput" class="form-control form-control-sm" placeholder="Sorğularda axtar..." onkeyup="filterRequests()" style="width: 180px; font-size: 12px;">
                     <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="loadRequests()" style="font-size: 12px;">
                         <i class="bi bi-arrow-clockwise"></i> Yenilə
@@ -1409,6 +1425,21 @@ Best regards,
                     cb.checked = checkbox.checked;
                 }
             });
+            updateBulkDeleteBtn();
+        }
+
+        function updateBulkDeleteBtn() {
+            const selectedCheckboxes = document.querySelectorAll('.manage-carrier-cb:checked');
+            const btn = document.getElementById('bulkDeleteBtn');
+            const countSpan = document.getElementById('selectedCount');
+            
+            if (selectedCheckboxes.length > 0) {
+                btn.classList.remove('d-none');
+                countSpan.innerText = selectedCheckboxes.length;
+            } else {
+                btn.classList.add('d-none');
+                document.getElementById('selectAllManageCarriers').checked = false;
+            }
         }
 
         async function applyBulkCategory() {
@@ -1447,6 +1478,7 @@ Best regards,
                     alert("Kateqoriya seçilmiş daşıyıcılara tətbiq edildi!");
                     bulkSelect.value = "";
                     document.getElementById("selectAllManageCarriers").checked = false;
+                    document.getElementById('bulkDeleteBtn').classList.add('d-none');
                     loadManageCarriersList();
                 } else {
                     alert("Xəta baş verdi");
@@ -1454,6 +1486,44 @@ Best regards,
             } catch(err) {
                 console.error(err);
                 alert("Server xətası");
+            }
+        }
+
+        async function bulkDeleteCarriers() {
+            const selectedCheckboxes = document.querySelectorAll('.manage-carrier-cb:checked');
+            if (selectedCheckboxes.length === 0) return;
+            
+            if (!confirm(`Seçilmiş ${selectedCheckboxes.length} daşıyıcını silmək istədiyinizə əminsiniz?`)) return;
+
+            const selectedIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+            const customerId = getCustomerId();
+
+            try {
+                const response = await fetch('/carriers/bulk-delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        customer_id: customerId,
+                        carrier_ids: selectedIds
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert(data.message);
+                    document.getElementById('bulkDeleteBtn').classList.add('d-none');
+                    document.getElementById('selectAllManageCarriers').checked = false;
+                    
+                    loadManageCarriersList();
+                    loadCarriersList();
+                    loadStats();
+                } else {
+                    alert("Xəta: " + (data.detail || ""));
+                }
+            } catch (error) {
+                console.error("Toplu silmə xətası:", error);
+                alert("Sistemlə əlaqə kəsildi.");
             }
         }
         // -------------------------------------------------------------------------
@@ -1614,7 +1684,7 @@ Best regards,
                 html += `
                     <div class="carrier-item-row d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 p-2 border-bottom">
                         <div class="d-flex align-items-start gap-2 text-break w-100">
-                            <input type="checkbox" class="form-check-input manage-carrier-cb mt-1 border-secondary shadow-sm" style="width: 1.15em; height: 1.15em; cursor: pointer; flex-shrink: 0;" value="${carrierId}">
+                            <input type="checkbox" class="form-check-input manage-carrier-cb mt-1 border-secondary shadow-sm" style="width: 1.15em; height: 1.15em; cursor: pointer; flex-shrink: 0;" value="${carrierId}" onchange="updateBulkDeleteBtn()">
                             <div>
                                 <strong class="text-dark d-block mb-1" style="line-height: 1.1;">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
                                 <span class="text-muted small">(${c.email || 'Email yoxdur'})</span>
@@ -1633,6 +1703,7 @@ Best regards,
             }
             box.innerHTML = html;
             document.getElementById("selectAllManageCarriers").checked = false; 
+            updateBulkDeleteBtn();
         }
 
         function filterManageCarriers() {
@@ -2008,7 +2079,7 @@ Best regards,
 
                 if (res.ok) {
                     globalRequestsCache = requestsList;
-                    renderRequests(requestsList);
+                    filterRequests(); // Yenilənəndə mövcud filtrə əsasən ekrana yazdırır
                 } else {
                     container.innerHTML = `<div class="alert alert-light border text-center p-4 rounded-4"><i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i><span class="text-muted fw-medium small">Hələ heç bir sorğu yaratmamısınız.</span></div>`;
                 }
@@ -2074,12 +2145,20 @@ Best regards,
 
         function filterRequests() {
             const query = document.getElementById("requestSearchInput").value.toLowerCase();
+            const statusElement = document.querySelector('input[name="statusFilter"]:checked');
+            const selectedStatus = statusElement ? statusElement.value : 'all';
+
             const filtered = globalRequestsCache.filter(req => {
+                const matchesStatus = (selectedStatus === 'all') || ((req.status || 'open').toLowerCase() === selectedStatus);
+
                 const origin = (req.origin || req.loading_location || '').toLowerCase();
                 const destination = (req.destination || req.delivery_location || '').toLowerCase();
                 const cargo = (req.cargo_type || req.cargo || '').toLowerCase();
                 const idStr = String(req.id || '').toLowerCase();
-                return origin.includes(query) || destination.includes(query) || cargo.includes(query) || idStr.includes(query);
+                
+                const matchesSearch = origin.includes(query) || destination.includes(query) || cargo.includes(query) || idStr.includes(query);
+
+                return matchesStatus && matchesSearch;
             });
             renderRequests(filtered);
         }
