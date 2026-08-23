@@ -973,11 +973,11 @@ def process_registration(data: RegisterRequest):
         # Parolu şifrələ
         hashed_password = pwd_context.hash(data.password)
         
-        # 1. YENİ MÜŞTƏRİNİ BAZAYA YAZ
+        # --- BAZAYA SIFIR RİSKLƏ YAZILMA (Dəyişiklik burada edildi) ---
         insert_res = supabase.table("customers").insert({
             "email": data.email,
             "password": hashed_password,       
-            "company_name": data.company_name  
+            "name": data.company_name  # <--- BURA DİQQƏT: Bazanızda 'name' olduğu üçün kod 'name' kimi göndərir
         }).execute()
         
         # 2. TOKENİ İSTİFADƏ EDİLMİŞ KİMİ QEYD ET
