@@ -495,7 +495,7 @@ def process_registration(data: RegisterRequest):
         insert_res = supabase.table("customers").insert({
             "email": data.email,
             "password": hashed_password,       # Əgər bazada add fərqlidirsə, xəta atacaq
-            "name": data.name  # Əgər bazada add fərqlidirsə, xəta atacaq
+            "company_name": data.name  # Əgər bazada add fərqlidirsə, xəta atacaq
         }).execute()
         
         # 2. TOKENİ İSTİFADƏ EDİLMİŞ KİMİ QEYD ET
