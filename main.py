@@ -908,7 +908,7 @@ async def select_winner_body(payload: SelectWinnerRequest):
 @app.get("/admin/generate-invite")
 def generate_invite_link(secret: str = None):
     # DİQQƏT: Bu gizli parolu kimsə bilməsə link yarada bilməz
-    ADMIN_SECRET_KEY = "arachi_admin_2026" 
+    ADMIN_SECRET_KEY = "arachi_super_gizli_recebvusal2026" 
     
     if secret != ADMIN_SECRET_KEY:
         raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir.")
