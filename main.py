@@ -488,29 +488,30 @@ def process_registration(data: RegisterRequest):
         if existing.data:
             raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq mövcuddur.")
         
-        # Mövcud Passlib (bcrypt) ilə parolu gizlət
+        # Parolu şifrələ
         hashed_password = pwd_context.hash(data.password)
         
-        # Yeni müştərini cədvələ əlavə et
+        # 1. YENİ MÜŞTƏRİNİ BAZAYA YAZ
         insert_res = supabase.table("customers").insert({
             "email": data.email,
-            "password": hashed_password,
-            "company_name": data.company_name
+            "password": hashed_password,       # Əgər bazada add fərqlidirsə, xəta atacaq
+            "company_name": data.company_name  # Əgər bazada add fərqlidirsə, xəta atacaq
         }).execute()
         
-        new_user_id = insert_res.data[0]['id']
-        
-        # Və ən əsası tokeni "istifadə edildi" kimi qeyd et
+        # 2. TOKENİ İSTİFADƏ EDİLMİŞ KİMİ QEYD ET
         supabase.table("registration_tokens").update({"is_used": True}).eq("token", data.token).execute()
         
-        return {"message": "Qeydiyyat uğurla tamamlandı!", "user_id": new_user_id}
+        return {"message": "Qeydiyyat uğurla tamamlandı!"}
         
     except HTTPException as he:
         raise he
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail="Sistem xətası baş verdi.")
+        # XƏTANIN ƏSL SƏBƏBİNİ EKRANDA GÖSTƏRİRİK (Supabase-in cavabı):
+        error_msg = str(e)
+        raise HTTPException(status_code=500, detail=f"Baza xətası: {error_msg}")
 
+        
 # --- ƏSAS TƏTBİQ ROUTELARI ---
 
 @app.get("/categories/customer/{customer_id}")
