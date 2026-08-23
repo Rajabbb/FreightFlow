@@ -361,6 +361,10 @@ class DeleteCarrierRequest(BaseModel):
     customer_id: int
     carrier_id: int
 
+class BulkDeleteCarrierRequest(BaseModel):
+    customer_id: int
+    carrier_ids: List[int]
+
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
@@ -574,6 +578,19 @@ def delete_customer_carrier(payload: DeleteCarrierRequest):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/carriers/bulk-delete")
+def bulk_delete_customer_carriers(payload: BulkDeleteCarrierRequest):
+    try:
+        if not payload.carrier_ids:
+            return {"status": "success", "message": "Silinəcək daşıyıcı seçilməyib."}
+            
+        supabase.table("carriers").delete().in_("id", payload.carrier_ids).eq("customer_id", payload.customer_id).execute()
+        
+        return {"status": "success", "message": f"{len(payload.carrier_ids)} daşıyıcı bazadan uğurla silindi!"}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Silinmə zamanı xəta: {str(e)}")
 
 @app.get("/carriers/customer/{customer_id}")
 def get_customer_carriers(customer_id: int):
@@ -903,17 +920,13 @@ async def select_winner_body(payload: SelectWinnerRequest):
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
     return {"status": "success", "message": "Qalib təklif uğurla təsdiqləndi!"}
 
-# --- INVITE & REGISTRATION LİNK MƏNTİQİ ---
-
 @app.get("/admin/generate-invite")
 def generate_invite_link(secret: str = None):
-    # DİQQƏT: Bu gizli parolu kimsə bilməsə link yarada bilməz
-    ADMIN_SECRET_KEY = "arachi_super_gizli_recebvusal2026" 
+    ADMIN_SECRET_KEY = "arachi_admin_2026" 
     
     if secret != ADMIN_SECRET_KEY:
         raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir.")
         
-    # Təxmin edilməsi qeyri-mümkün olan unikal token (kod)
     new_token = str(uuid.uuid4())
     
     try:
@@ -943,7 +956,6 @@ def register_page(request: Request, token: str = None):
         if token_record.get('is_used'):
             return HTMLResponse("<h1>Xəta: Bu qeydiyyat linki artıq istifadə edilib! Hər link yalnız 1 dəfə keçərlidir.</h1>", status_code=403)
             
-        # register.html faylını oxuyur və içindəki {{ token }} sözünü əsl tokenlə əvəzləyib müştəriyə göstərir
         file_path = os.path.join("static", "register.html")
         with open(file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
@@ -958,29 +970,24 @@ def register_page(request: Request, token: str = None):
 @app.post("/api/register")
 def process_registration(data: RegisterRequest):
     try:
-        # Tokeni yenidən yoxla
         res = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
         valid_token = res.data[0] if res.data else None
         
         if not valid_token:
             raise HTTPException(status_code=400, detail="Qeydiyyat linki etibarsızdır və ya artıq istifadə edilib.")
             
-        # Emailin artıq olub-olmadığını yoxla
         existing = supabase.table("customers").select("id").eq("email", data.email).execute()
         if existing.data:
             raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq mövcuddur.")
         
-        # Parolu şifrələ
         hashed_password = pwd_context.hash(data.password)
         
-        # --- BAZAYA SIFIR RİSKLƏ YAZILMA (Dəyişiklik burada edildi) ---
         insert_res = supabase.table("customers").insert({
             "email": data.email,
             "password": hashed_password,       
-            "name": data.company_name  # <--- BURA DİQQƏT: Bazanızda 'name' olduğu üçün kod 'name' kimi göndərir
+            "name": data.company_name  
         }).execute()
         
-        # 2. TOKENİ İSTİFADƏ EDİLMİŞ KİMİ QEYD ET
         supabase.table("registration_tokens").update({"is_used": True}).eq("token", data.token).execute()
         
         return {"message": "Qeydiyyat uğurla tamamlandı!"}
