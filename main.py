@@ -453,6 +453,7 @@ class BulkDeleteCarrierRequest(BaseModel):
 class ReportGenerateRequest(BaseModel):
     customer_id: int
     report_type: str
+    report_category: str = "rfq"
     start_date: Optional[str] = None
     end_date: Optional[str] = None
     rfq_ids: Optional[List[int]] = []
@@ -652,7 +653,7 @@ def format_excel_date(date_str: Any, is_utc: bool = False, use_ampm: bool = Fals
         return s.split(".")[0].replace("T", " ")
 
 @app.post("/reports/generate")
-def generate_excel_report(payload: ReportGenerateRequest, current_user: dict = Depends(verify_token)):
+def generate_report_data(payload: ReportGenerateRequest, current_user: dict = Depends(verify_token)):
     check_ownership(payload.customer_id, current_user)
     try:
         all_reqs_res = supabase.table("shipment_requests").select("id").eq("customer_id", payload.customer_id).order("id", desc=True).execute()
@@ -660,7 +661,7 @@ def generate_excel_report(payload: ReportGenerateRequest, current_user: dict = D
         total_reqs = len(all_reqs)
         display_id_map = {req["id"]: (total_reqs - i) for i, req in enumerate(all_reqs)}
         
-        query = supabase.table("shipment_requests").select("*, quotes(*, carriers(company_name))").eq("customer_id", payload.customer_id)
+        query = supabase.table("shipment_requests").select("*, quotes(*, carriers(company_name, email))").eq("customer_id", payload.customer_id)
         
         if payload.report_type == "selected" and payload.rfq_ids:
             query = query.in_("id", payload.rfq_ids)
@@ -679,37 +680,60 @@ def generate_excel_report(payload: ReportGenerateRequest, current_user: dict = D
                 if payload.end_date and created_date > payload.end_date: continue
             filtered_reqs.append(r)
         
-        output = io.StringIO()
-        output.write('\ufeff')
-        writer = csv.writer(output)
-        writer.writerow(["Sorğu ID", "Marşrut", "Yük Növü", "Çəki (kq)", "Yükləmə Tarixi", "Status", "Qalib Daşıyıcı", "Təsdiqlənmiş Qiymət", "Yaradılma Tarixi"])
-        
-        for r in filtered_reqs:
-            route = f"{r.get('origin', '')} -> {r.get('destination', '')}"
-            quotes = r.get("quotes") or []
-            winner_quote = next((q for q in quotes if q.get("is_winner")), None)
-            
-            winner_name = "-"
-            winner_price = "-"
-            
-            if winner_quote:
-                carrier = winner_quote.get("carriers") or {}
-                winner_name = carrier.get("company_name", "Daşıyıcı")
-                if winner_quote.get("price") is not None:
-                    winner_price = f"{winner_quote.get('price')} {winner_quote.get('currency', 'AZN')}"
-            
-            disp_id = display_id_map.get(r.get("id"), r.get("id"))
-            raw_deadline = format_excel_date(r.get("deadline"), is_utc=False, use_ampm=True)
-            raw_created = format_excel_date(r.get("created_at"), is_utc=True, use_ampm=False)
+        report_data = []
 
-            writer.writerow([
-                f"RFQ #{disp_id}", route, r.get("cargo_type", ""), r.get("weight_kg", 0),
-                raw_deadline, r.get("status", "open").upper(), winner_name, winner_price, raw_created
-            ])
-            
-        output.seek(0)
-        filename = f"Arachi_Hesabat_{datetime.utcnow().strftime('%Y-%m-%d')}.csv"
-        return Response(content=output.getvalue(), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
+        if payload.report_category == "rfq":
+            for r in filtered_reqs:
+                disp_id = display_id_map.get(r.get("id"), r.get("id"))
+                
+                req_fields = r.get("required_fields") or []
+                req_str = " | ".join([str(f) for f in req_fields]) if req_fields else "Yoxdur"
+
+                report_data.append({
+                    "Sorğu ID": f"RFQ #{disp_id}",
+                    "Marşrut": f"{r.get('origin', '')} -> {r.get('destination', '')}",
+                    "Yük Növü": r.get("cargo_type", ""),
+                    "Çəki (kq)": r.get("weight_kg", 0),
+                    "Həcm (CBM)": r.get("volume_m3", "Qeyd edilməyib"),
+                    "Nəqliyyat Növü": r.get("transportation_mode", "Qeyd edilməyib"),
+                    "Yükləmə Tarixi": format_excel_date(r.get("deadline"), is_utc=False, use_ampm=True),
+                    "Maşın Növü": r.get("truck_type", "Qeyd edilməyib"),
+                    "HS Kod": r.get("hs_code", "Qeyd edilməyib"),
+                    "Stackable": "Bəli" if r.get("stackable") is True else ("Xeyr" if r.get("stackable") is False else "Qeyd edilməyib"),
+                    "Yük Tipi (FTL/LTL)": r.get("shipment_type", "Qeyd edilməyib"),
+                    "Əlavə Tələblər": req_str,
+                    "Qeydlər": r.get("additional_notes", ""),
+                    "Status": r.get("status", "open").upper(),
+                    "Yaradılma Tarixi": format_excel_date(r.get("created_at"), is_utc=True, use_ampm=False)
+                })
+        else:
+            for r in filtered_reqs:
+                disp_id = display_id_map.get(r.get("id"), r.get("id"))
+                route = f"{r.get('origin', '')} -> {r.get('destination', '')}"
+                quotes = r.get("quotes") or []
+                
+                for q in quotes:
+                    if q.get("price") is None and not (q.get("extra_details") and q.get("extra_details").get("submitted")):
+                        continue
+
+                    carrier = q.get("carriers") or {}
+                    extra = q.get("extra_details") or {}
+                    extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k != "submitted" and v])
+
+                    report_data.append({
+                        "Sorğu ID": f"RFQ #{disp_id}",
+                        "Marşrut": route,
+                        "Daşıyıcı Şirkət": carrier.get("company_name", "Daşıyıcı"),
+                        "Daşıyıcı Email": carrier.get("email", ""),
+                        "Qiymət": q.get("price", "Yoxdur"),
+                        "Valyuta": q.get("currency", "AZN"),
+                        "Tranzit Müddəti (gün)": q.get("transit_time_days", "Qeyd edilməyib"),
+                        "Qalibdir?": "Bəli" if q.get("is_winner") else "Xeyr",
+                        "Əlavə Detallar": extra_str if extra_str else "Yoxdur",
+                        "Təklif Tarixi": format_excel_date(q.get("created_at"), is_utc=True, use_ampm=False)
+                    })
+
+        return {"status": "success", "data": report_data, "category": payload.report_category}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
