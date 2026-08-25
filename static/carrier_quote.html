@@ -101,15 +101,24 @@
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
 
-        // YENİ ƏLAVƏ: Tarix formatlama (AM/PM məntiqi ilə)
+        // YENİ TƏHLÜKƏSİZLİK: XSS QORUNMASI (ESCAPE HTML)
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Tarix formatlama (AM/PM məntiqi ilə)
         function formatDateTime(str) {
             if (!str) return "-";
             let s = String(str);
             
-            // Əgər yazı onsuz da AM/PM ehtiva edirsə (yəni bazaya formatted gedibsə) birbaşa qaytarırıq
             if (s.includes("AM") || s.includes("PM")) return s;
             
-            // Əgər standart ISO formatıdırsa
             if (s.includes("T")) {
                 let parts = s.split("T");
                 let datePart = parts[0];
@@ -119,12 +128,11 @@
                 if (timeParts.length >= 2) {
                     let h = parseInt(timeParts[0], 10);
                     let m = timeParts[1];
-                    // Əgər saat seçilməyibsə (00:00) heç nə yazma
                     if (h === 0 && m === "00") return datePart;
                     
                     let ampm = h >= 12 ? 'PM' : 'AM';
                     h = h % 12;
-                    h = h ? h : 12; // 0 olanda 12 edir
+                    h = h ? h : 12; 
                     timePart = String(h).padStart(2, '0') + ':' + m + ' ' + ampm;
                     return datePart + " " + timePart;
                 }
@@ -154,7 +162,7 @@
                     }
 
                     const routeEl = document.getElementById("route_text");
-                    if (routeEl) routeEl.innerText = `${req.origin} ➔ ${req.destination}`;
+                    if (routeEl) routeEl.innerText = `${escapeHTML(req.origin)} ➔ ${escapeHTML(req.destination)}`;
                     
                     let volumeText = req.volume_m3;
                     if (!volumeText || volumeText === 0 || volumeText === "0" || volumeText === 0.0 || volumeText === "Qeyd edilməyib" || volumeText === "Not specified") {
@@ -162,10 +170,10 @@
                     } else { volumeText = `${volumeText} m³`; }
                     
                     const weightVolEl = document.getElementById("weight_volume_text");
-                    if (weightVolEl) weightVolEl.innerText = `${req.weight_kg || 0} kg / ${volumeText}`;
+                    if (weightVolEl) weightVolEl.innerText = `${escapeHTML(req.weight_kg || 0)} kg / ${escapeHTML(volumeText)}`;
                     
                     const cargoTypeEl = document.getElementById("cargo_type_text");
-                    if (cargoTypeEl) cargoTypeEl.innerText = req.cargo_type || "Not specified";
+                    if (cargoTypeEl) cargoTypeEl.innerText = escapeHTML(req.cargo_type || "Not specified");
 
                     let loadingDateVal = null;
                     let deadlineVal = req.deadline || req.due_date || req.end_date || req.expiry_date || req.target_date;
@@ -176,7 +184,6 @@
                             if (typeof field === 'string') {
                                 const lowerField = field.toLowerCase();
                                 if (lowerField.includes("loading") || lowerField.includes("yükləmə")) {
-                                    // YENİ: Saat hissəsini də birlikdə tutmaq üçün Regex-i genişlətdik
                                     const match = field.match(/\d{4}-\d{2}-\d{2}.*/);
                                     if (match) loadingDateVal = match[0].trim();
                                 }
@@ -193,7 +200,6 @@
                     const loadingDateBox = document.getElementById("loading_date_box");
                     const loadingDateText = document.getElementById("loading_date_text");
                     if (loadingDateVal && String(loadingDateVal).trim() !== "") {
-                        // YENİ: Tarixi formata salaraq yazdırırıq
                         if (loadingDateText) loadingDateText.innerText = formatDateTime(loadingDateVal);
                         if (loadingDateBox) loadingDateBox.classList.remove("hidden");
                     } else { if (loadingDateBox) loadingDateBox.classList.add("hidden"); }
@@ -201,7 +207,6 @@
                     const deadlineBox = document.getElementById("deadline_box");
                     const deadlineText = document.getElementById("deadline_text");
                     if (deadlineVal && String(deadlineVal).trim() !== "") {
-                        // YENİ: Tarixi formata salaraq yazdırırıq
                         if (deadlineText) deadlineText.innerText = formatDateTime(deadlineVal);
                         if (deadlineBox) deadlineBox.classList.remove("hidden");
                     } else { if (deadlineBox) deadlineBox.classList.add("hidden"); }
@@ -217,7 +222,7 @@
                         if (finalCleanNote !== "") {
                             hasItems = true;
                             const noteDiv = document.createElement("div");
-                            noteDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer Note:</span><div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed whitespace-pre-line">${finalCleanNote}</div>`;
+                            noteDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer Note:</span><div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed whitespace-pre-line">${escapeHTML(finalCleanNote)}</div>`;
                             fieldsList.appendChild(noteDiv);
                         }
 
@@ -229,7 +234,7 @@
                                 }
                                 hasItems = true;
                                 const noteDiv = document.createElement("div");
-                                noteDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer Note / Requirement:</span><div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed">${field}</div>`;
+                                noteDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer Note / Requirement:</span><div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed">${escapeHTML(field)}</div>`;
                                 fieldsList.appendChild(noteDiv);
                             });
                         }
@@ -251,7 +256,7 @@
                             let realHref = fileUrl.includes("http") ? fileUrl.match(/https?:\/\/[^\s]+/)[0] : `/uploads/${fileName}`;
 
                             const fileDiv = document.createElement("div");
-                            fileDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer File:</span><div class="flex justify-between items-center bg-slate-950 px-3 py-2.5 rounded-lg border border-slate-800 text-sm"><span class="text-slate-300 truncate">Document / Specification</span><a href="${realHref}" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline font-medium flex items-center gap-1 text-xs">📎 <span>${fileName}</span></a></div>`;
+                            fileDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer File:</span><div class="flex justify-between items-center bg-slate-950 px-3 py-2.5 rounded-lg border border-slate-800 text-sm"><span class="text-slate-300 truncate">Document / Specification</span><a href="${escapeHTML(realHref)}" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline font-medium flex items-center gap-1 text-xs">📎 <span>${escapeHTML(fileName)}</span></a></div>`;
                             fieldsList.appendChild(fileDiv);
                         }
 
