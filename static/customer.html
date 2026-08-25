@@ -1275,36 +1275,45 @@ Best regards,
             return parseInt(String(currentUserId).replace(/[^0-9]/g, ''));
         }
 
-        // --- TARİX FORMATLAMA FUNKSİYASI (YENİ ƏLAVƏ) ---
+        // --- TARİX FORMATLAMA FUNKSİYASI (SAAT QURŞAĞI HƏLLİ İLƏ) ---
         function formatDateTime(str) {
             if (!str) return "Qeyd edilməyib";
             
-            // ISO 8601 və ya oxşar formatdırsa (məsələn: 2026-08-24T14:30:00+00:00)
-            if (String(str).includes("T")) {
-                let parts = String(str).split("T");
+            let s = String(str);
+
+            // 1. Supabase-dən gələn UTC (Qrinviç) vaxtdırsa (Sonunda Z və ya +00:00 varsa)
+            // Biz bunu avtomatik olaraq istifadəçinin yerli saatına (məs: Bakı +4) çeviririk.
+            if (s.endsWith("Z") || s.includes("+00:00") || s.includes("+00")) {
+                const d = new Date(s);
+                if (!isNaN(d.getTime())) {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    const hours = String(d.getHours()).padStart(2, '0');
+                    const minutes = String(d.getMinutes()).padStart(2, '0');
+                    return `${year}-${month}-${day} ${hours}:${minutes}`;
+                }
+            }
+
+            // 2. İstifadəçinin formdan daxil etdiyi yerli vaxtdırsa (Yükləmə tarixi)
+            if (s.includes("T")) {
+                let parts = s.split("T");
                 let datePart = parts[0];
-                let timePart = parts[1].split("+")[0].split(".")[0]; // millisaniyələri atırıq
+                let timePart = parts[1].split("+")[0].split(".")[0]; 
                 
-                // saniyələri silək (məsələn: 14:30:00 -> 14:30)
                 let timeParts = timePart.split(":");
                 if (timeParts.length >= 2) {
                     timePart = timeParts[0] + ":" + timeParts[1];
                 }
                 
-                // Əgər istifadəçi sadəcə gün seçibsə (yəni saat 00:00 olaraq yadda saxlanıbsa)
                 if (timePart === "00:00") {
                     return datePart;
                 }
                 return datePart + " " + timePart;
             }
-            
-            // Əgər fərqli bir formatdırsa və içində lüzumsuz sıfırlar varsa təmizləyək
-            let s = String(str);
-            s = s.replace(/\s00:00:00/g, '');
-            s = s.replace(/\s00:00/g, '');
-            return s.trim();
-        }
 
+            return s.replace(/\s00:00:00/g, '').replace(/\s00:00/g, '').trim();
+        }
         function formatErrorDetail(errDetail) {
             if (!errDetail) return "Naməlum xəta";
             if (typeof errDetail === 'string') return errDetail;
