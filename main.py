@@ -55,7 +55,12 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # MƏRHƏLƏ 1: JWT TOKEN VƏ IDOR QORUNMASI
 # ==========================================
 security = HTTPBearer()
-JWT_SECRET = os.getenv("JWT_SECRET", "arachi-super-secret-key-2026-b2b")
+
+# DƏYİŞDİRİLDİ: Açıq şifrə silindi, yalnız .env faylından oxunur
+JWT_SECRET = os.getenv("JWT_SECRET")
+if not JWT_SECRET:
+    raise ValueError("JWT_SECRET təyin olunmayıb! Zəhmət olmasa .env faylına əlavə edin.")
+    
 JWT_ALGORITHM = "HS256"
 
 def create_access_token(data: dict):
@@ -1151,10 +1156,11 @@ async def select_winner_body(payload: SelectWinnerRequest, current_user: dict = 
 
 @app.get("/admin/generate-invite")
 def generate_invite_link(secret: str = None):
-    ADMIN_SECRET_KEY = "arachi_admin_2026" 
+    # DƏYİŞDİRİLDİ: Açıq şifrə silindi, yalnız .env faylından oxunur
+    ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY")
     
-    if secret != ADMIN_SECRET_KEY:
-        raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir.")
+    if not ADMIN_SECRET_KEY or secret != ADMIN_SECRET_KEY:
+        raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir və ya təyin olunmayıb.")
         
     new_token = str(uuid.uuid4())
     
