@@ -713,12 +713,14 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                 quotes = r.get("quotes") or []
                 
                 for q in quotes:
-                    if q.get("price") is None and not (q.get("extra_details") and q.get("extra_details").get("submitted")):
+                    extra = q.get("extra_details") or {}
+                    if q.get("price") is None and not extra.get("submitted"):
                         continue
 
                     carrier = q.get("carriers") or {}
-                    extra = q.get("extra_details") or {}
-                    extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k != "submitted" and v])
+                    extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k not in ("submitted", "submitted_at") and v])
+                    
+                    date_val = extra.get("submitted_at") or q.get("updated_at") or q.get("created_at")
 
                     report_data.append({
                         "Sorğu ID": f"RFQ #{disp_id}",
@@ -730,7 +732,7 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                         "Tranzit Müddəti (gün)": q.get("transit_time_days", "Qeyd edilməyib"),
                         "Qalibdir?": "Bəli" if q.get("is_winner") else "Xeyr",
                         "Əlavə Detallar": extra_str if extra_str else "Yoxdur",
-                        "Təklif Tarixi": format_excel_date(q.get("created_at"), is_utc=True, use_ampm=False)
+                        "Təklif Tarixi": format_excel_date(date_val, is_utc=True, use_ampm=False)
                     })
 
         return {"status": "success", "data": report_data, "category": payload.report_category}
@@ -855,7 +857,7 @@ def get_customer_carriers(customer_id: int, current_user: dict = Depends(verify_
 
 @app.post("/requests/upload-attachment")
 async def upload_request_attachment(file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
-    await validate_file(file) # YENİ TƏHLÜKƏSİZLİK: FAYL YOXLANIŞI
+    await validate_file(file)
     try:
         file_ext = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_ext}"
@@ -1092,7 +1094,6 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
     res = supabase.table("quotes").insert({"request_id": payload.request_id, "price": payload.price, "transit_time_days": payload.transit_time_days, "extra_details": payload.extra_details, "currency": payload.currency or "AZN"}).execute()
     return {"status": "success", "message": "Təklif qəbul edildi!", "data": res.data}
 
-# YENİ TƏHLÜKƏSİZLİK: Təklif verəndə həm faylı yoxlayır, həm də botlardan qoruyur
 @app.post("/quotes/submit/{token}")
 @limiter.limit("5/minute")
 async def submit_quote(request: Request, token: str, price: Optional[str] = Form(None), currency: Optional[str] = Form("AZN"), transit_time_days: Optional[int] = Form(None), extra_details: Optional[str] = Form("{}"), carrier_file: Optional[UploadFile] = File(None)):
@@ -1103,9 +1104,10 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
     parsed_price = float(price) if price and str(price).strip() else None
     parsed_extra = json.loads(extra_details) if extra_details else {}
     parsed_extra["submitted"] = True
+    parsed_extra["submitted_at"] = datetime.utcnow().isoformat()
 
     if carrier_file and carrier_file.filename:
-        await validate_file(carrier_file) # FAYLI YOXLA (VIRUS, PHP, EXE OLUB-OLMADIĞINI)
+        await validate_file(carrier_file)
         file_ext = os.path.splitext(carrier_file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_ext}"
         with open(os.path.join(UPLOAD_DIR, unique_filename), "wb") as buffer: buffer.write(await carrier_file.read())
@@ -1180,14 +1182,11 @@ async def select_winner_body(payload: SelectWinnerRequest, current_user: dict = 
 
 @app.get("/admin/generate-invite")
 def generate_invite_link(secret: str = None):
-    # DƏYİŞDİRİLDİ: Açıq şifrə silindi, yalnız .env faylından oxunur
     ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY")
-    
     if not ADMIN_SECRET_KEY or secret != ADMIN_SECRET_KEY:
         raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir və ya təyin olunmayıb.")
         
     new_token = str(uuid.uuid4())
-    
     try:
         supabase.table("registration_tokens").insert({"token": new_token, "is_used": False}).execute()
     except Exception as e:
@@ -1204,36 +1203,30 @@ def generate_invite_link(secret: str = None):
 def register_page(request: Request, token: str = None):
     if not token:
         return HTMLResponse("<h1>Xəta: Token tapılmadı. Zəhmət olmasa etibarlı linkdən istifadə edin.</h1>", status_code=400)
-        
     try:
         res = supabase.table("registration_tokens").select("*").eq("token", token).execute()
         token_record = res.data[0] if res.data else None
         
         if not token_record:
             return HTMLResponse("<h1>Xəta: Bu link mövcud deyil və ya səhvdir.</h1>", status_code=404)
-            
         if token_record.get('is_used'):
             return HTMLResponse("<h1>Xəta: Bu qeydiyyat linki artıq istifadə edilib! Hər link yalnız 1 dəfə keçərlidir.</h1>", status_code=403)
             
         file_path = os.path.join("static", "register.html")
         with open(file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
-            
         html_content = html_content.replace("{{ token }}", token)
         return HTMLResponse(content=html_content)
-        
     except Exception as e:
         traceback.print_exc()
         return HTMLResponse("<h1>Xəta: register.html faylı tapılmadı! Zəhmət olmasa static/ qovluğunda yaradın.</h1>", status_code=404)
 
-# YENİ TƏHLÜKƏSİZLİK: Qeydiyyatı Botlardan qoruyuruq (Dəqiqədə maksimum 3 qeydiyyat)
 @app.post("/api/register")
 @limiter.limit("3/minute")
 def process_registration(request: Request, data: RegisterRequest):
     try:
         res = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
         valid_token = res.data[0] if res.data else None
-        
         if not valid_token:
             raise HTTPException(status_code=400, detail="Qeydiyyat linki etibarsızdır və ya artıq istifadə edilib.")
             
@@ -1242,25 +1235,14 @@ def process_registration(request: Request, data: RegisterRequest):
             raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq mövcuddur.")
         
         hashed_password = pwd_context.hash(data.password)
-        
-        insert_res = supabase.table("customers").insert({
-            "email": data.email,
-            "password": hashed_password,       
-            "name": data.company_name  
-        }).execute()
-        
+        supabase.table("customers").insert({"email": data.email, "password": hashed_password, "name": data.company_name}).execute()
         supabase.table("registration_tokens").update({"is_used": True}).eq("token", data.token).execute()
-        
         return {"message": "Qeydiyyat uğurla tamamlandı!"}
-        
-    except HTTPException as he:
-        raise he
+    except HTTPException as he: raise he
     except Exception as e:
         traceback.print_exc()
-        error_msg = str(e)
-        raise HTTPException(status_code=500, detail=f"Baza xətası: {error_msg}")
+        raise HTTPException(status_code=500, detail=f"Baza xətası: {str(e)}")
 
-# YENİ TƏHLÜKƏSİZLİK: Logini Botlardan qoruyuruq (Dəqiqədə maksimum 5 cəhd)
 @app.post("/auth/login")
 @limiter.limit("5/minute")
 async def login(request: Request, data: LoginRequest):
