@@ -10,47 +10,53 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center min-h-screen">
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col items-center justify-center min-h-screen p-4">
 
-    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-gray-100">
-        <!-- Logo / Title -->
-        <div class="text-center mb-8">
-            <img src="/static/arachi-logo.png" alt="arachi" class="mx-auto mb-2" style="height: 48px; width: auto;">
-            <p class="text-gray-500 text-sm mt-1">Müştəri Giriş Paneli</p>
+    <!-- Wrapper -->
+    <div class="w-full max-w-md">
+        
+        <!-- Main Card -->
+        <div class="bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+            <!-- Logo / Title -->
+            <div class="text-center mb-8">
+                <img src="/static/arachi-logo.png" alt="arachi" class="mx-auto mb-2" style="height: 48px; width: auto;">
+                <p class="text-gray-500 text-sm mt-1">Müştəri Giriş Paneli</p>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
+                <div>
+                    <label class="block text-gray-700 text-sm font-semibold mb-2" for="email">E-poçt</label>
+                    <input type="email" id="email" required 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        placeholder="E-poçtunuzu daxil edin">
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 text-sm font-semibold mb-2" for="password">Şifrə</label>
+                    <input type="password" id="password" required 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                        placeholder="••••••••">
+                </div>
+
+                <!-- Error Message Box -->
+                <div id="errorMessage" class="hidden bg-red-50 border-l-4 border-red-500 p-3 text-red-700 text-sm rounded"></div>
+
+                <button type="submit" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition duration-200">
+                    Daxil ol
+                </button>
+            </form>
         </div>
 
-        <!-- Login Form -->
-        <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-5">
-            <div>
-                <label class="block text-gray-700 text-sm font-semibold mb-2" for="email">E-poçt</label>
-                <input type="email" id="email" required 
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                    placeholder="E-poçtunuzu daxil edin">
-            </div>
+        <!-- Legal Notice (İstifadə Şərtləri) -->
+        <div class="text-center mt-6 text-[13px] text-slate-500 leading-relaxed">
+            Daxil olmaqla, siz Arachi-nin <br>
+            <a href="/static/terms.html" class="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">İstifadə Şərtləri</a> və 
+            <a href="/static/privacy.html" class="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">Məxfilik Siyasəti</a> ilə razılaşırsınız.
+        </div>
 
-            <div>
-                <label class="block text-gray-700 text-sm font-semibold mb-2" for="password">Şifrə</label>
-                <input type="password" id="password" required 
-                    class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-                    placeholder="••••••••">
-            </div>
-
-            <!-- Error Message Box -->
-            <div id="errorMessage" class="hidden bg-red-50 border-l-4 border-red-500 p-3 text-red-700 text-sm rounded"></div>
-
-            <button type="submit" 
-                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition duration-200">
-                Daxil ol
-            </button>
-        </form>
     </div>
-
-
-<div class="text-center mt-4" style="font-size: 12px; color: #64748b;">
-    Daxil olmaqla, siz Arachi-nin <br>
-    <a href="/static/terms.html" class="text-decoration-none fw-semibold" style="color: #4f46e5;">İstifadə Şərtləri</a> və 
-    <a href="/static/privacy.html" class="text-decoration-none fw-semibold" style="color: #4f46e5;">Məxfilik Siyasəti</a> ilə razılaşırsınız.
-</div>
     
     <script>
         async function handleLogin(event) {
