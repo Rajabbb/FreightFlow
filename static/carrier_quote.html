@@ -101,6 +101,37 @@
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
 
+        // YENİ ƏLAVƏ: Tarix formatlama (AM/PM məntiqi ilə)
+        function formatDateTime(str) {
+            if (!str) return "-";
+            let s = String(str);
+            
+            // Əgər yazı onsuz da AM/PM ehtiva edirsə (yəni bazaya formatted gedibsə) birbaşa qaytarırıq
+            if (s.includes("AM") || s.includes("PM")) return s;
+            
+            // Əgər standart ISO formatıdırsa
+            if (s.includes("T")) {
+                let parts = s.split("T");
+                let datePart = parts[0];
+                let timePart = parts[1].split("+")[0].split(".")[0].split("Z")[0]; 
+                
+                let timeParts = timePart.split(":");
+                if (timeParts.length >= 2) {
+                    let h = parseInt(timeParts[0], 10);
+                    let m = timeParts[1];
+                    // Əgər saat seçilməyibsə (00:00) heç nə yazma
+                    if (h === 0 && m === "00") return datePart;
+                    
+                    let ampm = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12;
+                    h = h ? h : 12; // 0 olanda 12 edir
+                    timePart = String(h).padStart(2, '0') + ':' + m + ' ' + ampm;
+                    return datePart + " " + timePart;
+                }
+            }
+            return s.replace(/\s00:00:00/g, '').replace(/\s00:00/g, '').trim();
+        }
+
         async function loadRequestDetails() {
             try {
                 const response = await fetch(`/requests/details/${token}`);
@@ -145,12 +176,13 @@
                             if (typeof field === 'string') {
                                 const lowerField = field.toLowerCase();
                                 if (lowerField.includes("loading") || lowerField.includes("yükləmə")) {
-                                    const match = field.match(/\d{4}-\d{2}-\d{2}/);
-                                    if (match) loadingDateVal = match[0];
+                                    // YENİ: Saat hissəsini də birlikdə tutmaq üçün Regex-i genişlətdik
+                                    const match = field.match(/\d{4}-\d{2}-\d{2}.*/);
+                                    if (match) loadingDateVal = match[0].trim();
                                 }
                                 if (lowerField.includes("deadline") || lowerField.includes("deadl")) {
-                                    const match = field.match(/\d{4}-\d{2}-\d{2}/);
-                                    if (match) deadlineVal = match[0];
+                                    const match = field.match(/\d{4}-\d{2}-\d{2}.*/);
+                                    if (match) deadlineVal = match[0].trim();
                                 }
                             }
                         });
@@ -161,14 +193,16 @@
                     const loadingDateBox = document.getElementById("loading_date_box");
                     const loadingDateText = document.getElementById("loading_date_text");
                     if (loadingDateVal && String(loadingDateVal).trim() !== "") {
-                        if (loadingDateText) loadingDateText.innerText = String(loadingDateVal).split('T')[0];
+                        // YENİ: Tarixi formata salaraq yazdırırıq
+                        if (loadingDateText) loadingDateText.innerText = formatDateTime(loadingDateVal);
                         if (loadingDateBox) loadingDateBox.classList.remove("hidden");
                     } else { if (loadingDateBox) loadingDateBox.classList.add("hidden"); }
 
                     const deadlineBox = document.getElementById("deadline_box");
                     const deadlineText = document.getElementById("deadline_text");
                     if (deadlineVal && String(deadlineVal).trim() !== "") {
-                        if (deadlineText) deadlineText.innerText = String(deadlineVal).split('T')[0];
+                        // YENİ: Tarixi formata salaraq yazdırırıq
+                        if (deadlineText) deadlineText.innerText = formatDateTime(deadlineVal);
                         if (deadlineBox) deadlineBox.classList.remove("hidden");
                     } else { if (deadlineBox) deadlineBox.classList.add("hidden"); }
 
