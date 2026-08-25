@@ -695,7 +695,6 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                 
                 req_fields = r.get("required_fields") or []
                 
-                # Ekstra sahələri çıxarmaq üçün lüğət
                 opts = {
                     "Incoterm": "",
                     "ADR": "",
@@ -707,49 +706,58 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                 for f in req_fields:
                     f_str = str(f)
                     lower_f = f_str.lower()
+                    
+                    # TƏHLÜKƏSİZLİK: Əgər ':' yoxdursa xəta verməsin deyə yoxlayırıq
+                    val = ""
+                    if ":" in f_str:
+                        val = f_str.split(":", 1)[1].strip()
+
                     if lower_f.startswith("incoterm:"):
-                        opts["Incoterm"] = f_str.split(":", 1)[1].strip()
+                        opts["Incoterm"] = val
                     elif lower_f.startswith("dangerous goods") or lower_f.startswith("adr:"):
-                        opts["ADR"] = f_str.split(":", 1)[1].strip()
+                        opts["ADR"] = val
                     elif lower_f.startswith("temperature") or lower_f.startswith("temp:"):
-                        opts["Temperature"] = f_str.split(":", 1)[1].strip()
+                        opts["Temperature"] = val
                     elif lower_f.startswith("delivery deadline") or lower_f.startswith("deliv_date:"):
-                        opts["Delivery"] = f_str.split(":", 1)[1].strip()
+                        opts["Delivery"] = val
                     elif lower_f.startswith("additional info") or lower_f.startswith("info:"):
-                        opts["Info"] = f_str.split(":", 1)[1].strip()
+                        opts["Info"] = val
 
                 stackable_val = r.get("stackable")
                 if stackable_val is True: stackable_str = "Bəli"
                 elif stackable_val is False: stackable_str = "Xeyr"
                 else: stackable_str = "Qeyd edilməyib"
 
-                main_notes = r.get("additional_notes", "").strip()
+                # TƏHLÜKƏSİZLİK: r.get("additional_notes") NoneType olmaması üçün
+                main_notes = (r.get("additional_notes") or "").strip()
                 all_notes = " | ".join(filter(None, [main_notes, opts["Info"]]))
 
                 report_data.append({
                     "Sorğu ID": f"RFQ #{disp_id}",
-                    "Marşrut": f"{r.get('origin', '')} -> {r.get('destination', '')}",
-                    "Yük Növü": r.get("cargo_type", ""),
-                    "Çəki (kq)": r.get("weight_kg", 0),
-                    "Həcm (CBM)": r.get("volume_m3", "") or "Qeyd edilməyib",
-                    "Nəqliyyat Növü": r.get("transportation_mode", "") or "Qeyd edilməyib",
+                    "Marşrut": f"{r.get('origin') or ''} -> {r.get('destination') or ''}",
+                    "Yük Növü": r.get("cargo_type") or "Qeyd edilməyib",
+                    "Çəki (kq)": r.get("weight_kg") if r.get("weight_kg") is not None else "Qeyd edilməyib",
+                    "Həcm (CBM)": r.get("volume_m3") if r.get("volume_m3") is not None else "Qeyd edilməyib",
+                    "Nəqliyyat Növü": r.get("transportation_mode") or "Qeyd edilməyib",
                     "Yükləmə Tarixi": format_excel_date(r.get("deadline"), is_utc=False, use_ampm=True) if r.get("deadline") else "Qeyd edilməyib",
-                    "Maşın Növü": r.get("truck_type", "") or "Qeyd edilməyib",
-                    "HS Kod": r.get("hs_code", "") or "Qeyd edilməyib",
+                    "Maşın Növü": r.get("truck_type") or "Qeyd edilməyib",
+                    "HS Kod": r.get("hs_code") or "Qeyd edilməyib",
                     "Stackable": stackable_str,
-                    "Yük Tipi (FTL/LTL)": r.get("shipment_type", "") or "Qeyd edilməyib",
+                    "Yük Tipi (FTL/LTL)": r.get("shipment_type") or "Qeyd edilməyib",
                     "Incoterm": opts["Incoterm"] or "Qeyd edilməyib",
                     "ADR (Təhlükəli Yük)": opts["ADR"] or "Qeyd edilməyib",
                     "Temperatur": opts["Temperature"] or "Qeyd edilməyib",
                     "Çatdırılma Tarixi": opts["Delivery"] or "Qeyd edilməyib",
                     "Əlavə Qeydlər / Fayl": all_notes or "Qeyd edilməyib",
-                    "Status": r.get("status", "open").upper(),
+                    "Status": (r.get("status") or "open").upper(),
                     "Yaradılma Tarixi": format_excel_date(r.get("created_at"), is_utc=True, use_ampm=False)
                 })
         else:
             for r in filtered_reqs:
                 disp_id = display_id_map.get(r.get("id"), r.get("id"))
-                route = f"{r.get('origin', '')} -> {r.get('destination', '')}"
+                origin = r.get("origin") or ""
+                dest = r.get("destination") or ""
+                route = f"{origin} -> {dest}"
                 quotes = r.get("quotes") or []
                 
                 for q in quotes:
@@ -767,9 +775,9 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                         "Marşrut": route,
                         "Daşıyıcı Şirkət": carrier.get("company_name", "Daşıyıcı"),
                         "Daşıyıcı Email": carrier.get("email", ""),
-                        "Qiymət": q.get("price", "Yoxdur"),
+                        "Qiymət": q.get("price", "Yoxdur") if q.get("price") is not None else "Yoxdur",
                         "Valyuta": q.get("currency", "AZN"),
-                        "Tranzit Müddəti (gün)": q.get("transit_time_days", "Qeyd edilməyib"),
+                        "Tranzit Müddəti (gün)": q.get("transit_time_days", "Qeyd edilməyib") if q.get("transit_time_days") is not None else "Qeyd edilməyib",
                         "Qalibdir?": "Bəli" if q.get("is_winner") else "Xeyr",
                         "Əlavə Detallar": extra_str if extra_str else "Yoxdur",
                         "Təklif Tarixi": format_excel_date(date_val, is_utc=True, use_ampm=False)
