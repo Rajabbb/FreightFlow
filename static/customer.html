@@ -5,19 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Müştəri Paneli - Arachi</title>
     
-    <!-- GOOGLE BOTA QADAĞA: Səhifə axtarışa düşməyəcək -->
     <meta name="robots" content="noindex, nofollow, nosnippet">
     <meta name="googlebot" content="noindex, nofollow, nosnippet">
     <meta name="description" content="Arachi Logistics - Şəxsi Müştəri Paneli. Yalnız qeydiyyatdan keçmiş və təsdiqlənmiş istifadəçilər üçün nəzərdə tutulub.">
 
     <link rel="icon" type="image/png" href="/static/arachi-logo.png">
-    <link rel="apple-touch-icon" href="/static/arachi-logo.png">
-    <link rel="shortcut icon" href="/static/arachi-logo.png">
     
     <!-- YENİ: PDF Formatında yükləmə üçün kitabxana -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
-    <!-- TƏHLÜKƏSİZLİK YOXLAMASI 1: Səhifə yüklənmədən yoxlanılır -->
+    <!-- TƏHLÜKƏSİZLİK YOXLAMASI -->
     <script>
         function checkAuthStatus() {
             var token = localStorage.getItem("token");
@@ -27,9 +24,7 @@
                 window.location.replace("/login");
             }
         }
-        checkAuthStatus(); // İlk açılışda yoxla
-        
-        // TƏHLÜKƏSİZLİK YOXLAMASI 2: BFCache (Geri düyməsi) ilə keşdən açılmanın qarşısını alırıq
+        checkAuthStatus();
         window.addEventListener('pageshow', function(event) {
             if (event.persisted || !localStorage.getItem("token")) {
                 checkAuthStatus();
@@ -40,519 +35,77 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
     <style>
-        :root {
-            --primary-blue: #4f46e5;
-            --primary-hover: #4338ca;
-            --secondary-color: #0ea5e9;
-            --bg-gradient: linear-gradient(145deg, #f0f4f8 0%, #e2e8f0 100%);
-            --card-bg: rgba(255, 255, 255, 0.85);
-            --text-main: #0f172a;
-            --text-muted: #64748b;
-            --border-color: rgba(226, 232, 240, 0.8);
-            --radius-lg: 20px;
-            --radius-md: 12px;
-            --radius-sm: 8px;
-        }
-
-        body {
-            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: var(--bg-gradient);
-            color: var(--text-main);
-            font-size: 14px;
-            -webkit-font-smoothing: antialiased;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        ::-webkit-scrollbar { width: 7px; height: 7px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; border: 2px solid #f0f4f8; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-        .navbar {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
-            position: sticky;
-            top: 0;
-            z-index: 1020;
-        }
-
-        .navbar-brand {
-            background: linear-gradient(45deg, var(--primary-blue), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-size: 1.15rem;
-        }
-
-        .card {
-            border: 1px solid rgba(255, 255, 255, 0.9);
-            border-radius: var(--radius-lg);
-            box-shadow: 0 15px 35px -15px rgba(15, 23, 42, 0.05);
-            background: var(--card-bg);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 24px;
-            margin-bottom: 24px;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            width: 100%;
-            word-break: break-word;
-        }
-
-        .section-title {
-            font-size: 17px;
-            font-weight: 800;
-            color: var(--text-main);
-            margin-bottom: 6px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            letter-spacing: -0.02em;
-            flex-wrap: wrap;
-        }
-
-        .section-title i {
-            font-size: 20px;
-            background: linear-gradient(135deg, #4f46e5 0%, #0ea5e9 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .section-desc {
-            font-size: 13px;
-            color: var(--text-muted);
-            margin-bottom: 20px;
-            font-weight: 500;
-        }
-
-        .main-app-tabs {
-            border-bottom: none;
-            gap: 6px;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-        .main-app-tabs::-webkit-scrollbar { display: none; }
-        .main-app-tabs .nav-link {
-            border: 1px solid transparent;
-            border-radius: var(--radius-md);
-            font-weight: 700;
-            font-size: 13px;
-            color: var(--text-muted);
-            padding: 10px 16px;
-            white-space: nowrap;
-            background: rgba(255, 255, 255, 0.6);
-            transition: all 0.25s ease;
-        }
-        .main-app-tabs .nav-link:hover {
-            color: var(--primary-blue);
-            background: rgba(255, 255, 255, 0.9);
-        }
-        .main-app-tabs .nav-link.active {
-            color: #fff;
-            background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%);
-            box-shadow: 0 8px 16px -8px rgba(79, 70, 229, 0.5);
-            border-color: transparent;
-        }
-        @media (max-width: 576px) {
-            .main-app-tabs .nav-link { font-size: 12px; padding: 9px 12px; }
-        }
-        @media (max-width: 640px) {
-            .main-app-tabs {
-                display: grid !important;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
-                overflow: visible !important;
-            }
-            .main-app-tabs .nav-item { width: 100%; }
-            .main-app-tabs .nav-link {
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                white-space: normal;
-                line-height: 1.2;
-            }
-        }
-
-        .form-control, .form-select {
-            padding: 10px 14px;
-            border-radius: var(--radius-md);
-            border: 1px solid #e2e8f0;
-            font-size: 13.5px;
-            background-color: #f8fafc;
-            color: var(--text-main);
-            font-weight: 500;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.01);
-            width: 100%;
-        }
-
-        .form-control:focus, .form-select:focus {
-            background-color: #ffffff;
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12), inset 0 1px 2px rgba(0, 0, 0, 0.02);
-            outline: none;
-            transform: translateY(-1px);
-        }
-
-        .form-control::placeholder { color: #94a3b8; }
-
-        .form-label {
-            font-size: 12.5px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 6px;
-            letter-spacing: -0.01em;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%);
-            border: none;
-            padding: 11px 20px;
-            border-radius: var(--radius-md);
-            font-weight: 700;
-            font-size: 13.5px;
-            letter-spacing: 0.3px;
-            color: white;
-            box-shadow: 0 8px 16px -8px rgba(79, 70, 229, 0.5), inset 0 1px 0 rgba(255,255,255,0.2);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 100%;
-        }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, var(--primary-hover) 0%, #2563eb 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 12px 20px -8px rgba(79, 70, 229, 0.6), inset 0 1px 0 rgba(255,255,255,0.2);
-            color: white;
-        }
-
-        .stats-card {
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255,255,255,1);
-            box-shadow: 0 12px 25px -10px rgba(0, 0, 0, 0.04);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            height: 100%;
-        }
-
-        .stats-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 5px; height: 100%;
-            background: linear-gradient(to bottom, var(--primary-blue), #8b5cf6);
-            border-radius: 10px 0 0 10px;
-        }
-
-        .stats-card:nth-child(2)::before { background: linear-gradient(to bottom, #10b981, #34d399); }
-        .stats-card:nth-child(3)::before { background: linear-gradient(to bottom, #f59e0b, #fbbf24); }
-
-        .stats-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 16px 30px -10px rgba(0, 0, 0, 0.08);
-        }
-
-        .stats-card h3 {
-            font-size: 30px;
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-top: 6px;
-            margin-bottom: 0;
-        }
-
-        .optional-box {
-            background: rgba(248, 250, 252, 0.6);
-            border: 2px dashed #cbd5e1;
-            border-radius: var(--radius-lg);
-            padding: 18px;
-            margin-top: 20px;
-            transition: border-color 0.3s;
-        }
-
-        .opt-row {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 12px 14px;
-            margin-bottom: 10px;
-            box-shadow: 0 3px 5px -3px rgba(0, 0, 0, 0.02);
-            transition: all 0.2s ease;
-        }
-
-        .form-check-input {
-            width: 1.15em;
-            height: 1.15em;
-            border: 2px solid #cbd5e1;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-        
-        .form-check-input:checked {
-            background-color: var(--primary-blue);
-            border-color: var(--primary-blue);
-            box-shadow: 0 0 8px rgba(79, 70, 229, 0.3);
-        }
-
-        .form-check-label {
-            cursor: pointer;
-            font-size: 13.5px;
-        }
-
-        .carrier-select-box {
-            max-height: 250px;
-            overflow-y: auto;
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            background: #ffffff;
-            box-shadow: inset 0 2px 8px rgba(0,0,0,0.01);
-        }
-
-        .carrier-item-row {
-            transition: all 0.2s ease;
-            border: 1px solid transparent;
-        }
-
-        .carrier-item-row:hover {
-            background: #f8fafc;
-        }
-
-        .history-item:hover { filter: brightness(0.95); }
-
-        .request-card {
-            border: 1px solid rgba(226, 232, 240, 0.9);
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .request-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 4px; height: 100%;
-            background: linear-gradient(to bottom, var(--primary-blue), var(--secondary-color));
-        }
-
-        .request-meta-box {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 12px 14px;
-            box-shadow: inset 0 1px 2px rgba(0,0,0,0.01);
-        }
-
-        .modal-content {
-            border: none;
-            border-radius: var(--radius-lg);
-            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-        }
-
-        .modal-header {
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 18px 22px;
-        }
-        
-        .modal-body { padding: 22px; }
-        
-        .modal-footer {
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-            padding: 14px 22px;
-        }
-
-        .badge {
-            padding: 5px 10px;
-            border-radius: 30px;
-            font-weight: 700;
-            font-size: 11px;
-            letter-spacing: 0.3px;
-        }
-
-        .table-container-responsive {
-            width: 100%;
-            min-width: 0;
-            flex: 1 1 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            margin-top: 12px;
-            padding-bottom: 8px;
-            display: block;
-            touch-action: pan-x;
-        }
-
-        .table-container-responsive table {
-            min-width: 650px;
-            width: 100%;
-            white-space: nowrap;
-        }
-
-        img, svg { max-width: 100%; height: auto; }
-
-        .table-container-responsive.overflow-hidden {
-            overflow-x: auto !important;
-            overflow-y: hidden !important;
-        }
-
-        @media (max-width: 768px) {
-            .container-fluid { padding-left: 12px; padding-right: 12px; }
-            .stats-card h3 { font-size: 28px; }
-            .section-title { font-size: 16px; }
-        }
-
-        @media (max-width: 576px) {
-            .card { padding: 16px; }
-            .optional-box { padding: 12px; }
-            .stats-card { padding: 16px; }
-            .stats-card h3 { font-size: 24px; }
-            .navbar-brand { font-size: 1rem; }
-            body { font-size: 13.5px; }
-            .section-title { font-size: 15px; }
-            .section-desc { font-size: 12.5px; }
-            .modal-body { padding: 16px; }
-            .modal-header { padding: 14px 16px; }
-            .modal-footer { padding: 12px 16px; }
-            .btn { white-space: normal; }
-            #userCompanyName { max-width: 100px; }
-        }
-
-        @media (max-width: 400px) {
-            .navbar-brand { font-size: 0.9rem; }
-            .navbar-brand i { font-size: 0.95rem; }
-            #userCompanyName { max-width: 76px; font-size: 11.5px; padding-left: 8px !important; padding-right: 8px !important; }
-            .stats-card h3 { font-size: 21px; }
-            .section-title { font-size: 14px; flex-wrap: wrap; }
-            .section-title i { font-size: 17px; }
-            .card { padding: 12px; }
-            .request-card { padding: 14px; }
-            .badge { font-size: 10px; padding: 4px 8px; }
-            body { font-size: 13px; }
-        }
-
-        @media (max-width: 340px) {
-            #userCompanyName { display: none; }
-        }
-
-        /* ============ RFQ DETAIL PAGE ============ */
-        .detail-header-card {
-            border-radius: var(--radius-lg);
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(255,255,255,1);
-            box-shadow: 0 12px 25px -10px rgba(0, 0, 0, 0.04);
-        }
-
-        .mini-stat-grid {
-            display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 10px;
-        }
-
-        @media (max-width: 700px) {
-            .mini-stat-grid {
-                grid-auto-flow: column;
-                grid-auto-columns: minmax(96px, 1fr);
-                grid-template-columns: none;
-                overflow-x: auto;
-                padding-bottom: 4px;
-                -webkit-overflow-scrolling: touch;
-            }
-        }
-
-        .mini-stat-box {
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            background: #f8fafc;
-            padding: 12px 10px;
-            text-align: center;
-        }
-
-        .mini-stat-box .mini-stat-icon {
-            width: 30px; height: 30px;
-            border-radius: 9px;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-size: 14px;
-            margin-bottom: 6px;
-        }
-
-        .mini-stat-box .mini-stat-value { font-size: 20px; font-weight: 800; color: var(--text-main); line-height: 1; }
-        .mini-stat-box .mini-stat-label { font-size: 10.5px; color: var(--text-muted); font-weight: 700; margin-top: 3px; display: block; }
-
-        .avatar-circle {
-            width: 38px; height: 38px; min-width: 38px;
-            border-radius: 50%;
-            display: inline-flex; align-items: center; justify-content: center;
-            font-weight: 800; font-size: 13px; color: #fff;
-        }
-
-        .carrier-panel-row {
-            border: 1px solid #e2e8f0;
-            border-radius: var(--radius-md);
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            background: #fff;
-            transition: all 0.2s ease;
-        }
-        .carrier-panel-row:hover { border-color: #c7d2fe; background: #f8fafc; }
-
-        .filter-pills-wrapper {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding-bottom: 6px;
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-            -webkit-overflow-scrolling: touch;
-        }
-        .filter-pills-wrapper::-webkit-scrollbar {
-            display: none;
-        }
-        .filter-pill {
-            border: 1px solid #e2e8f0;
-            background: #fff;
-            border-radius: 30px;
-            padding: 6px 14px;
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-muted);
-            white-space: nowrap;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-        }
-        .filter-pill.active {
-            background: var(--primary-blue);
-            border-color: var(--primary-blue);
-            color: #fff;
-        }
-
-        #carriersPanel {
-            width: 100%;
-            max-width: 400px;
-        }
-
-        .envelope-box {
-            width: 100%;
-            min-height: 120px;
-            border-radius: var(--radius-lg);
-            background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%);
-            display: flex; align-items: center; justify-content: center;
-        }
+        :root{--primary-blue:#4f46e5;--primary-hover:#4338ca;--secondary-color:#0ea5e9;--bg-gradient:linear-gradient(145deg,#f0f4f8 0%,#e2e8f0 100%);--card-bg:rgba(255,255,255,0.85);--text-main:#0f172a;--text-muted:#64748b;--border-color:rgba(226,232,240,0.8);--radius-lg:20px;--radius-md:12px;--radius-sm:8px}
+        body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;background:var(--bg-gradient);color:var(--text-main);font-size:14px;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+        ::-webkit-scrollbar{width:7px;height:7px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:10px;border:2px solid #f0f4f8}::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+        .navbar{background:rgba(255,255,255,0.85);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-bottom:1px solid rgba(255,255,255,0.5);box-shadow:0 4px 30px rgba(0,0,0,0.03);position:sticky;top:0;z-index:1020}
+        .navbar-brand{background:linear-gradient(45deg,var(--primary-blue),var(--secondary-color));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.15rem}
+        .card{border:1px solid rgba(255,255,255,0.9);border-radius:var(--radius-lg);box-shadow:0 15px 35px -15px rgba(15,23,42,0.05);background:var(--card-bg);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:24px;margin-bottom:24px;transition:transform 0.3s ease,box-shadow 0.3s ease;width:100%;word-break:break-word}
+        .section-title{font-size:17px;font-weight:800;color:var(--text-main);margin-bottom:6px;display:flex;align-items:center;gap:10px;letter-spacing:-0.02em;flex-wrap:wrap}
+        .section-title i{font-size:20px;background:linear-gradient(135deg,#4f46e5 0%,#0ea5e9 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+        .section-desc{font-size:13px;color:var(--text-muted);margin-bottom:20px;font-weight:500}
+        .main-app-tabs{border-bottom:none;gap:6px;-ms-overflow-style:none;scrollbar-width:none}
+        .main-app-tabs::-webkit-scrollbar{display:none}
+        .main-app-tabs .nav-link{border:1px solid transparent;border-radius:var(--radius-md);font-weight:700;font-size:13px;color:var(--text-muted);padding:10px 16px;white-space:nowrap;background:rgba(255,255,255,0.6);transition:all 0.25s ease}
+        .main-app-tabs .nav-link:hover{color:var(--primary-blue);background:rgba(255,255,255,0.9)}
+        .main-app-tabs .nav-link.active{color:#fff;background:linear-gradient(135deg,var(--primary-blue) 0%,#3b82f6 100%);box-shadow:0 8px 16px -8px rgba(79,70,229,0.5);border-color:transparent}
+        @media (max-width:576px){.main-app-tabs .nav-link{font-size:12px;padding:9px 12px}}
+        @media (max-width:640px){.main-app-tabs{display:grid !important;grid-template-columns:repeat(2,1fr);gap:8px;overflow:visible !important}.main-app-tabs .nav-item{width:100%}.main-app-tabs .nav-link{width:100%;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;line-height:1.2}}
+        .form-control,.form-select{padding:10px 14px;border-radius:var(--radius-md);border:1px solid #e2e8f0;font-size:13.5px;background-color:#f8fafc;color:var(--text-main);font-weight:500;transition:all 0.3s cubic-bezier(0.4,0,0.2,1);box-shadow:inset 0 2px 4px rgba(0,0,0,0.01);width:100%}
+        .form-control:focus,.form-select:focus{background-color:#ffffff;border-color:var(--primary-blue);box-shadow:0 0 0 3px rgba(79,70,229,0.12),inset 0 1px 2px rgba(0,0,0,0.02);outline:none;transform:translateY(-1px)}
+        .form-control::placeholder{color:#94a3b8}
+        .form-label{font-size:12.5px;font-weight:700;color:#1e293b;margin-bottom:6px;letter-spacing:-0.01em}
+        .btn-primary{background:linear-gradient(135deg,var(--primary-blue) 0%,#3b82f6 100%);border:none;padding:11px 20px;border-radius:var(--radius-md);font-weight:700;font-size:13.5px;letter-spacing:0.3px;color:white;box-shadow:0 8px 16px -8px rgba(79,70,229,0.5),inset 0 1px 0 rgba(255,255,255,0.2);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);width:100%}
+        .btn-primary:hover{background:linear-gradient(135deg,var(--primary-hover) 0%,#2563eb 100%);transform:translateY(-2px);box-shadow:0 12px 20px -8px rgba(79,70,229,0.6),inset 0 1px 0 rgba(255,255,255,0.2);color:white}
+        .stats-card{border-radius:var(--radius-lg);padding:20px;background:rgba(255,255,255,0.9);border:1px solid rgba(255,255,255,1);box-shadow:0 12px 25px -10px rgba(0,0,0,0.04);transition:all 0.3s ease;position:relative;overflow:hidden;height:100%}
+        .stats-card::before{content:'';position:absolute;top:0;left:0;width:5px;height:100%;background:linear-gradient(to bottom,var(--primary-blue),#8b5cf6);border-radius:10px 0 0 10px}
+        .stats-card:nth-child(2)::before{background:linear-gradient(to bottom,#10b981,#34d399)}
+        .stats-card:nth-child(3)::before{background:linear-gradient(to bottom,#f59e0b,#fbbf24)}
+        .stats-card:hover{transform:translateY(-3px);box-shadow:0 16px 30px -10px rgba(0,0,0,0.08)}
+        .stats-card h3{font-size:30px;font-weight:800;letter-spacing:-0.03em;background:linear-gradient(135deg,#0f172a 0%,#334155 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-top:6px;margin-bottom:0}
+        .optional-box{background:rgba(248,250,252,0.6);border:2px dashed #cbd5e1;border-radius:var(--radius-lg);padding:18px;margin-top:20px;transition:border-color 0.3s}
+        .opt-row{background:#ffffff;border:1px solid #e2e8f0;border-radius:var(--radius-md);padding:12px 14px;margin-bottom:10px;box-shadow:0 3px 5px -3px rgba(0,0,0,0.02);transition:all 0.2s ease}
+        .form-check-input{width:1.15em;height:1.15em;border:2px solid #cbd5e1;transition:all 0.2s ease;cursor:pointer;flex-shrink:0}
+        .form-check-input:checked{background-color:var(--primary-blue);border-color:var(--primary-blue);box-shadow:0 0 8px rgba(79,70,229,0.3)}
+        .form-check-label{cursor:pointer;font-size:13.5px}
+        .carrier-select-box{max-height:250px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:var(--radius-md);background:#ffffff;box-shadow:inset 0 2px 8px rgba(0,0,0,0.01)}
+        .carrier-item-row{transition:all 0.2s ease;border:1px solid transparent}
+        .carrier-item-row:hover{background:#f8fafc}
+        .history-item:hover{filter:brightness(0.95)}
+        .request-card{border:1px solid rgba(226,232,240,0.9);border-radius:var(--radius-lg);padding:20px;margin-bottom:20px;background:linear-gradient(135deg,#ffffff 0%,#f8fafc 100%);box-shadow:0 10px 25px -5px rgba(0,0,0,0.04),0 8px 10px -6px rgba(0,0,0,0.04);transition:all 0.3s cubic-bezier(0.4,0,0.2,1);position:relative;overflow:hidden}
+        .request-card::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%;background:linear-gradient(to bottom,var(--primary-blue),var(--secondary-color))}
+        .request-meta-box{background:#ffffff;border:1px solid #e2e8f0;border-radius:var(--radius-md);padding:12px 14px;box-shadow:inset 0 1px 2px rgba(0,0,0,0.01)}
+        .modal-content{border:none;border-radius:var(--radius-lg);box-shadow:0 20px 40px -10px rgba(0,0,0,0.2);overflow:hidden}
+        .modal-header{background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:18px 22px}
+        .modal-body{padding:22px}
+        .modal-footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:14px 22px}
+        .badge{padding:5px 10px;border-radius:30px;font-weight:700;font-size:11px;letter-spacing:0.3px}
+        .table-container-responsive{width:100%;min-width:0;flex:1 1 100%;overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:12px;padding-bottom:8px;display:block;touch-action:pan-x}
+        .table-container-responsive table{min-width:650px;width:100%;white-space:nowrap}
+        img,svg{max-width:100%;height:auto}
+        .table-container-responsive.overflow-hidden{overflow-x:auto !important;overflow-y:hidden !important}
+        @media (max-width:768px){.container-fluid{padding-left:12px;padding-right:12px}.stats-card h3{font-size:28px}.section-title{font-size:16px}}
+        @media (max-width:576px){.card{padding:16px}.optional-box{padding:12px}.stats-card{padding:16px}.stats-card h3{font-size:24px}.navbar-brand{font-size:1rem}body{font-size:13.5px}.section-title{font-size:15px}.section-desc{font-size:12.5px}.modal-body{padding:16px}.modal-header{padding:14px 16px}.modal-footer{padding:12px 16px}.btn{white-space:normal}#userCompanyName{max-width:100px}}
+        @media (max-width:400px){.navbar-brand{font-size:0.9rem}.navbar-brand i{font-size:0.95rem}#userCompanyName{max-width:76px;font-size:11.5px;padding-left:8px !important;padding-right:8px !important}.stats-card h3{font-size:21px}.section-title{font-size:14px;flex-wrap:wrap}.section-title i{font-size:17px}.card{padding:12px}.request-card{padding:14px}.badge{font-size:10px;padding:4px 8px}body{font-size:13px}}
+        @media (max-width:340px){#userCompanyName{display:none}}
+        .detail-header-card{border-radius:var(--radius-lg);padding:20px;background:rgba(255,255,255,0.9);border:1px solid rgba(255,255,255,1);box-shadow:0 12px 25px -10px rgba(0,0,0,0.04)}
+        .mini-stat-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+        @media (max-width:700px){.mini-stat-grid{grid-auto-flow:column;grid-auto-columns:minmax(96px,1fr);grid-template-columns:none;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}}
+        .mini-stat-box{border:1px solid #e2e8f0;border-radius:var(--radius-md);background:#f8fafc;padding:12px 10px;text-align:center}
+        .mini-stat-box .mini-stat-icon{width:30px;height:30px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;margin-bottom:6px}
+        .mini-stat-box .mini-stat-value{font-size:20px;font-weight:800;color:var(--text-main);line-height:1}
+        .mini-stat-box .mini-stat-label{font-size:10.5px;color:var(--text-muted);font-weight:700;margin-top:3px;display:block}
+        .avatar-circle{width:38px;height:38px;min-width:38px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:#fff}
+        .carrier-panel-row{border:1px solid #e2e8f0;border-radius:var(--radius-md);padding:10px 12px;margin-bottom:8px;background:#fff;transition:all 0.2s ease}
+        .carrier-panel-row:hover{border-color:#c7d2fe;background:#f8fafc}
+        .filter-pills-wrapper{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;-ms-overflow-style:none;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+        .filter-pills-wrapper::-webkit-scrollbar{display:none}
+        .filter-pill{border:1px solid #e2e8f0;background:#fff;border-radius:30px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--text-muted);white-space:nowrap;cursor:pointer;transition:all 0.2s ease;flex-shrink:0}
+        .filter-pill.active{background:var(--primary-blue);border-color:var(--primary-blue);color:#fff}
+        #carriersPanel{width:100%;max-width:400px}
+        .envelope-box{width:100%;min-height:120px;border-radius:var(--radius-lg);background:linear-gradient(135deg,#eef2ff 0%,#e0f2fe 100%);display:flex;align-items:center;justify-content:center}
     </style>
 </head>
 <body>
@@ -1300,7 +853,6 @@ Best regards,
                 <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
             </div>
 
-            <!-- DƏYİŞDİRİLMİŞ: YENİ DİZAYNLı FILTER DÜYMƏLƏRİ -->
             <div class="d-flex gap-2 mb-3 flex-nowrap overflow-auto filter-pills-container" style="padding-bottom: 5px;">
                 <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
                 <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif verənlər (<span id="tabRespondedCount">0</span>)</span>
@@ -1353,17 +905,11 @@ Best regards,
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // MÜTLƏQ TƏHLÜKƏSİZLİK YOXLAMASI VƏ USER ID TƏYİNİ
         let activeUser = null;
-        try {
-            activeUser = JSON.parse(localStorage.getItem("user"));
-        } catch (e) {}
+        try { activeUser = JSON.parse(localStorage.getItem("user")); } catch (e) {}
 
         function getCustomerId() {
-            if (!currentUserId) {
-                window.location.replace("/login");
-                return null;
-            }
+            if (!currentUserId) { window.location.replace("/login"); return null; }
             return parseInt(String(currentUserId).replace(/[^0-9]/g, ''));
         }
 
@@ -1382,18 +928,11 @@ Best regards,
         let globalCarriersCache = [];
         let globalCategoriesCache = [];
 
-        // --- YENİ TƏHLÜKƏSİZLİK: XSS QORUNMASI (ESCAPE HTML) ---
         function escapeHTML(str) {
             if (str === null || str === undefined) return '';
-            return String(str)
-                .replace(/&/g, "&amp;")
-                .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")
-                .replace(/"/g, "&quot;")
-                .replace(/'/g, "&#039;");
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // --- YENİ TƏHLÜKƏSİZLİK: JWT TOKEN İLƏ API ZƏNGLƏRİ ---
         function getAuthHeaders(isFormData = false) {
             const token = localStorage.getItem("token");
             if (!token) {
@@ -1405,10 +944,8 @@ Best regards,
             return headers;
         }
 
-        // --- TARİX FORMATLAMA FUNKSİYASI ---
         function formatDateTime(str, isUtc = false, useAmPm = false) {
             if (!str) return "—";
-            
             let s = String(str);
 
             function toAmPm(hStr, mStr) {
@@ -1420,9 +957,7 @@ Best regards,
             }
 
             if (isUtc) {
-                if (!s.endsWith("Z") && !s.includes("+")) {
-                    s += "Z"; 
-                }
+                if (!s.endsWith("Z") && !s.includes("+")) s += "Z"; 
                 const d = new Date(s);
                 if (!isNaN(d.getTime())) {
                     const year = d.getFullYear();
@@ -1430,7 +965,6 @@ Best regards,
                     const day = String(d.getDate()).padStart(2, '0');
                     const hours = String(d.getHours()).padStart(2, '0');
                     const minutes = String(d.getMinutes()).padStart(2, '0');
-                    
                     const timeString = useAmPm ? toAmPm(hours, minutes) : `${hours}:${minutes}`;
                     return `${year}-${month}-${day} ${timeString}`;
                 }
@@ -1445,27 +979,19 @@ Best regards,
                 if (timeParts.length >= 2) {
                     let h = timeParts[0];
                     let m = timeParts[1];
-                    if (h === "00" && m === "00") {
-                        return datePart;
-                    }
+                    if (h === "00" && m === "00") return datePart;
                     timePart = useAmPm ? toAmPm(h, m) : `${h}:${m}`;
                 }
-                
                 return datePart + " " + timePart;
             }
-            
             return s.replace(/\s00:00:00/g, '').replace(/\s00:00/g, '').trim();
         }
 
         function formatErrorDetail(errDetail) {
             if (!errDetail) return "Naməlum xəta";
             if (typeof errDetail === 'string') return errDetail;
-            if (Array.isArray(errDetail)) {
-                return errDetail.map(err => err.msg || JSON.stringify(err)).join(", ");
-            }
-            if (typeof errDetail === 'object') {
-                return JSON.stringify(errDetail);
-            }
+            if (Array.isArray(errDetail)) return errDetail.map(err => err.msg || JSON.stringify(err)).join(", ");
+            if (typeof errDetail === 'object') return JSON.stringify(errDetail);
             return String(errDetail);
         }
 
@@ -1475,10 +1001,8 @@ Best regards,
             window.location.replace("/login");
         }
 
-        // ------------------ ROUTING (GERİ QAYITMA DÜYMƏSİ) ------------------
         window.addEventListener('popstate', function(event) {
             const hash = window.location.hash;
-
             if (currentDetailRequestId && (!hash || !hash.startsWith('#rfq-'))) {
                 document.getElementById("rfqDetailPage").classList.add("d-none");
                 document.getElementById("dashboardMain").classList.remove("d-none");
@@ -1489,14 +1013,10 @@ Best regards,
 
             if (hash && hash.startsWith('#tab-')) {
                 const tabBtn = document.querySelector(`button[data-bs-target="${hash}"]`);
-                if (tabBtn && window.bootstrap) {
-                    bootstrap.Tab.getOrCreateInstance(tabBtn).show();
-                }
+                if (tabBtn && window.bootstrap) bootstrap.Tab.getOrCreateInstance(tabBtn).show();
             } else if (!hash && !currentDetailRequestId) {
                 const firstTab = document.querySelector('#tab-dashboard-btn');
-                if (firstTab && window.bootstrap) {
-                    bootstrap.Tab.getOrCreateInstance(firstTab).show();
-                }
+                if (firstTab && window.bootstrap) bootstrap.Tab.getOrCreateInstance(firstTab).show();
             }
         });
 
@@ -1513,15 +1033,11 @@ Best regards,
 
             if (window.location.hash && window.location.hash.startsWith('#tab-')) {
                 const activeTab = document.querySelector(`button[data-bs-target="${window.location.hash}"]`);
-                if (activeTab && window.bootstrap) {
-                    bootstrap.Tab.getOrCreateInstance(activeTab).show();
-                }
+                if (activeTab && window.bootstrap) bootstrap.Tab.getOrCreateInstance(activeTab).show();
             } else if (window.location.hash && window.location.hash.startsWith('#rfq-')) {
                 history.replaceState(null, null, '#tab-tracking');
                 const trackingTab = document.querySelector('#tab-tracking-btn');
-                if (trackingTab && window.bootstrap) {
-                    bootstrap.Tab.getOrCreateInstance(trackingTab).show();
-                }
+                if (trackingTab && window.bootstrap) bootstrap.Tab.getOrCreateInstance(trackingTab).show();
             } else if (!window.location.hash) {
                  history.replaceState(null, null, '#tab-dashboard');
             }
@@ -1537,7 +1053,6 @@ Best regards,
         
         initData();
 
-        // ------------------ YENİ: SON TƏKLİFLƏR ------------------
         async function loadRecentQuotes() {
             const container = document.getElementById("recentQuotesContainer");
             try {
@@ -1585,7 +1100,7 @@ Best regards,
             }
         }
 
-        // ------------------ YENİ: HESABATLAR ------------------
+        // HESABATLAR FUNKSİYALARI
         function toggleReportOptions() {
             const val = document.getElementById("reportTypeSelect").value;
             const dateBox = document.getElementById("reportDateRangeOptions");
@@ -1693,12 +1208,14 @@ Best regards,
                     } else if (format === 'pdf') {
                         let tableHtml = `
                         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px;">
-                            <h2 style="color: #4f46e5; margin-bottom: 5px; font-size: 22px;">Arachi Logistics</h2>
+                            <h2 style="color: #4f46e5; margin-bottom: 5px; font-size: 24px;">Arachi Logistics</h2>
                             <h3 style="color: #64748b; margin-bottom: 25px; font-size: 16px;">${category === 'rfq' ? 'RFQ Detalları Hesabatı' : 'Daşıyıcı Təklifləri Hesabatı'}</h3>
-                            <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 10px; table-layout: auto;">
                                 <thead>
                                     <tr style="background-color: #f1f5f9; text-align: left; color: #334155;">`;
-                        headers.forEach(h => { tableHtml += `<th style="padding: 10px 8px; border: 1px solid #cbd5e1;">${h}</th>`; });
+                        headers.forEach(h => { 
+                            tableHtml += `<th style="padding: 10px 8px; border: 1px solid #cbd5e1; white-space: normal; word-break: break-word; line-height: 1.5; vertical-align: middle;">${h}</th>`; 
+                        });
                         tableHtml += `</tr></thead><tbody>`;
                         
                         data.forEach((row, index) => {
@@ -1706,7 +1223,7 @@ Best regards,
                             tableHtml += `<tr style="background-color: ${bg};">`;
                             headers.forEach(h => {
                                 let val = row[h] !== null && row[h] !== undefined ? String(row[h]) : "";
-                                tableHtml += `<td style="padding: 8px; border: 1px solid #e2e8f0; color: #0f172a;">${val}</td>`;
+                                tableHtml += `<td style="padding: 10px 8px; border: 1px solid #e2e8f0; color: #0f172a; white-space: normal; word-break: break-word; line-height: 1.5; vertical-align: top;">${val}</td>`;
                             });
                             tableHtml += `</tr>`;
                         });
@@ -1716,8 +1233,8 @@ Best regards,
                             margin:       0.3,
                             filename:     `${fileNamePrefix}.pdf`,
                             image:        { type: 'jpeg', quality: 0.98 },
-                            html2canvas:  { scale: 2, useCORS: true },
-                            jsPDF:        { unit: 'in', format: 'a4', orientation: 'landscape' }
+                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+                            jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' }
                         };
                         
                         html2pdf().set(opt).from(tableHtml).save();
@@ -1733,7 +1250,7 @@ Best regards,
         }
 
 
-        // ------------------ KATEQORİYALAR ÜÇÜN JAVASCRIPT ------------------
+        // KATEQORİYALAR FUNKSİYALARI
         async function loadCategories() {
             const customerId = getCustomerId();
             if (!customerId) return;
@@ -1747,9 +1264,7 @@ Best regards,
                     renderCategoryCheckboxList();
                     updateBulkCategoryDropdown();
                 }
-            } catch(err) {
-                console.error("Kateqoriyalar yüklənmədi:", err);
-            }
+            } catch(err) {}
         }
 
         function updateBulkCategoryDropdown() {
@@ -1793,13 +1308,8 @@ Best regards,
                     nameInput.value = "";
                     await loadCategories();
                     loadManageCarriersList();
-                } else {
-                    alert("Kateqoriya yaradıla bilmədi");
-                }
-            } catch(err) { 
-                console.error(err);
-                alert("Xəta baş verdi"); 
-            }
+                } else { alert("Kateqoriya yaradıla bilmədi"); }
+            } catch(err) {}
         }
 
         async function deleteCategory(id) {
@@ -1814,9 +1324,7 @@ Best regards,
                     await loadCategories();
                     loadManageCarriersList();
                 }
-            } catch(err) {
-                console.error(err);
-            }
+            } catch(err) {}
         }
 
         async function setCarrierCategory(carrierId, categoryId) {
@@ -1831,9 +1339,7 @@ Best regards,
                     let c = globalCarriersCache.find(x => (x.id !== undefined ? x.id : x.carrier_id) == carrierId);
                     if(c) c.category_id = catId;
                 }
-            } catch(err) {
-                console.error(err);
-            }
+            } catch(err) {}
         }
 
         function renderCategoryCheckboxList() {
@@ -1855,7 +1361,7 @@ Best regards,
             box.innerHTML = html;
         }
 
-        // ------------------ TOPLU ƏMƏLİYYATLAR ------------------
+        // TOPLU ƏMƏLİYYATLAR
         function toggleAllManageCarriers(checkbox) {
             const checkboxes = document.querySelectorAll(".manage-carrier-cb");
             checkboxes.forEach(cb => {
@@ -1897,19 +1403,13 @@ Best regards,
             }
 
             let categoryId = null;
-            if(val !== "remove") {
-                categoryId = parseInt(val);
-            }
+            if(val !== "remove") { categoryId = parseInt(val); }
 
             try {
                 const res = await fetch("/carriers/bulk-set-category", {
                     method: "POST",
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        customer_id: getCustomerId(),
-                        carrier_ids: carrierIds,
-                        category_id: categoryId
-                    })
+                    body: JSON.stringify({ customer_id: getCustomerId(), carrier_ids: carrierIds, category_id: categoryId })
                 });
 
                 if (res.status === 401 || res.status === 403) { logout(); return; }
@@ -1920,13 +1420,8 @@ Best regards,
                     document.getElementById("selectAllManageCarriers").checked = false;
                     document.getElementById('bulkDeleteBtn').classList.add('d-none');
                     loadManageCarriersList();
-                } else {
-                    alert("Xəta baş verdi");
-                }
-            } catch(err) {
-                console.error(err);
-                alert("Server xətası");
-            }
+                } else { alert("Xəta baş verdi"); }
+            } catch(err) {}
         }
 
         async function bulkDeleteCarriers() {
@@ -1940,12 +1435,8 @@ Best regards,
 
             try {
                 const response = await fetch('/carriers/bulk-delete', {
-                    method: 'POST',
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({
-                        customer_id: customerId,
-                        carrier_ids: selectedIds
-                    })
+                    method: 'POST', headers: getAuthHeaders(),
+                    body: JSON.stringify({ customer_id: customerId, carrier_ids: selectedIds })
                 });
 
                 if (response.status === 401 || response.status === 403) { logout(); return; }
@@ -1956,19 +1447,12 @@ Best regards,
                     alert(data.message);
                     document.getElementById('bulkDeleteBtn').classList.add('d-none');
                     document.getElementById('selectAllManageCarriers').checked = false;
-                    
                     loadManageCarriersList();
                     loadCarriersList();
                     loadStats();
-                } else {
-                    alert("Xəta: " + (data.detail || ""));
-                }
-            } catch (error) {
-                console.error("Toplu silmə xətası:", error);
-                alert("Sistemlə əlaqə kəsildi.");
-            }
+                } else { alert("Xəta: " + (data.detail || "")); }
+            } catch (error) {}
         }
-        // -------------------------------------------------------------------------
 
         function toggleCarrierSelection() {
             const sendOptElement = document.querySelector('input[name="carrierOption"]:checked');
@@ -2010,9 +1494,8 @@ Best regards,
             if (key === 'info') {
                 const container = document.getElementById(`inp_info_container`);
                 if (!container) return;
-                if (chk.checked) {
-                    container.classList.remove('d-none');
-                } else {
+                if (chk.checked) { container.classList.remove('d-none'); } 
+                else {
                     container.classList.add('d-none');
                     const infoText = document.getElementById(`inp_info_text`);
                     const infoFile = document.getElementById(`inp_info_file`);
@@ -2022,12 +1505,8 @@ Best regards,
             } else {
                 const input = document.getElementById(`inp_${key}`);
                 if (!input) return;
-                if (chk.checked) {
-                    input.classList.remove('d-none');
-                } else {
-                    input.classList.add('d-none');
-                    input.value = '';
-                }
+                if (chk.checked) { input.classList.remove('d-none'); } 
+                else { input.classList.add('d-none'); input.value = ''; }
             }
         }
 
@@ -2046,13 +1525,9 @@ Best regards,
                 const box = document.getElementById("carrierCheckboxList");
                 
                 let carriers = [];
-                if (Array.isArray(data)) {
-                    carriers = data;
-                } else if (data.carriers && Array.isArray(data.carriers)) {
-                    carriers = data.carriers;
-                } else if (data.data && Array.isArray(data.data)) {
-                    carriers = data.data;
-                }
+                if (Array.isArray(data)) { carriers = data; } 
+                else if (data.carriers && Array.isArray(data.carriers)) { carriers = data.carriers; } 
+                else if (data.data && Array.isArray(data.data)) { carriers = data.data; }
 
                 if (res.ok && carriers.length > 0) {
                     let html = "";
@@ -2070,13 +1545,8 @@ Best regards,
                         `;
                     }
                     box.innerHTML = html;
-                } else {
-                    box.innerHTML = `<span class="text-danger small p-2 d-block">Bazada daşıyıcı tapılmadı.</span>`;
-                }
-            } catch (err) {
-                console.error("Daşıyıcılar yüklənmədi:", err);
-                document.getElementById("carrierCheckboxList").innerHTML = `<span class="text-danger small p-2 d-block">Şəbəkə xətası baş verdi.</span>`;
-            }
+                } else { box.innerHTML = `<span class="text-danger small p-2 d-block">Bazada daşıyıcı tapılmadı.</span>`; }
+            } catch (err) { }
         }
 
         async function loadManageCarriersList() {
@@ -2088,13 +1558,9 @@ Best regards,
                 const data = await res.json();
                 
                 let carriers = [];
-                if (Array.isArray(data)) {
-                    carriers = data;
-                } else if (data.carriers && Array.isArray(data.carriers)) {
-                    carriers = data.carriers;
-                } else if (data.data && Array.isArray(data.data)) {
-                    carriers = data.data;
-                }
+                if (Array.isArray(data)) { carriers = data; } 
+                else if (data.carriers && Array.isArray(data.carriers)) { carriers = data.carriers; } 
+                else if (data.data && Array.isArray(data.data)) { carriers = data.data; }
 
                 if (res.ok) {
                     globalCarriersCache = carriers;
@@ -2102,10 +1568,7 @@ Best regards,
                 } else {
                     document.getElementById("manageCarriersContainer").innerHTML = `<span class="text-muted small p-3 d-block text-center">Bazada hələ heç bir daşıyıcı yoxdur.</span>`;
                 }
-            } catch (err) {
-                console.error("Daşıyıcılar idarəetmə siyahısı yüklənmədi:", err);
-                document.getElementById("manageCarriersContainer").innerHTML = `<span class="text-danger small p-3 d-block text-center">Məlumatları yükləmək mümkün olmadı.</span>`;
-            }
+            } catch (err) {}
         }
 
         function renderManageCarriers(carriers) {
@@ -2165,170 +1628,90 @@ Best regards,
             try {
                 const customerId = getCustomerId();
                 const res = await fetch(`/carriers/delete`, {
-                    method: "POST",
-                    headers: getAuthHeaders(),
+                    method: "POST", headers: getAuthHeaders(),
                     body: JSON.stringify({ customer_id: customerId, carrier_id: carrierId })
                 });
-
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-
                 if (res.ok) {
                     alert("Daşıyıcı bazadan uğurla silindi!");
-                    loadManageCarriersList();
-                    loadCarriersList();
-                    loadStats();
-                } else {
-                    const errData = await res.json().catch(() => ({}));
-                    alert("Silinmə zamanı xəta baş verdi: " + formatErrorDetail(errData.detail));
+                    loadManageCarriersList(); loadCarriersList(); loadStats();
                 }
-            } catch (err) {
-                console.error("Silmə xətası:", err);
-                alert("Serverlə əlaqə qurulmadı!");
-            }
+            } catch (err) {}
         }
 
         async function uploadCarriers(e) {
             e.preventDefault();
             const fileInput = document.querySelector("#file-content input[name='file']");
-            if (!fileInput || !fileInput.files.length) {
-                alert("Zəhmət olmasa Excel və ya CSV faylı seçin!");
-                return;
-            }
-
-            const customerId = getCustomerId();
+            if (!fileInput || !fileInput.files.length) { alert("Zəhmət olmasa Excel və ya CSV faylı seçin!"); return; }
             const formData = new FormData();
-            formData.append("customer_id", customerId);
+            formData.append("customer_id", getCustomerId());
             formData.append("file", fileInput.files[0]);
 
             try {
-                const res = await fetch("/carriers/upload-excel", {
-                    method: "POST",
-                    headers: getAuthHeaders(true),
-                    body: formData
-                });
-                
+                const res = await fetch("/carriers/upload-excel", { method: "POST", headers: getAuthHeaders(true), body: formData });
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-                
                 const data = await res.json();
                 if (res.ok) {
                     alert(data.message || "Fayl uğurla yükləndi!");
                     fileInput.value = "";
-                    loadStats();
-                    loadCarriersList();
-                    loadManageCarriersList();
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                console.error("Yükləmə xətası:", err);
-                alert("Serverlə əlaqə qurulmadı!");
-            }
+                    loadStats(); loadCarriersList(); loadManageCarriersList();
+                } else { alert("Xəta: " + formatErrorDetail(data.detail)); }
+            } catch (err) {}
         }
 
         async function addManualCarrier(e) {
             e.preventDefault();
             const name = document.getElementById("manual_company_name").value.trim();
             const email = document.getElementById("manual_email").value.trim();
-
-            if (!name || !email) {
-                alert("Zəhmət olmasa bütün xanaları doldurun!");
-                return;
-            }
-
-            const customerId = getCustomerId();
+            if (!name || !email) { alert("Zəhmət olmasa bütün xanaları doldurun!"); return; }
 
             try {
                 const res = await fetch("/carriers/manual", {
-                    method: "POST",
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ 
-                        customer_id: customerId, 
-                        name: name, 
-                        company_name: name, 
-                        carrier_name: name,
-                        email: email 
-                    })
+                    method: "POST", headers: getAuthHeaders(),
+                    body: JSON.stringify({ customer_id: getCustomerId(), name: name, company_name: name, carrier_name: name, email: email })
                 });
-
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-
                 const data = await res.json();
                 if (res.ok) {
                     alert("Daşıyıcı uğurla əlavə edildi!");
                     document.getElementById("manual_company_name").value = "";
                     document.getElementById("manual_email").value = "";
-                    loadStats();
-                    loadCarriersList();
-                    loadManageCarriersList();
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                console.error("Daşıyıcı əlavə etmə xətası:", err);
-                alert("Serverlə əlaqə qurulmadı!");
-            }
+                    loadStats(); loadCarriersList(); loadManageCarriersList();
+                } else { alert("Xəta: " + formatErrorDetail(data.detail)); }
+            } catch (err) {}
         }
 
         async function addPasteCarrier(e) {
             e.preventDefault();
             const text = document.getElementById("paste_raw_text").value.trim();
-            if (!text) {
-                alert("Zəhmət olmasa cədvəl məlumatlarını yapışdırın!");
-                return;
-            }
-
-            const customerId = getCustomerId();
+            if (!text) { alert("Zəhmət olmasa cədvəl məlumatlarını yapışdırın!"); return; }
 
             try {
                 const res = await fetch("/carriers/upload-text", {
-                    method: "POST",
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ 
-                        customer_id: customerId, 
-                        raw_text: text, 
-                        text: text,
-                        content: text
-                    })
+                    method: "POST", headers: getAuthHeaders(),
+                    body: JSON.stringify({ customer_id: getCustomerId(), raw_text: text, text: text, content: text })
                 });
-
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-
                 const data = await res.json();
                 if (res.ok) {
                     alert("Daşıyıcılar uğurla əlavə edildi!");
                     document.getElementById("paste_raw_text").value = "";
-                    loadStats();
-                    loadCarriersList();
-                    loadManageCarriersList();
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                console.error("Cədvəldən əlavə etmə xətası:", err);
-                alert("Serverlə əlaqə qurulmadı!");
-            }
+                    loadStats(); loadCarriersList(); loadManageCarriersList();
+                } else { alert("Xəta: " + formatErrorDetail(data.detail)); }
+            } catch (err) {}
         }
 
         async function loadStats() {
             try {
-                const customerId = getCustomerId();
-                if(!customerId) return;
-                const res = await fetch(`/customer/stats/${customerId}`, { headers: getAuthHeaders() });
-                
-                if (res.status === 401 || res.status === 403) {
-                    logout();
-                    return;
-                }
-
+                const res = await fetch(`/customer/stats/${getCustomerId()}`, { headers: getAuthHeaders() });
+                if (res.status === 401 || res.status === 403) { logout(); return; }
                 const data = await res.json();
                 if (res.ok) {
                     document.getElementById("statActiveRfqs").innerText = data.active_rfqs || 0;
                     document.getElementById("statCompleted").innerText = data.completed_shipments || 0;
                     document.getElementById("statCarriersCount").innerText = data.carriers_count || 0;
                 }
-            } catch (err) {
-                console.error("Statistika xətası:", err);
-            }
+            } catch (err) {}
         }
 
         async function createRfq(e) {
@@ -2343,19 +1726,11 @@ Best regards,
             if (sendOpt === 'selected') {
                 const checkboxes = document.querySelectorAll(".carrier-item-check:checked");
                 checkboxes.forEach(cb => selectedCarriers.push(parseInt(cb.value)));
-
-                if (selectedCarriers.length === 0) {
-                    alert("Zəhmət olmasa siyahıdan ən azı bir daşıyıcı seçin!");
-                    return;
-                }
+                if (selectedCarriers.length === 0) { alert("Zəhmət olmasa siyahıdan ən azı bir daşıyıcı seçin!"); return; }
             } else if (sendOpt === 'category') {
                 const checkboxes = document.querySelectorAll(".cat-item-check:checked");
                 checkboxes.forEach(cb => selectedCategories.push(parseInt(cb.value)));
-
-                if (selectedCategories.length === 0) {
-                    alert("Zəhmət olmasa siyahıdan ən azı bir kateqoriya seçin!");
-                    return;
-                }
+                if (selectedCategories.length === 0) { alert("Zəhmət olmasa siyahıdan ən azı bir kateqoriya seçin!"); return; }
             }
 
             let uploadedAttachmentUrl = null;
@@ -2363,36 +1738,19 @@ Best regards,
 
             if (document.getElementById("chk_info")?.checked) {
                 const fileInp = document.getElementById("inp_info_file");
-                if (fileInp && fileInp.files.length > 0) {
-                    fileToUpload = fileInp.files[0];
-                }
+                if (fileInp && fileInp.files.length > 0) { fileToUpload = fileInp.files[0]; }
             }
 
             if (fileToUpload) {
                 const fileData = new FormData();
                 fileData.append("file", fileToUpload);
-
                 try {
-                    const uploadRes = await fetch("/requests/upload-attachment", {
-                        method: "POST",
-                        headers: getAuthHeaders(true),
-                        body: fileData
-                    });
-                    
+                    const uploadRes = await fetch("/requests/upload-attachment", { method: "POST", headers: getAuthHeaders(true), body: fileData });
                     if (uploadRes.status === 401 || uploadRes.status === 403) { logout(); return; }
-
                     const uploadResult = await uploadRes.json();
-                    if (uploadRes.ok) {
-                        uploadedAttachmentUrl = uploadResult.attachment_url;
-                    } else {
-                        alert("Fayl yüklənərkən xəta baş verdi: " + formatErrorDetail(uploadResult.detail));
-                        return;
-                    }
-                } catch (fileErr) {
-                    console.error("Fayl yükləmə xətası:", fileErr);
-                    alert("Faylı serverə yükləmək mümkün olmadı!");
-                    return;
-                }
+                    if (uploadRes.ok) { uploadedAttachmentUrl = uploadResult.attachment_url; } 
+                    else { alert("Fayl yüklənərkən xəta baş verdi: " + formatErrorDetail(uploadResult.detail)); return; }
+                } catch (fileErr) { alert("Faylı serverə yükləmək mümkün olmadı!"); return; }
             }
 
             const requiredFieldsList = [];
@@ -2437,14 +1795,10 @@ Best regards,
                 let textVal = document.getElementById("inp_info_text")?.value.trim() || "";
                 let fileInput = document.getElementById("inp_info_file");
                 let infoStr = textVal;
-                if(fileInput && fileInput.files.length > 0) {
-                    infoStr += ` [Fayl: ${fileInput.files[0].name}]`;
-                }
+                if(fileInput && fileInput.files.length > 0) { infoStr += ` [Fayl: ${fileInput.files[0].name}]`; }
                 if(infoStr) requiredFieldsList.push(`Additional Information: ${infoStr}`);
             }
 
-            const customerId = getCustomerId();
-            
             const originVal = document.getElementById("origin")?.value.trim();
             const destinationVal = document.getElementById("destination")?.value.trim();
             const cargoTypeVal = document.getElementById("cargo_type")?.value.trim();
@@ -2453,8 +1807,7 @@ Best regards,
             const transportModeVal = document.getElementById("transportation_mode")?.value;
 
             if (!originVal || !destinationVal || !cargoTypeVal || !weightVal || !volumeVal || !transportModeVal) {
-                alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!");
-                return;
+                alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!"); return;
             }
 
             let additionalNotesCombined = "";
@@ -2466,46 +1819,23 @@ Best regards,
             const customEmailBodyVal = useCustomTemplate ? (document.getElementById("custom_email_body")?.value.trim() || "") : "";
 
             const payload = {
-                customer_id: customerId,
-                origin: originVal,
-                loading_location: originVal,
-                destination: destinationVal,
-                delivery_location: destinationVal,
-                cargo_type: cargoTypeVal,
-                cargo: cargoTypeVal,
-                weight_kg: parseFloat(weightVal) || 0,
-                weight: parseFloat(weightVal) || 0,
-                volume_m3: parseFloat(volumeVal) || 0,
-                volume: parseFloat(volumeVal) || 0,
+                customer_id: getCustomerId(), origin: originVal, loading_location: originVal, destination: destinationVal, delivery_location: destinationVal,
+                cargo_type: cargoTypeVal, cargo: cargoTypeVal, weight_kg: parseFloat(weightVal) || 0, weight: parseFloat(weightVal) || 0,
+                volume_m3: parseFloat(volumeVal) || 0, volume: parseFloat(volumeVal) || 0,
                 deadline: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
                 loading_date: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
                 truck_type: document.getElementById("chk_truck_type")?.checked ? (document.getElementById("inp_truck_type")?.value || "") : "",
                 hs_code: document.getElementById("chk_hs_code")?.checked ? (document.getElementById("inp_hs_code")?.value || "") : "",
                 stackable: document.getElementById("chk_stackable")?.checked ? (document.getElementById("inp_stackable")?.value || "") : "",
                 shipment_type: document.getElementById("chk_shipment_type")?.checked ? (document.getElementById("inp_shipment_type")?.value || "") : "",
-                required_fields: requiredFieldsList,
-                attachment_url: uploadedAttachmentUrl,
-                additional_notes: additionalNotesCombined,
-                note: additionalNotesCombined,
-                email_template_type: useCustomTemplate ? "custom" : "standard",
-                custom_email_body: customEmailBodyVal,
-                transportation_mode: transportModeVal,
-                
-                send_to_all: (sendOpt === 'all'),
-                send_option: sendOpt,
-                carrier_ids: selectedCarriers,
-                category_ids: selectedCategories
+                required_fields: requiredFieldsList, attachment_url: uploadedAttachmentUrl, additional_notes: additionalNotesCombined, note: additionalNotesCombined,
+                email_template_type: useCustomTemplate ? "custom" : "standard", custom_email_body: customEmailBodyVal, transportation_mode: transportModeVal,
+                send_to_all: (sendOpt === 'all'), send_option: sendOpt, carrier_ids: selectedCarriers, category_ids: selectedCategories
             };
 
             try {
-                const res = await fetch("/requests/create", {
-                    method: "POST",
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify(payload)
-                });
-
+                const res = await fetch("/requests/create", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify(payload) });
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-
                 const data = await res.json();
                 if (res.ok) {
                     let msg = typeof data.message === 'object' ? JSON.stringify(data.message) : (data.message || "Sorğu uğurla yaradıldı!");
@@ -2517,53 +1847,32 @@ Best regards,
                     if(infoContainer) infoContainer.classList.add('d-none');
                     document.getElementById("sendToAllRadio").checked = true;
                     document.getElementById("standardTemplateRadio").checked = true;
-                    toggleEmailTemplateFields();
-                    toggleCarrierSelection();
-                    
-                    initData(); 
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                console.error(err);
-                alert("Server xətası!");
-            }
+                    toggleEmailTemplateFields(); toggleCarrierSelection(); initData(); 
+                } else { alert("Xəta: " + formatErrorDetail(data.detail)); }
+            } catch (err) {}
         }
 
         async function loadRequests() {
             const container = document.getElementById("requestsContainer");
             container.innerHTML = `<div class="text-center p-3"><span class="spinner-border spinner-border-sm text-primary me-2"></span><span class="text-muted small">Sorğular yüklənir...</span></div>`;
             try {
-                const customerId = getCustomerId();
-                if(!customerId) return;
+                const customerId = getCustomerId(); if(!customerId) return;
                 const res = await fetch(`/requests/customer/${customerId}`, { headers: getAuthHeaders() });
-                
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-
                 const data = await res.json();
                 
                 let requestsList = [];
-                if (Array.isArray(data)) {
-                    requestsList = data;
-                } else if (data && Array.isArray(data.requests)) {
-                    requestsList = data.requests;
-                }
+                if (Array.isArray(data)) { requestsList = data; } 
+                else if (data && Array.isArray(data.requests)) { requestsList = data.requests; }
 
                 if (res.ok) {
                     let totalReqs = requestsList.length;
-                    requestsList.forEach((req, index) => {
-                        req.display_id = totalReqs - index; 
-                    });
-
-                    globalRequestsCache = requestsList;
-                    filterRequests(); 
-                    loadRecentQuotes(); 
+                    requestsList.forEach((req, index) => { req.display_id = totalReqs - index; });
+                    globalRequestsCache = requestsList; filterRequests(); loadRecentQuotes(); 
                 } else {
                     container.innerHTML = `<div class="alert alert-light border text-center p-4 rounded-4"><i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i><span class="text-muted fw-medium small">Hələ heç bir sorğu yaratmamısınız.</span></div>`;
                 }
-            } catch (err) {
-                container.innerHTML = `<p class="text-danger fw-bold small"><i class="bi bi-exclamation-circle-fill me-1"></i> Sorğuları yükləmək mümkün olmadı.</p>`;
-            }
+            } catch (err) {}
         }
 
         function renderRequests(requestsList) {
@@ -2576,13 +1885,10 @@ Best regards,
             let html = "";
             for (let req of requestsList) {
                 let attachmentBtn = "";
-                if (req.attachment_url) {
-                    attachmentBtn = `<a href="${escapeHTML(req.attachment_url)}" target="_blank" class="btn btn-sm btn-light mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 11.5px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
-                }
+                if (req.attachment_url) { attachmentBtn = `<a href="${escapeHTML(req.attachment_url)}" target="_blank" class="btn btn-sm btn-light mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 11.5px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`; }
 
                 let qCount = req.quotes_count !== undefined && req.quotes_count !== null ? req.quotes_count : 0;
                 let badgeClass = qCount > 0 ? 'bg-info text-dark' : 'bg-secondary';
-                
                 let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
                 let statusText = (req.status || 'Aktiv').toUpperCase();
 
@@ -2598,23 +1904,18 @@ Best regards,
                                 <i class="bi bi-arrow-right-short mx-1 text-primary fs-5"></i> 
                                 <span class="text-break">${escapeHTML(req.destination || req.delivery_location || '')}</span>
                             </h6>
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge ${badgeClass} shadow-sm">${qCount} təklif</span>
-                                <span class="badge ${bgClass} shadow-sm">${statusText}</span>
-                            </div>
+                            <div class="d-flex align-items-center gap-2"><span class="badge ${badgeClass} shadow-sm">${qCount} təklif</span><span class="badge ${bgClass} shadow-sm">${statusText}</span></div>
                         </div>
                         <div class="request-meta-box mb-3">
                             <div class="row text-muted small fw-medium g-2">
                                 <div class="col-6 col-lg-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${escapeHTML(req.cargo_type || req.cargo || '—')}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${escapeHTML(req.weight_kg || req.weight || 0)} kq</strong></div>
-                                <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə tarixi: <strong class="text-dark">${formattedDeadline}</strong></div>
+                                <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${formattedDeadline}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
                             </div>
                         </div>
                         <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
-                            <button class="btn btn-sm btn-primary px-3 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12px;" onclick="openRfqDetail(${req.id})">
-                                <i class="bi bi-eye me-1"></i> RFQ-ya Bax (${qCount} təklif)
-                            </button>
+                            <button class="btn btn-sm btn-primary px-3 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12px;" onclick="openRfqDetail(${req.id})"><i class="bi bi-eye me-1"></i> RFQ-ya Bax (${qCount} təklif)</button>
                             ${attachmentBtn}
                         </div>
                     </div>
@@ -2630,14 +1931,11 @@ Best regards,
 
             const filtered = globalRequestsCache.filter(req => {
                 const matchesStatus = (selectedStatus === 'all') || ((req.status || 'open').toLowerCase() === selectedStatus);
-
                 const origin = (req.origin || req.loading_location || '').toLowerCase();
                 const destination = (req.destination || req.delivery_location || '').toLowerCase();
                 const cargo = (req.cargo_type || req.cargo || '').toLowerCase();
                 const idStr = String(req.display_id || req.id || '').toLowerCase();
-                
                 const matchesSearch = origin.includes(query) || destination.includes(query) || cargo.includes(query) || idStr.includes(query);
-
                 return matchesStatus && matchesSearch;
             });
             renderRequests(filtered);
@@ -2667,7 +1965,6 @@ Best regards,
                 if (q.extra_details) {
                     for (let [k, v] of Object.entries(q.extra_details)) {
                         if (k === 'submitted' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
-
                         if (v !== null && v !== undefined && v !== "") {
                             if (k === 'carrier_attachment_url') {
                                 extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${escapeHTML(v)}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
@@ -2678,16 +1975,10 @@ Best regards,
                     }
                 }
 
-                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") 
-                    ? `${escapeHTML(q.transit_time_days)} gün` 
-                    : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
-
+                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") ? `${escapeHTML(q.transit_time_days)} gün` : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
                 let isRevised = q.quote_history && q.quote_history.length > 0;
                 let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">Yenilənib (v${q.quote_history.length + 1})</span>` : "";
-
-                let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") 
-                    ? `${escapeHTML(q.price)} <span class="text-muted small">${escapeHTML(q.currency || 'AZN')}</span>${revisedBadge}` 
-                    : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
+                let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") ? `${escapeHTML(q.price)} <span class="text-muted small">${escapeHTML(q.currency || 'AZN')}</span>${revisedBadge}` : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
 
                 html += `
                     <tr class="${q.is_winner ? 'table-success' : ''}">
@@ -2701,10 +1992,7 @@ Best regards,
                             </button>
                         </td>
                         <td class="px-3 text-center py-2.5" style="min-width: 100px;">
-                            ${q.is_winner ? 
-                                '<span class="badge bg-success px-2.5 py-1 rounded-pill"><i class="bi bi-trophy-fill me-1"></i> Qalib</span>' : 
-                                `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`
-                            }
+                            ${q.is_winner ? '<span class="badge bg-success px-2.5 py-1 rounded-pill"><i class="bi bi-trophy-fill me-1"></i> Qalib</span>' : `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`}
                         </td>
                     </tr>
                 `;
@@ -2723,23 +2011,15 @@ Best regards,
                 const data = await res.json();
 
                 let quotesList = [];
-                if (Array.isArray(data)) {
-                    quotesList = data;
-                } else if (data && Array.isArray(data.quotes)) {
-                    quotesList = data.quotes;
-                }
+                if (Array.isArray(data)) { quotesList = data; } 
+                else if (data && Array.isArray(data.quotes)) { quotesList = data.quotes; }
 
                 if (res.ok) {
                     window.currentQuotesCache[requestId] = quotesList;
                     container.innerHTML = buildQuotesTableHtml(quotesList, requestId);
-                } else {
-                    container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`;
-                }
+                } else { container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`; }
                 return quotesList;
-            } catch (err) {
-                container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`;
-                return [];
-            }
+            } catch (err) { container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`; return []; }
         }
 
         async function loadQuotes(requestId) {
@@ -2754,9 +2034,7 @@ Best regards,
             if (countEl) countEl.textContent = quotesList.length;
         }
 
-        // ==========================================
         // KLİKLƏNƏ BİLƏN (İnteraktiv) MODAL
-        // ==========================================
         function openQuoteModal(requestId, quoteId) {
             const quotes = window.currentQuotesCache[requestId] || [];
             const q = quotes.find(item => item.id === quoteId);
@@ -2778,11 +2056,8 @@ Best regards,
                     
                     historyHtml += `
                         <div class="p-2 border rounded small d-flex justify-content-between flex-wrap gap-1 history-item" 
-                             id="hist_item_${index}"
-                             onclick="renderQuoteVersion(${requestId}, ${quoteId}, ${index})"
-                             style="cursor: pointer; transition: 0.2s;">
-                            <span><strong>Təklif v${index + 1}:</strong> ${hPrice}</span>
-                            <span>Tranzit: ${hTransit}</span>
+                             id="hist_item_${index}" onclick="renderQuoteVersion(${requestId}, ${quoteId}, ${index})" style="cursor: pointer; transition: 0.2s;">
+                            <span><strong>Təklif v${index + 1}:</strong> ${hPrice}</span><span>Tranzit: ${hTransit}</span>
                         </div>
                     `;
                 });
@@ -2793,11 +2068,8 @@ Best regards,
                 
                 historyHtml += `
                         <div class="p-2 border rounded small d-flex justify-content-between flex-wrap gap-1 history-item" 
-                             id="hist_item_${lastIndex}"
-                             onclick="renderQuoteVersion(${requestId}, ${quoteId}, ${lastIndex})"
-                             style="cursor: pointer; transition: 0.2s;">
-                            <span><strong>Təklif v${lastIndex + 1} (Sonuncu):</strong> ${currPrice}</span>
-                            <span>Tranzit: ${currTransit}</span>
+                             id="hist_item_${lastIndex}" onclick="renderQuoteVersion(${requestId}, ${quoteId}, ${lastIndex})" style="cursor: pointer; transition: 0.2s;">
+                            <span><strong>Təklif v${lastIndex + 1} (Sonuncu):</strong> ${currPrice}</span><span>Tranzit: ${currTransit}</span>
                         </div>
                     </div>
                 </div>
@@ -2810,13 +2082,11 @@ Best regards,
                     <span class="badge bg-light text-primary mb-1 px-2.5 py-1 border rounded-pill">Daşıyıcı Şirkət</span>
                     <h4 class="fw-bold text-dark text-break" style="font-size: 1.2rem;">${escapeHTML(q.carrier_company || 'Daşıyıcı')}</h4>
                 </div>
-                
                 <div id="quoteVersionDetails"></div>
                 ${historyHtml}
             `;
 
             renderQuoteVersion(requestId, quoteId, totalVersions - 1);
-
             const modal = new bootstrap.Modal(document.getElementById("quoteDetailModal"));
             modal.show();
         }
@@ -2826,79 +2096,47 @@ Best regards,
             const q = quotes.find(item => item.id === quoteId);
             if (!q) return;
 
-            let targetData;
-            let versionLabel = "";
+            let targetData; let versionLabel = "";
 
-            if (q.quote_history && versionIndex < q.quote_history.length) {
-                targetData = q.quote_history[versionIndex];
-                versionLabel = `v${versionIndex + 1}`;
-            } else {
-                targetData = q; 
-                versionLabel = `v${(q.quote_history ? q.quote_history.length : 0) + 1} (Sonuncu)`;
-            }
+            if (q.quote_history && versionIndex < q.quote_history.length) { targetData = q.quote_history[versionIndex]; versionLabel = `v${versionIndex + 1}`; } 
+            else { targetData = q; versionLabel = `v${(q.quote_history ? q.quote_history.length : 0) + 1} (Sonuncu)`; }
 
-            document.querySelectorAll(".history-item").forEach(el => {
-                el.classList.remove("border-primary", "bg-primary", "bg-opacity-10", "text-primary");
-                el.classList.add("bg-light", "text-muted");
-            });
+            document.querySelectorAll(".history-item").forEach(el => { el.classList.remove("border-primary", "bg-primary", "bg-opacity-10", "text-primary"); el.classList.add("bg-light", "text-muted"); });
             
             let activeItem = document.getElementById(`hist_item_${versionIndex}`);
-            if(activeItem) {
-                activeItem.classList.remove("bg-light", "text-muted");
-                activeItem.classList.add("border-primary", "bg-primary", "bg-opacity-10", "text-primary");
-            }
+            if(activeItem) { activeItem.classList.remove("bg-light", "text-muted"); activeItem.classList.add("border-primary", "bg-primary", "bg-opacity-10", "text-primary"); }
 
-            let extraHtml = "";
-            let extraObj = targetData.extra_details || {};
+            let extraHtml = ""; let extraObj = targetData.extra_details || {};
             
             for (let [k, v] of Object.entries(extraObj)) {
                 if (k === 'submitted' || k.toLowerCase() === 'carrier_attachment_name' || k === 'submitted_at') continue;
                 if (v !== null && v !== undefined && v !== "" && v !== "null") {
                     if (k === 'carrier_attachment_url') {
                         extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <strong class="text-dark small">Qoşulmuş Fayl:</strong>
-                            <a href="${escapeHTML(v)}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Yüklə</a>
+                            <strong class="text-dark small">Qoşulmuş Fayl:</strong><a href="${escapeHTML(v)}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Yüklə</a>
                         </div>`;
                     } else {
                         extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm">
-                            <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 10.5px;">${escapeHTML(k)}</strong>
-                            <p class="mb-0 text-dark fw-medium small text-break" style="white-space: pre-wrap;">${escapeHTML(v)}</p>
+                            <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 10.5px;">${escapeHTML(k)}</strong><p class="mb-0 text-dark fw-medium small text-break" style="white-space: pre-wrap;">${escapeHTML(v)}</p>
                         </div>`;
                     }
                 }
             }
 
             let modalTransitDisplay = (targetData.transit_time_days !== null && targetData.transit_time_days !== undefined && targetData.transit_time_days !== "null")
-                ? `${escapeHTML(targetData.transit_time_days)} <span class="fs-6 text-muted">gün</span>`
-                : `<span class="fs-6 text-muted fst-italic">Qeyd olunmayıb</span>`;
+                ? `${escapeHTML(targetData.transit_time_days)} <span class="fs-6 text-muted">gün</span>` : `<span class="fs-6 text-muted fst-italic">Qeyd olunmayıb</span>`;
 
             let modalPriceDisplay = (targetData.price !== null && targetData.price !== undefined && targetData.price !== "null")
-                ? `${escapeHTML(targetData.price)} <span class="fs-6 text-muted">${escapeHTML(targetData.currency || 'AZN')}</span>`
-                : `<span class="fs-6 text-muted fst-italic">Yoxdur</span>`;
+                ? `${escapeHTML(targetData.price)} <span class="fs-6 text-muted">${escapeHTML(targetData.currency || 'AZN')}</span>` : `<span class="fs-6 text-muted fst-italic">Yoxdur</span>`;
 
             let detailsDiv = document.getElementById("quoteVersionDetails");
-            
-            let headerHtml = (q.quote_history && q.quote_history.length > 0) 
-                ? `<div class="d-flex justify-content-center mb-3">
-                     <span class="badge bg-warning text-dark px-3 py-1 shadow-sm border border-warning" style="font-size: 12px;">Hazırda baxılır: Təklif ${versionLabel}</span>
-                   </div>` 
-                : "";
+            let headerHtml = (q.quote_history && q.quote_history.length > 0) ? `<div class="d-flex justify-content-center mb-3"><span class="badge bg-warning text-dark px-3 py-1 shadow-sm border border-warning" style="font-size: 12px;">Hazırda baxılır: Təklif ${versionLabel}</span></div>` : "";
 
             detailsDiv.innerHTML = `
                 ${headerHtml}
                 <div class="row g-2 mb-3">
-                    <div class="col-12 col-sm-6">
-                        <div class="p-3 rounded-4 border bg-light h-100 shadow-sm transition">
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Təklif olunan Qiymət</span>
-                            <h3 class="text-success fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalPriceDisplay}</h3>
-                        </div>
-                    </div>
-                    <div class="col-12 col-sm-6">
-                        <div class="p-3 rounded-4 border bg-light h-100 shadow-sm transition">
-                            <span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Tranzit Müddəti</span>
-                            <h3 class="text-dark fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalTransitDisplay}</h3>
-                        </div>
-                    </div>
+                    <div class="col-12 col-sm-6"><div class="p-3 rounded-4 border bg-light h-100 shadow-sm transition"><span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Təklif olunan Qiymət</span><h3 class="text-success fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalPriceDisplay}</h3></div></div>
+                    <div class="col-12 col-sm-6"><div class="p-3 rounded-4 border bg-light h-100 shadow-sm transition"><span class="text-muted small fw-bold text-uppercase d-block mb-1" style="font-size: 10.5px;">Tranzit Müddəti</span><h3 class="text-dark fw-bold mb-0 text-break" style="font-size: 1.3rem;">${modalTransitDisplay}</h3></div></div>
                 </div>
                 <div class="p-3 rounded-4 bg-light shadow-sm">
                     <h6 class="fw-bold text-dark mb-2 small"><i class="bi bi-list-stars text-primary me-2"></i> Əlavə Məlumatlar və Şərtlər:</h6>
@@ -2911,39 +2149,23 @@ Best regards,
             if (!confirm("Bu təklifi qalib seçmək istədiyinizə əminsiniz?")) return;
             try {
                 const res = await fetch("/quotes/select-winner", {
-                    method: "POST",
-                    headers: getAuthHeaders(),
+                    method: "POST", headers: getAuthHeaders(),
                     body: JSON.stringify({ request_id: requestId, quote_id: quoteId })
                 });
-                
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-
                 const data = await res.json();
                 if (res.ok) {
                     alert("Qalib təklif uğurla təsdiqləndi!");
-                    loadRequests();
-                    loadStats();
-                    if (currentDetailRequestId === requestId) {
-                        loadDetailQuotes(requestId);
-                        loadDetailCarriersStatus(requestId);
-                    }
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                alert("Server xətası!");
-            }
+                    loadRequests(); loadStats();
+                    if (currentDetailRequestId === requestId) { loadDetailQuotes(requestId); loadDetailCarriersStatus(requestId); }
+                } else { alert("Xəta: " + formatErrorDetail(data.detail)); }
+            } catch (err) { alert("Server xətası!"); }
         }
 
         /* ================================================================
            RFQ DETAIL SƏHİFƏSİ
            ================================================================ */
-        let currentDetailRequestId = null;
-        let currentDetailRequestObj = null;
-        let detailCarriersCache = [];
-        let carrierPanelFilter = 'all';
-        let selectedReminderIds = new Set();
-
+        let currentDetailRequestId = null; let currentDetailRequestObj = null; let detailCarriersCache = []; let carrierPanelFilter = 'all'; let selectedReminderIds = new Set();
         const AVATAR_PALETTE = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
 
         function getInitials(name) {
@@ -2955,61 +2177,31 @@ Best regards,
         }
 
         async function openRfqDetail(requestId) {
-            currentDetailRequestId = requestId;
-            selectedReminderIds = new Set();
-
-            if (window.location.hash !== `#rfq-${requestId}`) {
-                history.pushState(null, null, `#rfq-${requestId}`);
-            }
-
-            document.getElementById("dashboardMain").classList.add("d-none");
-            document.getElementById("rfqDetailPage").classList.remove("d-none");
-            window.scrollTo(0, 0);
+            currentDetailRequestId = requestId; selectedReminderIds = new Set();
+            if (window.location.hash !== `#rfq-${requestId}`) { history.pushState(null, null, `#rfq-${requestId}`); }
+            document.getElementById("dashboardMain").classList.add("d-none"); document.getElementById("rfqDetailPage").classList.remove("d-none"); window.scrollTo(0, 0);
 
             let req = (globalRequestsCache || []).find(r => String(r.id) === String(requestId));
             if (!req) {
-                try {
-                    const res = await fetch(`/requests/details/${requestId}`);
-                    const data = await res.json();
-                    if (res.ok && data.request) req = data.request;
-                } catch (err) { /* ignore */ }
+                try { const res = await fetch(`/requests/details/${requestId}`); const data = await res.json(); if (res.ok && data.request) req = data.request; } catch (err) {}
             }
             currentDetailRequestObj = req || { id: requestId };
             
-            try {
-                renderDetailHeader(currentDetailRequestObj);
-            } catch(e) {
-                console.error("Məlumat başlıqlarını göstərərkən xəta:", e);
-            }
-
-            loadDetailQuotes(requestId);
-            loadDetailCarriersStatus(requestId);
+            try { renderDetailHeader(currentDetailRequestObj); } catch(e) {}
+            loadDetailQuotes(requestId); loadDetailCarriersStatus(requestId);
         }
 
         function closeRfqDetail() {
-            document.getElementById("rfqDetailPage").classList.add("d-none");
-            document.getElementById("dashboardMain").classList.remove("d-none");
-            currentDetailRequestId = null;
-            
-            if (window.location.hash !== '#tab-tracking') {
-                history.pushState(null, null, '#tab-tracking');
-            }
-
-            try {
-                const trackingTabBtn = document.getElementById("tab-tracking-btn");
-                if (trackingTabBtn && window.bootstrap) {
-                    bootstrap.Tab.getOrCreateInstance(trackingTabBtn).show();
-                }
-            } catch (err) { /* ignore */ }
-            loadRequests();
-            loadStats();
+            document.getElementById("rfqDetailPage").classList.add("d-none"); document.getElementById("dashboardMain").classList.remove("d-none"); currentDetailRequestId = null;
+            if (window.location.hash !== '#tab-tracking') { history.pushState(null, null, '#tab-tracking'); }
+            try { const trackingTabBtn = document.getElementById("tab-tracking-btn"); if (trackingTabBtn && window.bootstrap) { bootstrap.Tab.getOrCreateInstance(trackingTabBtn).show(); } } catch (err) {}
+            loadRequests(); loadStats();
         }
 
         async function refreshRfqDetail() {
             if (!currentDetailRequestId) return;
-            try { await fetch(`/mail/check-bounces`, { method: "POST" }); } catch (err) { /* ignore */ }
-            loadDetailQuotes(currentDetailRequestId);
-            loadDetailCarriersStatus(currentDetailRequestId);
+            try { await fetch(`/mail/check-bounces`, { method: "POST" }); } catch (err) {}
+            loadDetailQuotes(currentDetailRequestId); loadDetailCarriersStatus(currentDetailRequestId);
         }
 
         function renderDetailHeader(req) {
@@ -3021,14 +2213,12 @@ Best regards,
 
             const weight = req.weight_kg || req.weight;
             document.getElementById("detailWeight").textContent = weight ? `${escapeHTML(weight)} kq` : "Qeyd edilməyib";
-            
             document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false, true) : "—";
             document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at, true, false) : "—";
 
             const statusBadge = document.getElementById("detailStatusBadge");
             const isOpen = (req.status || "open") === "open";
-            statusBadge.textContent = isOpen ? "OPEN" : "CLOSED";
-            statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
+            statusBadge.textContent = isOpen ? "OPEN" : "CLOSED"; statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
 
             document.getElementById("detailSenderCompany").textContent = escapeHTML((activeUser && (activeUser.company_name || activeUser.name)) || "—");
             document.getElementById("detailSenderEmail").textContent = escapeHTML((activeUser && activeUser.email) || "—");
@@ -3066,22 +2256,13 @@ Best regards,
                         let fStr = typeof f === 'object' ? JSON.stringify(f) : String(f);
                         let parts = fStr.split(":");
                         if(parts.length > 1) {
-                            let key = parts.shift().trim();
-                            let val = parts.join(":").trim();
-                            return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0">
-                                      <span class="text-muted d-block" style="font-size:10px; font-weight:700; text-transform:uppercase;">${escapeHTML(key)}</span>
-                                      <span class="text-dark fw-medium">${escapeHTML(val)}</span>
-                                    </div>`;
+                            let key = parts.shift().trim(); let val = parts.join(":").trim();
+                            return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0"><span class="text-muted d-block" style="font-size:10px; font-weight:700; text-transform:uppercase;">${escapeHTML(key)}</span><span class="text-dark fw-medium">${escapeHTML(val)}</span></div>`;
                         }
                         return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0"><i class="bi bi-check2 text-success me-1"></i> <span class="text-dark fw-medium">${escapeHTML(fStr)}</span></div>`;
                     }).join("");
                     
-                    html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1">
-                                <strong class="text-primary small d-flex align-items-center mb-3 border-bottom pb-2">
-                                    <i class="bi bi-card-checklist fs-5 me-2"></i> İxtiyari Parametrlər
-                                </strong>
-                                <div class="text-dark small">${fieldsHtml}</div>
-                             </div>`;
+                    html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1"><strong class="text-primary small d-flex align-items-center mb-3 border-bottom pb-2"><i class="bi bi-card-checklist fs-5 me-2"></i> İxtiyari Parametrlər</strong><div class="text-dark small">${fieldsHtml}</div></div>`;
                 }
 
                 if (req.attachment_url) {
@@ -3089,18 +2270,10 @@ Best regards,
                     html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${escapeHTML(req.attachment_url)}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
                 }
 
-                if (!hasAny) {
-                    html += `<div class="text-muted small text-center p-3">Əlavə detal qeyd olunmayıb.</div>`;
-                }
-                html += `</div>`;
-                
-                html += `<style>.last-child-border-0:last-child { border-bottom: none !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }</style>`;
-                
+                if (!hasAny) { html += `<div class="text-muted small text-center p-3">Əlavə detal qeyd olunmayıb.</div>`; }
+                html += `</div><style>.last-child-border-0:last-child { border-bottom: none !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }</style>`;
                 box.innerHTML = html;
-            } catch (e) {
-                console.error("Xəta: Modal render edilə bilmədi:", e);
-                box.innerHTML = `<div class="text-danger small p-3">Məlumatları göstərərkən xəta baş verdi.</div>`;
-            }
+            } catch (e) { box.innerHTML = `<div class="text-danger small p-3">Məlumatları göstərərkən xəta baş verdi.</div>`; }
         }
 
         async function loadDetailCarriersStatus(requestId) {
@@ -3109,15 +2282,12 @@ Best regards,
 
             try {
                 const res = await fetch(`/requests/carriers-status/${requestId}`, { headers: getAuthHeaders() });
-                
                 if (res.status === 401 || res.status === 403) { logout(); return; }
 
                 const data = await res.json();
                 detailCarriersCache = (res.ok && Array.isArray(data.carriers)) ? data.carriers : [];
 
-                selectedReminderIds = new Set(
-                    detailCarriersCache.filter(c => !c.has_submitted).map(c => c.quote_id)
-                );
+                selectedReminderIds = new Set(detailCarriersCache.filter(c => !c.has_submitted).map(c => c.quote_id));
                 updateSelectedReminderCount();
 
                 const total = detailCarriersCache.length;
@@ -3132,25 +2302,17 @@ Best regards,
                 document.getElementById("statViewed").textContent = viewed;
                 document.getElementById("statQuoted").textContent = quoted;
                 document.getElementById("statFailed").textContent = failed;
-
                 document.getElementById("mobileCarriersCount").textContent = total;
                 document.getElementById("statBtnCarriersCount").textContent = total;
                 document.getElementById("panelCarriersCount").textContent = total;
-
+                
                 const pendingBanner = document.getElementById("detailNonResponders");
                 document.getElementById("detailPendingCount").textContent = pending;
-                if (pending > 0) {
-                    pendingBanner.classList.remove("d-none");
-                    pendingBanner.classList.add("d-flex");
-                } else {
-                    pendingBanner.classList.remove("d-flex");
-                    pendingBanner.classList.add("d-none");
-                }
+                if (pending > 0) { pendingBanner.classList.remove("d-none"); pendingBanner.classList.add("d-flex"); } 
+                else { pendingBanner.classList.remove("d-flex"); pendingBanner.classList.add("d-none"); }
 
                 renderCarrierPanel();
-            } catch (err) {
-                list.innerHTML = `<p class="text-danger small fw-bold"><i class="bi bi-x-circle me-1"></i> Daşıyıcıları yükləmək mümkün olmadı.</p>`;
-            }
+            } catch (err) { list.innerHTML = `<p class="text-danger small fw-bold"><i class="bi bi-x-circle me-1"></i> Daşıyıcıları yükləmək mümkün olmadı.</p>`; }
         }
 
         function setCarrierPanelFilter(filter) {
@@ -3184,40 +2346,27 @@ Best regards,
             });
 
             if (filtered.length === 0) {
-                list.innerHTML = `<div class="text-center text-muted small p-4"><i class="bi bi-people fs-3 d-block mb-2 opacity-50"></i>Uyğun daşıyıcı tapılmadı.</div>`;
-                return;
+                list.innerHTML = `<div class="text-center text-muted small p-4"><i class="bi bi-people fs-3 d-block mb-2 opacity-50"></i>Uyğun daşıyıcı tapılmadı.</div>`; return;
             }
 
             let html = "";
             filtered.forEach((c, idx) => {
-                const color = AVATAR_PALETTE[idx % AVATAR_PALETTE.length];
-                const initials = getInitials(c.company_name);
-
+                const color = AVATAR_PALETTE[idx % AVATAR_PALETTE.length]; const initials = getInitials(c.company_name);
                 let deliveryBadge;
-                if (c.mail_status === 'delivered') {
-                    deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`;
-                } else if (c.mail_status === 'failed') {
-                    deliveryBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Çatdırılmadı</span>`;
-                } else {
-                    deliveryBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Göndərilir...</span>`;
-                }
+                if (c.mail_status === 'delivered') { deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`; } 
+                else if (c.mail_status === 'failed') { deliveryBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Çatdırılmadı</span>`; } 
+                else { deliveryBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Göndərilir...</span>`; }
 
                 let quoteStatus = c.has_submitted
                     ? `<span class="text-success fw-bold" style="font-size: 11.5px;"><i class="bi bi-check-circle-fill me-1"></i>Təklif alındı</span>`
                     : `<span class="text-warning fw-bold" style="font-size: 11.5px;"><i class="bi bi-hourglass-split me-1"></i>Təklif yoxdur</span>`;
 
                 let actionBtn;
-                if (c.mail_status === 'failed') {
-                    actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="resendCarrierEmail(${c.quote_id})"><i class="bi bi-arrow-clockwise me-1"></i>Yenidən göndər</button>`;
-                } else if (!c.has_submitted) {
-                    actionBtn = `<button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="sendSingleReminder(${c.quote_id})"><i class="bi bi-bell me-1"></i>Reminder göndər</button>`;
-                } else {
-                    actionBtn = "";
-                }
+                if (c.mail_status === 'failed') { actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="resendCarrierEmail(${c.quote_id})"><i class="bi bi-arrow-clockwise me-1"></i>Yenidən göndər</button>`; } 
+                else if (!c.has_submitted) { actionBtn = `<button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="sendSingleReminder(${c.quote_id})"><i class="bi bi-bell me-1"></i>Reminder göndər</button>`; } 
+                else { actionBtn = ""; }
 
-                const checkbox = !c.has_submitted
-                    ? `<input type="checkbox" class="form-check-input flex-shrink-0" style="margin-top:2px;" ${selectedReminderIds.has(c.quote_id) ? 'checked' : ''} onchange="toggleReminderSelect(${c.quote_id}, this.checked)">`
-                    : `<span style="width:1.15em; display:inline-block;"></span>`;
+                const checkbox = !c.has_submitted ? `<input type="checkbox" class="form-check-input flex-shrink-0" style="margin-top:2px;" ${selectedReminderIds.has(c.quote_id) ? 'checked' : ''} onchange="toggleReminderSelect(${c.quote_id}, this.checked)">` : `<span style="width:1.15em; display:inline-block;"></span>`;
 
                 html += `
                     <div class="carrier-panel-row d-flex align-items-start gap-2">
@@ -3239,97 +2388,63 @@ Best regards,
                     </div>
                 `;
             });
-
             list.innerHTML = html;
         }
 
         function updateSelectedReminderCount() {
             const n = selectedReminderIds.size;
-            const el1 = document.getElementById("detailSelectedCount");
-            const el2 = document.getElementById("panelSelectedCount");
-            if (el1) el1.textContent = n;
-            if (el2) el2.textContent = n;
+            const el1 = document.getElementById("detailSelectedCount"); const el2 = document.getElementById("panelSelectedCount");
+            if (el1) el1.textContent = n; if (el2) el2.textContent = n;
         }
 
         function toggleReminderSelect(quoteId, checked) {
-            if (checked) selectedReminderIds.add(quoteId);
-            else selectedReminderIds.delete(quoteId);
+            if (checked) selectedReminderIds.add(quoteId); else selectedReminderIds.delete(quoteId);
             updateSelectedReminderCount();
         }
 
         function selectAllPendingReminders() {
             detailCarriersCache.filter(c => !c.has_submitted).forEach(c => selectedReminderIds.add(c.quote_id));
-            renderCarrierPanel();
-            updateSelectedReminderCount();
+            renderCarrierPanel(); updateSelectedReminderCount();
         }
 
         function clearAllReminderSelection() {
             selectedReminderIds.clear();
-            renderCarrierPanel();
-            updateSelectedReminderCount();
+            renderCarrierPanel(); updateSelectedReminderCount();
         }
 
         async function sendSingleReminder(quoteId) {
             try {
                 const res = await fetch(`/quotes/reminder/${quoteId}`, { method: "POST", headers: getAuthHeaders() });
-                
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-
                 const data = await res.json();
-                if (res.ok) {
-                    alert(data.message || "Reminder göndərildi!");
-                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                alert("Server xətası!");
-            }
+                if (res.ok) { alert(data.message || "Reminder göndərildi!"); if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId); } 
+                else { alert("Xəta: " + formatErrorDetail(data.detail)); }
+            } catch (err) { alert("Server xətası!"); }
         }
 
         async function resendCarrierEmail(quoteId) {
             try {
                 const res = await fetch(`/quotes/resend/${quoteId}`, { method: "POST", headers: getAuthHeaders() });
-                
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-
                 const data = await res.json();
-                if (res.ok) {
-                    alert(data.message || "Mail yenidən göndərildi!");
-                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                alert("Server xətası!");
-            }
+                if (res.ok) { alert(data.message || "Mail yenidən göndərildi!"); if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId); } 
+                else { alert("Xəta: " + formatErrorDetail(data.detail)); }
+            } catch (err) { alert("Server xətası!"); }
         }
 
         async function sendSelectedReminders() {
             const ids = Array.from(selectedReminderIds);
-            if (ids.length === 0) {
-                alert("Zəhmət olmasa Daşıyıcılar panelindən azı bir daşıyıcı seçin.");
-                return;
-            }
+            if (ids.length === 0) { alert("Zəhmət olmasa Daşıyıcılar panelindən azı bir daşıyıcı seçin."); return; }
             try {
                 const res = await fetch(`/quotes/reminder-batch`, {
-                    method: "POST",
-                    headers: getAuthHeaders(),
+                    method: "POST", headers: getAuthHeaders(),
                     body: JSON.stringify({ quote_ids: ids })
                 });
-
                 if (res.status === 401 || res.status === 403) { logout(); return; }
-
                 const data = await res.json();
-                if (res.ok) {
-                    alert(data.message || "Reminderlər göndərildi!");
-                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
-                } else {
-                    alert("Xəta: " + formatErrorDetail(data.detail));
-                }
-            } catch (err) {
-                alert("Server xətası!");
-            }
+                if (res.ok) { alert(data.message || "Reminderlər göndərildi!"); if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId); } 
+                else { alert("Xəta: " + formatErrorDetail(data.detail)); }
+            } catch (err) { alert("Server xətası!"); }
         }
     </script>
 </body>
