@@ -813,7 +813,7 @@
                             <input class="form-check-input opt-check" type="checkbox" id="chk_loading_date" onchange="toggleOptField('loading_date')">
                             <label class="form-check-label fw-bold text-dark" for="chk_loading_date">Loading Date (Yükləmə tarixi)</label>
                         </div>
-                        <input type="date" class="form-control opt-input d-none mt-2" id="inp_loading_date">
+                        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_loading_date">
                     </div>
 
                     <div class="opt-row">
@@ -881,7 +881,7 @@
                             <input class="form-check-input opt-check" type="checkbox" id="chk_deliv_date" onchange="toggleOptField('deliv_date')">
                             <label class="form-check-label fw-bold text-dark" for="chk_deliv_date">Delivery Deadline</label>
                         </div>
-                        <input type="date" class="form-control opt-input d-none mt-2" id="inp_deliv_date">
+                        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_deliv_date">
                     </div>
 
                     <div class="opt-row">
@@ -1091,9 +1091,10 @@ Best regards,
                         <span class="badge bg-primary shadow-sm" id="detailStatusBadge">OPEN</span>
                     </div>
                     <div class="row text-muted small fw-medium g-2 mb-3">
-                        <div class="col-12 col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark" id="detailCargoType">—</strong></div>
-                        <div class="col-12 col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark" id="detailWeight">—</strong></div>
-                        <div class="col-12 col-sm-4"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark" id="detailDeadline">—</strong></div>
+                        <div class="col-12 col-sm-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark" id="detailCargoType">—</strong></div>
+                        <div class="col-12 col-sm-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark" id="detailWeight">—</strong></div>
+                        <div class="col-12 col-sm-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə tarixi: <strong class="text-dark" id="detailDeadline">—</strong></div>
+                        <div class="col-12 col-sm-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark" id="detailCreatedAt">—</strong></div>
                     </div>
                     <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" style="font-size: 12px;" data-bs-toggle="modal" data-bs-target="#requestExtraModal">
                         <i class="bi bi-info-circle me-1"></i> Daha ətraflı məlumat
@@ -1272,6 +1273,36 @@ Best regards,
                 return null;
             }
             return parseInt(String(currentUserId).replace(/[^0-9]/g, ''));
+        }
+
+        // --- TARİX FORMATLAMA FUNKSİYASI (YENİ ƏLAVƏ) ---
+        function formatDateTime(str) {
+            if (!str) return "Qeyd edilməyib";
+            
+            // ISO 8601 və ya oxşar formatdırsa (məsələn: 2026-08-24T14:30:00+00:00)
+            if (String(str).includes("T")) {
+                let parts = String(str).split("T");
+                let datePart = parts[0];
+                let timePart = parts[1].split("+")[0].split(".")[0]; // millisaniyələri atırıq
+                
+                // saniyələri silək (məsələn: 14:30:00 -> 14:30)
+                let timeParts = timePart.split(":");
+                if (timeParts.length >= 2) {
+                    timePart = timeParts[0] + ":" + timeParts[1];
+                }
+                
+                // Əgər istifadəçi sadəcə gün seçibsə (yəni saat 00:00 olaraq yadda saxlanıbsa)
+                if (timePart === "00:00") {
+                    return datePart;
+                }
+                return datePart + " " + timePart;
+            }
+            
+            // Əgər fərqli bir formatdırsa və içində lüzumsuz sıfırlar varsa təmizləyək
+            let s = String(str);
+            s = s.replace(/\s00:00:00/g, '');
+            s = s.replace(/\s00:00/g, '');
+            return s.trim();
         }
 
         function formatErrorDetail(errDetail) {
@@ -1935,7 +1966,7 @@ Best regards,
 
             if(document.getElementById("chk_loading_date")?.checked) {
                 let val = document.getElementById("inp_loading_date")?.value.trim();
-                if(val) requiredFieldsList.push(`Loading Date: ${val}`);
+                if(val) requiredFieldsList.push(`Loading Date: ${formatDateTime(val)}`);
             }
             if(document.getElementById("chk_truck_type")?.checked) {
                 let val = document.getElementById("inp_truck_type")?.value.trim();
@@ -1967,7 +1998,7 @@ Best regards,
             }
             if(document.getElementById("chk_deliv_date")?.checked) {
                 let val = document.getElementById("inp_deliv_date")?.value.trim();
-                if(val) requiredFieldsList.push(`Delivery Deadline: ${val}`);
+                if(val) requiredFieldsList.push(`Delivery Deadline: ${formatDateTime(val)}`);
             }
             if(document.getElementById("chk_info")?.checked) {
                 let textVal = document.getElementById("inp_info_text")?.value.trim() || "";
@@ -2115,7 +2146,8 @@ Best regards,
                 let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
                 let statusText = (req.status || 'Aktiv').toUpperCase();
 
-                let deadlineField = req.deadline ? `<div class="col-12 col-sm-4"><i class="bi bi-calendar-event me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${req.deadline}</strong></div>` : '';
+                let formattedDeadline = req.deadline ? formatDateTime(req.deadline) : '';
+                let deadlineField = req.deadline ? `<div class="col-12 col-sm-4"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə tarixi: <strong class="text-dark">${formattedDeadline}</strong></div>` : '';
 
                 html += `
                     <div class="request-card">
@@ -2536,7 +2568,9 @@ Best regards,
 
             const weight = req.weight_kg || req.weight;
             document.getElementById("detailWeight").textContent = weight ? `${weight} kq` : "Qeyd edilməyib";
-            document.getElementById("detailDeadline").textContent = req.deadline || "Qeyd edilməyib";
+            
+            document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline) : "Qeyd edilməyib";
+            document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at) : "Qeyd edilməyib";
 
             const statusBadge = document.getElementById("detailStatusBadge");
             const isOpen = (req.status || "open") === "open";
