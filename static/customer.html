@@ -18,7 +18,8 @@
     <script>
         (function() {
             var sessionUser = localStorage.getItem("user");
-            if (!sessionUser) {
+            var sessionToken = localStorage.getItem("token"); // YENİ: Token yoxlanışı
+            if (!sessionUser || !sessionToken) {
                 window.location.replace("/login");
             } else {
                 try {
@@ -1270,7 +1271,6 @@ Best regards,
                 <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
             </div>
 
-            <!-- DƏYİŞDİRİLMİŞ: YENİ DİZAYNLı FILTER DÜYMƏLƏRİ -->
             <div class="d-flex gap-2 mb-3 flex-nowrap overflow-auto filter-pills-container" style="padding-bottom: 5px;">
                 <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
                 <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif verənlər (<span id="tabRespondedCount">0</span>)</span>
@@ -1311,6 +1311,15 @@ Best regards,
         </div>
     </div>
 
+    <!-- FOOTER -->
+    <div class="text-center py-4 mt-4 border-top">
+        <p class="text-muted small mb-0">
+            &copy; 2026 Arachi Logistics. Bütün hüquqlar qorunur. <br>
+            <a href="/static/terms.html" class="text-decoration-none text-muted fw-semibold me-2">İstifadə Şərtləri</a> | 
+            <a href="/static/privacy.html" class="text-decoration-none text-muted fw-semibold ms-2">Məxfilik Siyasəti</a>
+        </p>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
@@ -1347,6 +1356,29 @@ Best regards,
             return parseInt(String(currentUserId).replace(/[^0-9]/g, ''));
         }
 
+        // --- YENİ TƏHLÜKƏSİZLİK: XSS QORUNMASI (ESCAPE HTML) ---
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // --- YENİ TƏHLÜKƏSİZLİK: JWT TOKEN İLƏ API ZƏNGLƏRİ ---
+        function getAuthHeaders(isFormData = false) {
+            const token = localStorage.getItem("token");
+            if (!token) {
+                window.location.replace("/login");
+                throw new Error("Sessiyanız bitmişdir.");
+            }
+            const headers = { "Authorization": `Bearer ${token}` };
+            if (!isFormData) headers["Content-Type"] = "application/json";
+            return headers;
+        }
+
         // --- TARİX FORMATLAMA FUNKSİYASI ---
         function formatDateTime(str, isUtc = false, useAmPm = false) {
             if (!str) return "—";
@@ -1361,7 +1393,6 @@ Best regards,
                 return String(h).padStart(2, '0') + ':' + mStr + ' ' + ampm;
             }
 
-            // 1. Əgər BAZADAN gələn vaxtdırsa (Yaradılıb)
             if (isUtc) {
                 if (!s.endsWith("Z") && !s.includes("+")) {
                     s += "Z"; 
@@ -1379,7 +1410,6 @@ Best regards,
                 }
             }
             
-            // 2. Əgər istifadəçinin özünün əllə seçdiyi vaxtdırsa (Yükləmə tarixi)
             if (s.includes("T")) {
                 let parts = s.split("T");
                 let datePart = parts[0];
@@ -1415,6 +1445,7 @@ Best regards,
 
         function logout() {
             localStorage.removeItem("user");
+            localStorage.removeItem("token");
             window.location.replace("/login");
         }
 
@@ -1485,7 +1516,7 @@ Best regards,
             const container = document.getElementById("recentQuotesContainer");
             try {
                 const customerId = getCustomerId();
-                const res = await fetch(`/customer/recent-quotes/${customerId}`);
+                const res = await fetch(`/customer/recent-quotes/${customerId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 
                 if (res.ok && data.quotes && data.quotes.length > 0) {
@@ -1496,19 +1527,22 @@ Best regards,
                         
                         let priceDisplay = "";
                         if (q.price !== null && q.price !== undefined) {
-                            priceDisplay = `<span class="text-success fw-bold">${q.price} ${q.currency}</span>`;
+                            priceDisplay = `<span class="text-success fw-bold">${escapeHTML(q.price)} ${escapeHTML(q.currency)}</span>`;
                         } else {
                             priceDisplay = `<span class="text-muted fw-semibold" style="font-size: 12.5px;">Qiymət qeyd edilməyib</span>`;
                         }
+                        
+                        let timeStr = formatDateTime(q.submitted_at, true, true);
+                        let timeHtml = timeStr !== "—" ? `<br><span class="text-muted fw-normal" style="font-size: 10px;">${timeStr}</span>` : "";
                         
                         html += `
                             <tr>
                                 <td class="py-3 px-3">
                                     <span class="fw-bold text-dark d-block">RFQ #${displayId}</span>
-                                    <span class="text-muted" style="font-size: 11.5px;">${q.origin} &rarr; ${q.destination}</span>
+                                    <span class="text-muted" style="font-size: 11.5px;">${escapeHTML(q.origin)} &rarr; ${escapeHTML(q.destination)}</span>
                                 </td>
-                                <td class="py-3 px-3 fw-medium text-dark">${q.carrier_name}</td>
-                                <td class="py-3 px-3">${priceDisplay}</td>
+                                <td class="py-3 px-3 fw-medium text-dark">${escapeHTML(q.carrier_name)}</td>
+                                <td class="py-3 px-3">${priceDisplay}${timeHtml}</td>
                                 <td class="py-3 px-3 text-end">
                                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openRfqDetail(${q.request_id})" style="font-size: 11px;">Bax</button>
                                 </td>
@@ -1553,7 +1587,7 @@ Best regards,
                     <div class="form-check mb-1">
                         <input class="form-check-input report-rfq-cb shadow-sm border-secondary" type="checkbox" value="${req.id}" id="rep_rfq_${req.id}" style="width: 1.1em; height: 1.1em;">
                         <label class="form-check-label text-dark" for="rep_rfq_${req.id}" style="font-size: 12px; cursor: pointer;">
-                            <strong>RFQ #${req.display_id}</strong> - ${req.origin} &rarr; ${req.destination}
+                            <strong>RFQ #${req.display_id}</strong> - ${escapeHTML(req.origin)} &rarr; ${escapeHTML(req.destination)}
                         </label>
                     </div>
                 `;
@@ -1592,7 +1626,7 @@ Best regards,
             try {
                 const res = await fetch("/reports/generate", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify(payload)
                 });
                 
@@ -1621,7 +1655,7 @@ Best regards,
             const customerId = getCustomerId();
             if (!customerId) return;
             try {
-                const res = await fetch(`/categories/customer/${customerId}`);
+                const res = await fetch(`/categories/customer/${customerId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 if (res.ok) {
                     globalCategoriesCache = data.categories || [];
@@ -1640,7 +1674,7 @@ Best regards,
             let options = `<option value="">-- Kateqoriya Seçin --</option>`;
             options += `<option value="remove">❌ Kateqoriyadan çıxar</option>`;
             for(let cat of globalCategoriesCache) {
-                options += `<option value="${cat.id}">📁 ${cat.name}</option>`;
+                options += `<option value="${cat.id}">📁 ${escapeHTML(cat.name)}</option>`;
             }
             bulkSelect.innerHTML = options;
         }
@@ -1654,7 +1688,7 @@ Best regards,
             let html = "";
             for(let cat of globalCategoriesCache) {
                 html += `<div class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-sm" style="font-size: 12.5px;">
-                    <span>${cat.name}</span>
+                    <span>${escapeHTML(cat.name)}</span>
                     <i class="bi bi-x-circle-fill text-danger fs-6" style="cursor:pointer;" onclick="deleteCategory(${cat.id})"></i>
                 </div>`;
             }
@@ -1667,7 +1701,7 @@ Best regards,
             if(!name) return;
             try {
                 const res = await fetch("/categories/create", {
-                    method: "POST", headers: {"Content-Type": "application/json"},
+                    method: "POST", headers: getAuthHeaders(),
                     body: JSON.stringify({customer_id: getCustomerId(), name: name})
                 });
                 if(res.ok) {
@@ -1687,7 +1721,7 @@ Best regards,
             if(!confirm("Bu kateqoriyanı silmək istədiyinizə əminsiniz?")) return;
             try {
                 const res = await fetch("/categories/delete", {
-                    method: "POST", headers: {"Content-Type": "application/json"},
+                    method: "POST", headers: getAuthHeaders(),
                     body: JSON.stringify({customer_id: getCustomerId(), category_id: id})
                 });
                 if(res.ok) {
@@ -1703,7 +1737,7 @@ Best regards,
             let catId = categoryId ? parseInt(categoryId) : null;
             try {
                 const res = await fetch("/carriers/set-category", {
-                    method: "POST", headers: {"Content-Type": "application/json"},
+                    method: "POST", headers: getAuthHeaders(),
                     body: JSON.stringify({customer_id: getCustomerId(), carrier_id: carrierId, category_id: catId})
                 });
                 if(res.ok) {
@@ -1727,7 +1761,7 @@ Best regards,
                     <div class="carrier-item-row mb-1 p-2" onclick="document.getElementById('cat_${cat.id}').click(); event.stopPropagation();">
                         <div class="form-check mb-0 w-100">
                             <input class="form-check-input cat-item-check me-2 shadow-sm border-secondary" type="checkbox" value="${cat.id}" id="cat_${cat.id}" onclick="event.stopPropagation();" style="cursor: pointer; width:1.15em; height:1.15em;">
-                            <label class="form-check-label fw-bold text-dark" for="cat_${cat.id}" style="cursor: pointer;">${cat.name}</label>
+                            <label class="form-check-label fw-bold text-dark" for="cat_${cat.id}" style="cursor: pointer;">${escapeHTML(cat.name)}</label>
                         </div>
                     </div>`;
             }
@@ -1783,7 +1817,7 @@ Best regards,
             try {
                 const res = await fetch("/carriers/bulk-set-category", {
                     method: "POST",
-                    headers: {"Content-Type": "application/json"},
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         customer_id: getCustomerId(),
                         carrier_ids: carrierIds,
@@ -1818,7 +1852,7 @@ Best regards,
             try {
                 const response = await fetch('/carriers/bulk-delete', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         customer_id: customerId,
                         carrier_ids: selectedIds
@@ -1915,7 +1949,7 @@ Best regards,
             try {
                 const customerId = getCustomerId();
                 if(!customerId) return;
-                const res = await fetch(`/carriers/customer/${customerId}`);
+                const res = await fetch(`/carriers/customer/${customerId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 const box = document.getElementById("carrierCheckboxList");
                 
@@ -1937,7 +1971,7 @@ Best regards,
                                 <div class="form-check mb-0 w-100">
                                     <input class="form-check-input carrier-item-check me-2 shadow-sm border-secondary" type="checkbox" value="${carrierId}" id="carrier_${carrierId}" onclick="event.stopPropagation();" style="cursor: pointer; width:1.15em; height:1.15em;">
                                     <label class="form-check-label fw-bold text-dark text-break" for="carrier_${carrierId}" style="cursor: pointer;">
-                                        ${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'} <span class="text-muted fw-normal small ms-1">(${c.email || ''})</span>
+                                        ${escapeHTML(c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur')} <span class="text-muted fw-normal small ms-1">(${escapeHTML(c.email || '')})</span>
                                     </label>
                                 </div>
                             </div>
@@ -1957,7 +1991,7 @@ Best regards,
             try {
                 const customerId = getCustomerId();
                 if(!customerId) return;
-                const res = await fetch(`/carriers/customer/${customerId}`);
+                const res = await fetch(`/carriers/customer/${customerId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 
                 let carriers = [];
@@ -1995,7 +2029,7 @@ Best regards,
                 let catOptions = `<option value="">-- Kateqoriyasız --</option>`;
                 for(let cat of globalCategoriesCache) {
                     let selected = (c.category_id == cat.id) ? "selected" : "";
-                    catOptions += `<option value="${cat.id}" ${selected}>${cat.name}</option>`;
+                    catOptions += `<option value="${cat.id}" ${selected}>${escapeHTML(cat.name)}</option>`;
                 }
 
                 html += `
@@ -2003,8 +2037,8 @@ Best regards,
                         <div class="d-flex align-items-start gap-2 text-break w-100">
                             <input type="checkbox" class="form-check-input manage-carrier-cb mt-1 border-secondary shadow-sm" style="width: 1.15em; height: 1.15em; cursor: pointer; flex-shrink: 0;" value="${carrierId}" onchange="updateBulkDeleteBtn()">
                             <div>
-                                <strong class="text-dark d-block mb-1" style="line-height: 1.1;">${c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur'}</strong> 
-                                <span class="text-muted small">(${c.email || 'Email yoxdur'})</span>
+                                <strong class="text-dark d-block mb-1" style="line-height: 1.1;">${escapeHTML(c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur')}</strong> 
+                                <span class="text-muted small">(${escapeHTML(c.email || 'Email yoxdur')})</span>
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-2 w-100 justify-content-sm-end mt-2 mt-sm-0">
@@ -2039,7 +2073,7 @@ Best regards,
                 const customerId = getCustomerId();
                 const res = await fetch(`/carriers/delete`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ customer_id: customerId, carrier_id: carrierId })
                 });
 
@@ -2074,6 +2108,7 @@ Best regards,
             try {
                 const res = await fetch("/carriers/upload-excel", {
                     method: "POST",
+                    headers: getAuthHeaders(true),
                     body: formData
                 });
                 const data = await res.json();
@@ -2107,7 +2142,7 @@ Best regards,
             try {
                 const res = await fetch("/carriers/manual", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ 
                         customer_id: customerId, 
                         name: name, 
@@ -2146,7 +2181,7 @@ Best regards,
             try {
                 const res = await fetch("/carriers/upload-text", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ 
                         customer_id: customerId, 
                         raw_text: text, 
@@ -2174,7 +2209,7 @@ Best regards,
             try {
                 const customerId = getCustomerId();
                 if(!customerId) return;
-                const res = await fetch(`/customer/stats/${customerId}`);
+                const res = await fetch(`/customer/stats/${customerId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 if (res.ok) {
                     document.getElementById("statActiveRfqs").innerText = data.active_rfqs || 0;
@@ -2230,6 +2265,7 @@ Best regards,
                 try {
                     const uploadRes = await fetch("/requests/upload-attachment", {
                         method: "POST",
+                        headers: getAuthHeaders(true),
                         body: fileData
                     });
                     const uploadResult = await uploadRes.json();
@@ -2351,7 +2387,7 @@ Best regards,
             try {
                 const res = await fetch("/requests/create", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
@@ -2384,7 +2420,7 @@ Best regards,
             try {
                 const customerId = getCustomerId();
                 if(!customerId) return;
-                const res = await fetch(`/requests/customer/${customerId}`);
+                const res = await fetch(`/requests/customer/${customerId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 
                 let requestsList = [];
@@ -2402,7 +2438,7 @@ Best regards,
 
                     globalRequestsCache = requestsList;
                     filterRequests(); 
-                    loadRecentQuotes(); // YENİ: Sorğular yükləndikdən sonra son təklifləri çəkirik
+                    loadRecentQuotes(); 
                 } else {
                     container.innerHTML = `<div class="alert alert-light border text-center p-4 rounded-4"><i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i><span class="text-muted fw-medium small">Hələ heç bir sorğu yaratmamısınız.</span></div>`;
                 }
@@ -2422,7 +2458,7 @@ Best regards,
             for (let req of requestsList) {
                 let attachmentBtn = "";
                 if (req.attachment_url) {
-                    attachmentBtn = `<a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-light mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 11.5px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
+                    attachmentBtn = `<a href="${escapeHTML(req.attachment_url)}" target="_blank" class="btn btn-sm btn-light mt-2 mt-sm-0 fw-semibold border rounded-pill px-3" style="font-size: 11.5px;"><i class="bi bi-paperclip text-primary"></i> Sənədə Bax</a>`;
                 }
 
                 let qCount = req.quotes_count !== undefined && req.quotes_count !== null ? req.quotes_count : 0;
@@ -2439,9 +2475,9 @@ Best regards,
                         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
                             <h6 class="fw-bold text-dark mb-0 d-flex align-items-center fs-6 flex-wrap gap-1">
                                 <span class="badge bg-light text-secondary border shadow-sm">RFQ #${req.display_id || req.id}</span> 
-                                <span class="text-break">${req.origin || req.loading_location || ''}</span> 
+                                <span class="text-break">${escapeHTML(req.origin || req.loading_location || '')}</span> 
                                 <i class="bi bi-arrow-right-short mx-1 text-primary fs-5"></i> 
-                                <span class="text-break">${req.destination || req.delivery_location || ''}</span>
+                                <span class="text-break">${escapeHTML(req.destination || req.delivery_location || '')}</span>
                             </h6>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="badge ${badgeClass} shadow-sm">${qCount} təklif</span>
@@ -2450,8 +2486,8 @@ Best regards,
                         </div>
                         <div class="request-meta-box mb-3">
                             <div class="row text-muted small fw-medium g-2">
-                                <div class="col-12 col-sm-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type || req.cargo || '—'}</strong></div>
-                                <div class="col-12 col-sm-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg || req.weight || 0} kq</strong></div>
+                                <div class="col-12 col-sm-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${escapeHTML(req.cargo_type || req.cargo || '—')}</strong></div>
+                                <div class="col-12 col-sm-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${escapeHTML(req.weight_kg || req.weight || 0)} kq</strong></div>
                                 <div class="col-12 col-sm-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${formattedDeadline}</strong></div>
                                 <div class="col-12 col-sm-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
                             </div>
@@ -2515,16 +2551,16 @@ Best regards,
 
                         if (v !== null && v !== undefined && v !== "") {
                             if (k === 'carrier_attachment_url') {
-                                extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${v}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
+                                extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${escapeHTML(v)}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
                             } else {
-                                extraStr += `<div><strong class="text-dark">${k}:</strong> ${v}</div>`;
+                                extraStr += `<div><strong class="text-dark">${escapeHTML(k)}:</strong> ${escapeHTML(v)}</div>`;
                             }
                         }
                     }
                 }
 
                 let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") 
-                    ? `${q.transit_time_days} gün` 
+                    ? `${escapeHTML(q.transit_time_days)} gün` 
                     : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
 
                 // Yenilənmiş (Revised) badge
@@ -2532,12 +2568,12 @@ Best regards,
                 let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">Yenilənib (v${q.quote_history.length + 1})</span>` : "";
 
                 let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") 
-                    ? `${q.price} <span class="text-muted small">${q.currency || 'AZN'}</span>${revisedBadge}` 
+                    ? `${escapeHTML(q.price)} <span class="text-muted small">${escapeHTML(q.currency || 'AZN')}</span>${revisedBadge}` 
                     : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
 
                 html += `
                     <tr class="${q.is_winner ? 'table-success' : ''}">
-                        <td class="px-3 fw-bold text-dark py-2.5" style="min-width: 130px;">${q.carrier_company || 'Daşıyıcı'}</td>
+                        <td class="px-3 fw-bold text-dark py-2.5" style="min-width: 130px;">${escapeHTML(q.carrier_company || 'Daşıyıcı')}</td>
                         <td class="px-3 text-success fw-bold py-2.5" style="min-width: 100px;">${priceDisplay}</td>
                         <td class="px-3 fw-medium text-dark py-2.5" style="min-width: 90px;">${transitDisplay}</td>
                         <td class="px-3 py-2.5" style="min-width: 160px;">
@@ -2564,7 +2600,7 @@ Best regards,
             container.innerHTML = `<div class="mt-2 p-2 text-center w-100"><span class="spinner-border spinner-border-sm text-primary me-2"></span> <span class="text-muted fw-medium small">Təkliflər yüklənir...</span></div>`;
 
             try {
-                const res = await fetch(`/quotes/request/${requestId}`);
+                const res = await fetch(`/quotes/request/${requestId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
 
                 let quotesList = [];
@@ -2618,8 +2654,8 @@ Best regards,
                 `;
                 
                 q.quote_history.forEach((hist, index) => {
-                    let hPrice = hist.price !== null ? `${hist.price} ${hist.currency || 'AZN'}` : "Yoxdur";
-                    let hTransit = hist.transit_time_days ? `${hist.transit_time_days} gün` : "Yoxdur";
+                    let hPrice = hist.price !== null ? `${escapeHTML(hist.price)} ${escapeHTML(hist.currency || 'AZN')}` : "Yoxdur";
+                    let hTransit = hist.transit_time_days ? `${escapeHTML(hist.transit_time_days)} gün` : "Yoxdur";
                     
                     historyHtml += `
                         <div class="p-2 border rounded small d-flex justify-content-between flex-wrap gap-1 history-item" 
@@ -2632,8 +2668,8 @@ Best regards,
                     `;
                 });
                 
-                let currPrice = q.price !== null ? `${q.price} ${q.currency || 'AZN'}` : "Yoxdur";
-                let currTransit = q.transit_time_days ? `${q.transit_time_days} gün` : "Yoxdur";
+                let currPrice = q.price !== null ? `${escapeHTML(q.price)} ${escapeHTML(q.currency || 'AZN')}` : "Yoxdur";
+                let currTransit = q.transit_time_days ? `${escapeHTML(q.transit_time_days)} gün` : "Yoxdur";
                 let lastIndex = q.quote_history.length;
                 
                 historyHtml += `
@@ -2653,7 +2689,7 @@ Best regards,
             modalContent.innerHTML = `
                 <div class="mb-3 text-center">
                     <span class="badge bg-light text-primary mb-1 px-2.5 py-1 border rounded-pill">Daşıyıcı Şirkət</span>
-                    <h4 class="fw-bold text-dark text-break" style="font-size: 1.2rem;">${q.carrier_company || 'Daşıyıcı'}</h4>
+                    <h4 class="fw-bold text-dark text-break" style="font-size: 1.2rem;">${escapeHTML(q.carrier_company || 'Daşıyıcı')}</h4>
                 </div>
                 
                 <div id="quoteVersionDetails"></div>
@@ -2702,23 +2738,23 @@ Best regards,
                     if (k === 'carrier_attachment_url') {
                         extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <strong class="text-dark small">Qoşulmuş Fayl:</strong>
-                            <a href="${v}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Yüklə</a>
+                            <a href="${escapeHTML(v)}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3" style="font-size: 12px;"><i class="bi bi-cloud-download me-1"></i> Yüklə</a>
                         </div>`;
                     } else {
                         extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm">
-                            <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 10.5px;">${k}</strong>
-                            <p class="mb-0 text-dark fw-medium small text-break" style="white-space: pre-wrap;">${v}</p>
+                            <strong class="text-primary text-uppercase small tracking-wider mb-1 d-block" style="font-size: 10.5px;">${escapeHTML(k)}</strong>
+                            <p class="mb-0 text-dark fw-medium small text-break" style="white-space: pre-wrap;">${escapeHTML(v)}</p>
                         </div>`;
                     }
                 }
             }
 
             let modalTransitDisplay = (targetData.transit_time_days !== null && targetData.transit_time_days !== undefined && targetData.transit_time_days !== "null")
-                ? `${targetData.transit_time_days} <span class="fs-6 text-muted">gün</span>`
+                ? `${escapeHTML(targetData.transit_time_days)} <span class="fs-6 text-muted">gün</span>`
                 : `<span class="fs-6 text-muted fst-italic">Qeyd olunmayıb</span>`;
 
             let modalPriceDisplay = (targetData.price !== null && targetData.price !== undefined && targetData.price !== "null")
-                ? `${targetData.price} <span class="fs-6 text-muted">${targetData.currency || 'AZN'}</span>`
+                ? `${escapeHTML(targetData.price)} <span class="fs-6 text-muted">${escapeHTML(targetData.currency || 'AZN')}</span>`
                 : `<span class="fs-6 text-muted fst-italic">Yoxdur</span>`;
 
             let detailsDiv = document.getElementById("quoteVersionDetails");
@@ -2757,7 +2793,7 @@ Best regards,
             try {
                 const res = await fetch("/quotes/select-winner", {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ request_id: requestId, quote_id: quoteId })
                 });
                 const data = await res.json();
@@ -2857,12 +2893,12 @@ Best regards,
         function renderDetailHeader(req) {
             document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.display_id || req.id}`;
             document.getElementById("detailIdBadge").textContent = `RFQ #${req.display_id || req.id}`;
-            document.getElementById("detailOrigin").textContent = req.origin || req.loading_location || "—";
-            document.getElementById("detailDestination").textContent = req.destination || req.delivery_location || "—";
-            document.getElementById("detailCargoType").textContent = req.cargo_type || req.cargo || "—";
+            document.getElementById("detailOrigin").textContent = escapeHTML(req.origin || req.loading_location || "—");
+            document.getElementById("detailDestination").textContent = escapeHTML(req.destination || req.delivery_location || "—");
+            document.getElementById("detailCargoType").textContent = escapeHTML(req.cargo_type || req.cargo || "—");
 
             const weight = req.weight_kg || req.weight;
-            document.getElementById("detailWeight").textContent = weight ? `${weight} kq` : "Qeyd edilməyib";
+            document.getElementById("detailWeight").textContent = weight ? `${escapeHTML(weight)} kq` : "Qeyd edilməyib";
             
             document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false, true) : "—";
             document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at, true, false) : "—";
@@ -2872,9 +2908,9 @@ Best regards,
             statusBadge.textContent = isOpen ? "OPEN" : "CLOSED";
             statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
 
-            document.getElementById("detailSenderCompany").textContent = (activeUser && (activeUser.company_name || activeUser.name)) || "—";
-            document.getElementById("detailSenderEmail").textContent = (activeUser && activeUser.email) || "—";
-            document.getElementById("detailReplyTo").textContent = (activeUser && activeUser.email) || "—";
+            document.getElementById("detailSenderCompany").textContent = escapeHTML((activeUser && (activeUser.company_name || activeUser.name)) || "—");
+            document.getElementById("detailSenderEmail").textContent = escapeHTML((activeUser && activeUser.email) || "—");
+            document.getElementById("detailReplyTo").textContent = escapeHTML((activeUser && activeUser.email) || "—");
             document.getElementById("detailEmailTemplate").textContent = req.email_template_type === 'custom' ? "Fərdi şablon" : "Standart şablon";
 
             renderRequestExtraModal(req);
@@ -2898,7 +2934,7 @@ Best regards,
                 for (let [label, value] of rows) {
                     if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib") continue;
                     hasAny = true;
-                    html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">${label}</strong><span class="text-dark small">${value}</span></div>`;
+                    html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">${escapeHTML(label)}</strong><span class="text-dark small">${escapeHTML(value)}</span></div>`;
                 }
 
                 if (Array.isArray(req.required_fields) && req.required_fields.length > 0) {
@@ -2911,11 +2947,11 @@ Best regards,
                             let key = parts.shift().trim();
                             let val = parts.join(":").trim();
                             return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0">
-                                      <span class="text-muted d-block" style="font-size:10px; font-weight:700; text-transform:uppercase;">${key}</span>
-                                      <span class="text-dark fw-medium">${val}</span>
+                                      <span class="text-muted d-block" style="font-size:10px; font-weight:700; text-transform:uppercase;">${escapeHTML(key)}</span>
+                                      <span class="text-dark fw-medium">${escapeHTML(val)}</span>
                                     </div>`;
                         }
-                        return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0"><i class="bi bi-check2 text-success me-1"></i> <span class="text-dark fw-medium">${fStr}</span></div>`;
+                        return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0"><i class="bi bi-check2 text-success me-1"></i> <span class="text-dark fw-medium">${escapeHTML(fStr)}</span></div>`;
                     }).join("");
                     
                     html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1">
@@ -2928,7 +2964,7 @@ Best regards,
 
                 if (req.attachment_url) {
                     hasAny = true;
-                    html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${req.attachment_url}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
+                    html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${escapeHTML(req.attachment_url)}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
                 }
 
                 if (!hasAny) {
@@ -2950,7 +2986,7 @@ Best regards,
             list.innerHTML = `<div class="text-center p-3"><span class="spinner-border spinner-border-sm text-primary me-2"></span><span class="text-muted small">Daşıyıcılar yüklənir...</span></div>`;
 
             try {
-                const res = await fetch(`/requests/carriers-status/${requestId}`);
+                const res = await fetch(`/requests/carriers-status/${requestId}`, { headers: getAuthHeaders() });
                 const data = await res.json();
                 detailCarriersCache = (res.ok && Array.isArray(data.carriers)) ? data.carriers : [];
 
@@ -3065,8 +3101,8 @@ Best regards,
                         <div class="flex-grow-1" style="min-width:0;">
                             <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
                                 <div style="min-width:0;">
-                                    <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 170px;">${c.company_name || 'Daşıyıcı'}</div>
-                                    <div class="text-muted text-truncate" style="font-size: 11.5px; max-width: 170px;">${c.email || ''}</div>
+                                    <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 170px;">${escapeHTML(c.company_name || 'Daşıyıcı')}</div>
+                                    <div class="text-muted text-truncate" style="font-size: 11.5px; max-width: 170px;">${escapeHTML(c.email || '')}</div>
                                 </div>
                                 ${deliveryBadge}
                             </div>
@@ -3110,7 +3146,7 @@ Best regards,
 
         async function sendSingleReminder(quoteId) {
             try {
-                const res = await fetch(`/quotes/reminder/${quoteId}`, { method: "POST" });
+                const res = await fetch(`/quotes/reminder/${quoteId}`, { method: "POST", headers: getAuthHeaders() });
                 const data = await res.json();
                 if (res.ok) {
                     alert(data.message || "Reminder göndərildi!");
@@ -3125,7 +3161,7 @@ Best regards,
 
         async function resendCarrierEmail(quoteId) {
             try {
-                const res = await fetch(`/quotes/resend/${quoteId}`, { method: "POST" });
+                const res = await fetch(`/quotes/resend/${quoteId}`, { method: "POST", headers: getAuthHeaders() });
                 const data = await res.json();
                 if (res.ok) {
                     alert(data.message || "Mail yenidən göndərildi!");
@@ -3147,7 +3183,7 @@ Best regards,
             try {
                 const res = await fetch(`/quotes/reminder-batch`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({ quote_ids: ids })
                 });
                 const data = await res.json();
