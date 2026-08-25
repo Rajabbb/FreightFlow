@@ -1276,14 +1276,21 @@ Best regards,
         }
 
         // --- TARİX FORMATLAMA FUNKSİYASI ---
-        function formatDateTime(str, isUtc = false) {
+        function formatDateTime(str, isUtc = false, useAmPm = false) {
             if (!str) return "Qeyd edilməyib";
             
             let s = String(str);
 
-            // 1. Əgər BAZADAN gələn vaxtdırsa (Yaradılıb), onu məcburi şəkildə yerli vaxta çeviririk
+            function toAmPm(hStr, mStr) {
+                let h = parseInt(hStr, 10);
+                let ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12;
+                h = h ? h : 12;
+                return String(h).padStart(2, '0') + ':' + mStr + ' ' + ampm;
+            }
+
+            // 1. Əgər BAZADAN gələn vaxtdırsa (Yaradılıb)
             if (isUtc) {
-                // Əgər sonunda saat qurşağı (Z) yoxdursa, biz əlavə edirik ki, JS UTC olduğunu anlasın
                 if (!s.endsWith("Z") && !s.includes("+")) {
                     s += "Z"; 
                 }
@@ -1294,11 +1301,13 @@ Best regards,
                     const day = String(d.getDate()).padStart(2, '0');
                     const hours = String(d.getHours()).padStart(2, '0');
                     const minutes = String(d.getMinutes()).padStart(2, '0');
-                    return `${year}-${month}-${day} ${hours}:${minutes}`;
+                    
+                    const timeString = useAmPm ? toAmPm(hours, minutes) : `${hours}:${minutes}`;
+                    return `${year}-${month}-${day} ${timeString}`;
                 }
             }
             
-            // 2. Əgər istifadəçinin özünün əllə seçdiyi vaxtdırsa (Yükləmə tarixi), heç nəyə toxunmuruq
+            // 2. Əgər istifadəçinin özünün əllə seçdiyi vaxtdırsa (Yükləmə tarixi)
             if (s.includes("T")) {
                 let parts = s.split("T");
                 let datePart = parts[0];
@@ -1306,12 +1315,14 @@ Best regards,
                 
                 let timeParts = timePart.split(":");
                 if (timeParts.length >= 2) {
-                    timePart = timeParts[0] + ":" + timeParts[1];
+                    let h = timeParts[0];
+                    let m = timeParts[1];
+                    if (h === "00" && m === "00") {
+                        return datePart;
+                    }
+                    timePart = useAmPm ? toAmPm(h, m) : `${h}:${m}`;
                 }
                 
-                if (timePart === "00:00") {
-                    return datePart;
-                }
                 return datePart + " " + timePart;
             }
             
@@ -1979,7 +1990,7 @@ Best regards,
 
             if(document.getElementById("chk_loading_date")?.checked) {
                 let val = document.getElementById("inp_loading_date")?.value.trim();
-                if(val) requiredFieldsList.push(`Loading Date: ${formatDateTime(val, false)}`);
+                if(val) requiredFieldsList.push(`Loading Date: ${formatDateTime(val, false, true)}`);
             }
             if(document.getElementById("chk_truck_type")?.checked) {
                 let val = document.getElementById("inp_truck_type")?.value.trim();
@@ -2011,7 +2022,7 @@ Best regards,
             }
             if(document.getElementById("chk_deliv_date")?.checked) {
                 let val = document.getElementById("inp_deliv_date")?.value.trim();
-                if(val) requiredFieldsList.push(`Delivery Deadline: ${formatDateTime(val, false)}`);
+                if(val) requiredFieldsList.push(`Delivery Deadline: ${formatDateTime(val, false, true)}`);
             }
             if(document.getElementById("chk_info")?.checked) {
                 let textVal = document.getElementById("inp_info_text")?.value.trim() || "";
@@ -2159,7 +2170,7 @@ Best regards,
                 let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
                 let statusText = (req.status || 'Aktiv').toUpperCase();
 
-                let formattedDeadline = req.deadline ? formatDateTime(req.deadline, false) : '';
+                let formattedDeadline = req.deadline ? formatDateTime(req.deadline, false, true) : '';
                 let deadlineField = req.deadline ? `<div class="col-12 col-sm-4"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə tarixi: <strong class="text-dark">${formattedDeadline}</strong></div>` : '';
 
                 html += `
@@ -2582,8 +2593,8 @@ Best regards,
             const weight = req.weight_kg || req.weight;
             document.getElementById("detailWeight").textContent = weight ? `${weight} kq` : "Qeyd edilməyib";
             
-            document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false) : "Qeyd edilməyib";
-            document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at, true) : "Qeyd edilməyib";
+            document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false, true) : "Qeyd edilməyib";
+            document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at, true, false) : "Qeyd edilməyib";
 
             const statusBadge = document.getElementById("detailStatusBadge");
             const isOpen = (req.status || "open") === "open";
