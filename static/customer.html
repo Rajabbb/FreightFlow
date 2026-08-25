@@ -1449,6 +1449,8 @@ Best regards,
                             priceDisplay = `<span class="badge bg-warning text-dark mb-1">Təklif var</span><br><span class="text-muted fw-normal" style="font-size: 10px;">Qiymət qeyd edilməyib</span>`;
                         }
                         
+                        let timeStr = formatDateTime(q.submitted_at, true, true);
+                        
                         html += `
                             <tr>
                                 <td class="py-3 px-3">
@@ -1456,7 +1458,7 @@ Best regards,
                                     <span class="text-muted" style="font-size: 11.5px;">${q.origin} &rarr; ${q.destination}</span>
                                 </td>
                                 <td class="py-3 px-3 fw-medium text-dark">${q.carrier_name}</td>
-                                <td class="py-3 px-3">${priceDisplay}</td>
+                                <td class="py-3 px-3">${priceDisplay}<br><span class="text-muted fw-normal" style="font-size: 10px;">${timeStr}</span></td>
                                 <td class="py-3 px-3 text-end">
                                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openRfqDetail(${q.request_id})" style="font-size: 11px;">Bax</button>
                                 </td>
