@@ -1446,10 +1446,11 @@ Best regards,
                         if (q.price !== null && q.price !== undefined) {
                             priceDisplay = `<span class="text-success fw-bold">${q.price} ${q.currency}</span>`;
                         } else {
-                            priceDisplay = `<span class="badge bg-warning text-dark mb-1">Təklif var</span><br><span class="text-muted fw-normal" style="font-size: 10px;">Qiymət qeyd edilməyib</span>`;
+                            priceDisplay = `<span class="text-muted fw-semibold" style="font-size: 12.5px;">Qiymət qeyd edilməyib</span>`;
                         }
                         
                         let timeStr = formatDateTime(q.submitted_at, true, true);
+                        let timeHtml = timeStr !== "Qeyd edilməyib" ? `<br><span class="text-muted fw-normal" style="font-size: 10px;">${timeStr}</span>` : "";
                         
                         html += `
                             <tr>
@@ -1458,7 +1459,7 @@ Best regards,
                                     <span class="text-muted" style="font-size: 11.5px;">${q.origin} &rarr; ${q.destination}</span>
                                 </td>
                                 <td class="py-3 px-3 fw-medium text-dark">${q.carrier_name}</td>
-                                <td class="py-3 px-3">${priceDisplay}<br><span class="text-muted fw-normal" style="font-size: 10px;">${timeStr}</span></td>
+                                <td class="py-3 px-3">${priceDisplay}${timeHtml}</td>
                                 <td class="py-3 px-3 text-end">
                                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openRfqDetail(${q.request_id})" style="font-size: 11px;">Bax</button>
                                 </td>
