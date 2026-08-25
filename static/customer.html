@@ -1271,6 +1271,7 @@ Best regards,
                 <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
             </div>
 
+            <!-- DƏYİŞDİRİLMİŞ: YENİ DİZAYNLı FILTER DÜYMƏLƏRİ -->
             <div class="d-flex gap-2 mb-3 flex-nowrap overflow-auto filter-pills-container" style="padding-bottom: 5px;">
                 <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
                 <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif verənlər (<span id="tabRespondedCount">0</span>)</span>
@@ -2486,10 +2487,10 @@ Best regards,
                         </div>
                         <div class="request-meta-box mb-3">
                             <div class="row text-muted small fw-medium g-2">
-                                <div class="col-12 col-sm-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${escapeHTML(req.cargo_type || req.cargo || '—')}</strong></div>
-                                <div class="col-12 col-sm-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${escapeHTML(req.weight_kg || req.weight || 0)} kq</strong></div>
-                                <div class="col-12 col-sm-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${formattedDeadline}</strong></div>
-                                <div class="col-12 col-sm-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
+                                <div class="col-6 col-lg-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${escapeHTML(req.cargo_type || req.cargo || '—')}</strong></div>
+                                <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${escapeHTML(req.weight_kg || req.weight || 0)} kq</strong></div>
+                                <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə tarixi: <strong class="text-dark">${formattedDeadline}</strong></div>
+                                <div class="col-6 col-lg-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
                             </div>
                         </div>
                         <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
