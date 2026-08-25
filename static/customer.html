@@ -1298,7 +1298,7 @@ Best regards,
         <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable mx-2 mx-sm-auto">
             <div class="modal-content">
                 <div class="modal-header d-flex justify-content-between align-items-center">
-                    <h5 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center" style="font-size: 1.05rem;">
+                    <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.05rem;">
                         <i class="bi bi-info-circle-fill text-primary me-2"></i> RFQ-nun Əlavə Detalları
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -1442,8 +1442,12 @@ Best regards,
                         let reqObj = globalRequestsCache.find(r => String(r.id) === String(q.request_id));
                         let displayId = reqObj ? reqObj.display_id : q.request_id;
                         
-                        let priceDisplay = q.price !== null ? `${q.price} ${q.currency}` : `<span class="badge bg-warning text-dark">Təklif var</span>`;
-                        let timeStr = formatDateTime(q.submitted_at, true, true);
+                        let priceDisplay = "";
+                        if (q.price !== null && q.price !== undefined) {
+                            priceDisplay = `<span class="text-success fw-bold">${q.price} ${q.currency}</span>`;
+                        } else {
+                            priceDisplay = `<span class="badge bg-warning text-dark mb-1">Təklif var</span><br><span class="text-muted fw-normal" style="font-size: 10px;">Qiymət qeyd edilməyib</span>`;
+                        }
                         
                         html += `
                             <tr>
@@ -1452,7 +1456,7 @@ Best regards,
                                     <span class="text-muted" style="font-size: 11.5px;">${q.origin} &rarr; ${q.destination}</span>
                                 </td>
                                 <td class="py-3 px-3 fw-medium text-dark">${q.carrier_name}</td>
-                                <td class="py-3 px-3 text-success fw-bold">${priceDisplay}<br><span class="text-muted fw-normal" style="font-size: 10px;">${timeStr}</span></td>
+                                <td class="py-3 px-3">${priceDisplay}</td>
                                 <td class="py-3 px-3 text-end">
                                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openRfqDetail(${q.request_id})" style="font-size: 11px;">Bax</button>
                                 </td>
@@ -1461,7 +1465,7 @@ Best regards,
                     });
                     container.innerHTML = html;
                 } else {
-                    container.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4 small">Son günlərdə yeni təklif gəlməyib.</td></tr>`;
+                    container.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-4 small">Son 24 saatda yeni təklif gəlməyib.</td></tr>`;
                 }
             } catch (err) {
                 container.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4 small">Xəta baş verdi.</td></tr>`;
