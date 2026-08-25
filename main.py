@@ -530,6 +530,11 @@ def get_recent_quotes(customer_id: int):
 @app.post("/reports/generate")
 def generate_excel_report(payload: ReportGenerateRequest):
     try:
+        all_reqs_res = supabase.table("shipment_requests").select("id").eq("customer_id", payload.customer_id).order("id", desc=True).execute()
+        all_reqs = all_reqs_res.data or []
+        total_reqs = len(all_reqs)
+        display_id_map = {req["id"]: (total_reqs - i) for i, req in enumerate(all_reqs)}
+        
         query = supabase.table("shipment_requests").select("*, quotes(*, carriers(company_name))").eq("customer_id", payload.customer_id)
         
         if payload.report_type == "selected" and payload.rfq_ids:
@@ -568,16 +573,30 @@ def generate_excel_report(payload: ReportGenerateRequest):
                 if winner_quote.get("price") is not None:
                     winner_price = f"{winner_quote.get('price')} {winner_quote.get('currency', 'AZN')}"
             
+            disp_id = display_id_map.get(r.get("id"), r.get("id"))
+            
+            raw_deadline = str(r.get("deadline") or "-")
+            if "T" in raw_deadline:
+                raw_deadline = raw_deadline.split("+")[0].replace("T", " ")
+                if raw_deadline.endswith(":00"):
+                    raw_deadline = raw_deadline[:-3]
+                    
+            raw_created = str(r.get("created_at") or "-")
+            if "T" in raw_created:
+                raw_created = raw_created.split("+")[0].replace("T", " ")
+                if raw_created.endswith(":00"):
+                    raw_created = raw_created[:-3]
+
             writer.writerow([
-                r.get("id"),
+                f"RFQ #{disp_id}",
                 route,
                 r.get("cargo_type", ""),
                 r.get("weight_kg", 0),
-                r.get("deadline", "-"),
-                r.get("status", "open"),
+                raw_deadline,
+                r.get("status", "open").upper(),
                 winner_name,
                 winner_price,
-                r.get("created_at", "")[:10]
+                raw_created
             ])
             
         output.seek(0)
