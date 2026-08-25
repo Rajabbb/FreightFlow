@@ -8,7 +8,7 @@ import csv
 import asyncio
 import imaplib
 import email as email_lib
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.header import decode_header
 import pandas as pd
 from typing import Optional, Dict, Any, List, Tuple
@@ -527,6 +527,40 @@ def get_recent_quotes(customer_id: int):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# ----------------- YENİ: EXCEL TARİX FORMATLAMA FUNKSİYASI -----------------
+def format_excel_date(date_str: Any, is_utc: bool = False, use_ampm: bool = False) -> str:
+    if not date_str or str(date_str).strip() in ("-", "None", ""):
+        return "-"
+    s = str(date_str).strip()
+    if "AM" in s or "PM" in s:
+        return s
+    try:
+        if "T" in s:
+            clean_str = s.split("+")[0].split("Z")[0].split(".")[0]
+            if len(clean_str) == 16:
+                clean_str += ":00"
+            dt = datetime.strptime(clean_str, "%Y-%m-%dT%H:%M:%S")
+        else:
+            clean_str = s.split("+")[0].split("Z")[0].split(".")[0]
+            if len(clean_str) == 10:
+                clean_str += " 00:00:00"
+            elif len(clean_str) == 16:
+                clean_str += ":00"
+            dt = datetime.strptime(clean_str, "%Y-%m-%d %H:%M:%S")
+        
+        if is_utc:
+            dt = dt + timedelta(hours=4)
+        
+        if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and not is_utc:
+            return dt.strftime("%Y-%m-%d")
+        
+        if use_ampm:
+            return dt.strftime("%Y-%m-%d %I:%M %p")
+        else:
+            return dt.strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return s.split(".")[0].replace("T", " ")
+
 @app.post("/reports/generate")
 def generate_excel_report(payload: ReportGenerateRequest):
     try:
@@ -575,17 +609,9 @@ def generate_excel_report(payload: ReportGenerateRequest):
             
             disp_id = display_id_map.get(r.get("id"), r.get("id"))
             
-            raw_deadline = str(r.get("deadline") or "-")
-            if "T" in raw_deadline:
-                raw_deadline = raw_deadline.split("+")[0].replace("T", " ")
-                if raw_deadline.endswith(":00"):
-                    raw_deadline = raw_deadline[:-3]
-                    
-            raw_created = str(r.get("created_at") or "-")
-            if "T" in raw_created:
-                raw_created = raw_created.split("+")[0].replace("T", " ")
-                if raw_created.endswith(":00"):
-                    raw_created = raw_created[:-3]
+            # YENİ ƏLAVƏ: Excel üçün səliqəli və AM/PM formatında vaxtlar
+            raw_deadline = format_excel_date(r.get("deadline"), is_utc=False, use_ampm=True)
+            raw_created = format_excel_date(r.get("created_at"), is_utc=True, use_ampm=False)
 
             writer.writerow([
                 f"RFQ #{disp_id}",
