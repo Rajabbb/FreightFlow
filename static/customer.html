@@ -1418,10 +1418,62 @@ Best regards,
             window.location.replace("/login");
         }
 
+        // ------------------ ROUTING (GERİ QAYITMA DÜYMƏSİ) ------------------
+        window.addEventListener('popstate', function(event) {
+            const hash = window.location.hash;
+
+            if (currentDetailRequestId && (!hash || !hash.startsWith('#rfq-'))) {
+                document.getElementById("rfqDetailPage").classList.add("d-none");
+                document.getElementById("dashboardMain").classList.remove("d-none");
+                currentDetailRequestId = null;
+                loadRequests();
+                loadStats();
+            }
+
+            if (hash && hash.startsWith('#tab-')) {
+                const tabBtn = document.querySelector(`button[data-bs-target="${hash}"]`);
+                if (tabBtn && window.bootstrap) {
+                    bootstrap.Tab.getOrCreateInstance(tabBtn).show();
+                }
+            } else if (!hash && !currentDetailRequestId) {
+                const firstTab = document.querySelector('#tab-dashboard-btn');
+                if (firstTab && window.bootstrap) {
+                    bootstrap.Tab.getOrCreateInstance(firstTab).show();
+                }
+            }
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const tabElms = document.querySelectorAll('button[data-bs-toggle="tab"]');
+            tabElms.forEach(tab => {
+                tab.addEventListener('shown.bs.tab', event => {
+                    const target = event.target.getAttribute("data-bs-target");
+                    if (window.location.hash !== target && !currentDetailRequestId) {
+                        history.pushState(null, null, target);
+                    }
+                });
+            });
+
+            if (window.location.hash && window.location.hash.startsWith('#tab-')) {
+                const activeTab = document.querySelector(`button[data-bs-target="${window.location.hash}"]`);
+                if (activeTab && window.bootstrap) {
+                    bootstrap.Tab.getOrCreateInstance(activeTab).show();
+                }
+            } else if (window.location.hash && window.location.hash.startsWith('#rfq-')) {
+                history.replaceState(null, null, '#tab-tracking');
+                const trackingTab = document.querySelector('#tab-tracking-btn');
+                if (trackingTab && window.bootstrap) {
+                    bootstrap.Tab.getOrCreateInstance(trackingTab).show();
+                }
+            } else if (!window.location.hash) {
+                 history.replaceState(null, null, '#tab-dashboard');
+            }
+        });
+
         async function initData() {
             await loadCategories(); 
             loadStats();
-            await loadRequests(); // loadRequests bitdikdən sonra recent quotes yüklənəcək ki, ID-lər hazır olsun
+            await loadRequests(); 
             loadCarriersList();
             loadManageCarriersList();
         }
@@ -1449,9 +1501,6 @@ Best regards,
                             priceDisplay = `<span class="text-muted fw-semibold" style="font-size: 12.5px;">Qiymət qeyd edilməyib</span>`;
                         }
                         
-                        let timeStr = formatDateTime(q.submitted_at, true, true);
-                        let timeHtml = timeStr !== "—" ? `<br><span class="text-muted fw-normal" style="font-size: 10px;">${timeStr}</span>` : "";
-                        
                         html += `
                             <tr>
                                 <td class="py-3 px-3">
@@ -1459,7 +1508,7 @@ Best regards,
                                     <span class="text-muted" style="font-size: 11.5px;">${q.origin} &rarr; ${q.destination}</span>
                                 </td>
                                 <td class="py-3 px-3 fw-medium text-dark">${q.carrier_name}</td>
-                                <td class="py-3 px-3">${priceDisplay}${timeHtml}</td>
+                                <td class="py-3 px-3">${priceDisplay}</td>
                                 <td class="py-3 px-3 text-end">
                                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openRfqDetail(${q.request_id})" style="font-size: 11px;">Bax</button>
                                 </td>
@@ -2751,6 +2800,10 @@ Best regards,
             currentDetailRequestId = requestId;
             selectedReminderIds = new Set();
 
+            if (window.location.hash !== `#rfq-${requestId}`) {
+                history.pushState(null, null, `#rfq-${requestId}`);
+            }
+
             document.getElementById("dashboardMain").classList.add("d-none");
             document.getElementById("rfqDetailPage").classList.remove("d-none");
             window.scrollTo(0, 0);
@@ -2779,6 +2832,11 @@ Best regards,
             document.getElementById("rfqDetailPage").classList.add("d-none");
             document.getElementById("dashboardMain").classList.remove("d-none");
             currentDetailRequestId = null;
+            
+            if (window.location.hash !== '#tab-tracking') {
+                history.pushState(null, null, '#tab-tracking');
+            }
+
             try {
                 const trackingTabBtn = document.getElementById("tab-tracking-btn");
                 if (trackingTabBtn && window.bootstrap) {
