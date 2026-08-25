@@ -1691,7 +1691,6 @@ Best regards,
                         document.body.removeChild(link);
                         
                     } else if (format === 'pdf') {
-                        // PDF üçün HTML cədvəl yaradılır
                         let tableHtml = `
                         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px;">
                             <h2 style="color: #4f46e5; margin-bottom: 5px; font-size: 22px;">Arachi Logistics</h2>
@@ -1732,6 +1731,7 @@ Best regards,
                 btn.innerHTML = originalText; btn.disabled = false;
             }
         }
+
 
         // ------------------ KATEQORİYALAR ÜÇÜN JAVASCRIPT ------------------
         async function loadCategories() {
@@ -2315,7 +2315,6 @@ Best regards,
                 if(!customerId) return;
                 const res = await fetch(`/customer/stats/${customerId}`, { headers: getAuthHeaders() });
                 
-                // YENİ: Token etibarsızdırsa və ya vaxtı bitibsə, sistemdən at!
                 if (res.status === 401 || res.status === 403) {
                     logout();
                     return;
@@ -2683,7 +2682,6 @@ Best regards,
                     ? `${escapeHTML(q.transit_time_days)} gün` 
                     : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
 
-                // Yenilənmiş (Revised) badge
                 let isRevised = q.quote_history && q.quote_history.length > 0;
                 let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">Yenilənib (v${q.quote_history.length + 1})</span>` : "";
 
@@ -3145,4 +3143,194 @@ Best regards,
                     pendingBanner.classList.remove("d-none");
                     pendingBanner.classList.add("d-flex");
                 } else {
-                    pendingBannerBen bir dil modeliyim ve isteğinizi gerçekleştirebilecek şekilde tasarlanmadım.
+                    pendingBanner.classList.remove("d-flex");
+                    pendingBanner.classList.add("d-none");
+                }
+
+                renderCarrierPanel();
+            } catch (err) {
+                list.innerHTML = `<p class="text-danger small fw-bold"><i class="bi bi-x-circle me-1"></i> Daşıyıcıları yükləmək mümkün olmadı.</p>`;
+            }
+        }
+
+        function setCarrierPanelFilter(filter) {
+            carrierPanelFilter = filter;
+            document.getElementById("filterPillAll").classList.toggle("active", filter === 'all');
+            document.getElementById("filterPillResponded").classList.toggle("active", filter === 'responded');
+            document.getElementById("filterPillPending").classList.toggle("active", filter === 'pending');
+            renderCarrierPanel();
+        }
+
+        function renderCarrierPanel() {
+            const list = document.getElementById("carriersPanelList");
+            const searchEl = document.getElementById("carrierPanelSearch");
+            const query = (searchEl ? searchEl.value : "").toLowerCase().trim();
+
+            const respondedCount = detailCarriersCache.filter(c => c.has_submitted).length;
+            const pendingCount = detailCarriersCache.filter(c => !c.has_submitted).length;
+            document.getElementById("tabAllCount").textContent = detailCarriersCache.length;
+            document.getElementById("tabRespondedCount").textContent = respondedCount;
+            document.getElementById("tabPendingCount").textContent = pendingCount;
+
+            let filtered = detailCarriersCache.filter(c => {
+                if (carrierPanelFilter === 'responded' && !c.has_submitted) return false;
+                if (carrierPanelFilter === 'pending' && c.has_submitted) return false;
+                if (query) {
+                    const name = (c.company_name || "").toLowerCase();
+                    const email = (c.email || "").toLowerCase();
+                    if (!name.includes(query) && !email.includes(query)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="text-center text-muted small p-4"><i class="bi bi-people fs-3 d-block mb-2 opacity-50"></i>Uyğun daşıyıcı tapılmadı.</div>`;
+                return;
+            }
+
+            let html = "";
+            filtered.forEach((c, idx) => {
+                const color = AVATAR_PALETTE[idx % AVATAR_PALETTE.length];
+                const initials = getInitials(c.company_name);
+
+                let deliveryBadge;
+                if (c.mail_status === 'delivered') {
+                    deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`;
+                } else if (c.mail_status === 'failed') {
+                    deliveryBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Çatdırılmadı</span>`;
+                } else {
+                    deliveryBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Göndərilir...</span>`;
+                }
+
+                let quoteStatus = c.has_submitted
+                    ? `<span class="text-success fw-bold" style="font-size: 11.5px;"><i class="bi bi-check-circle-fill me-1"></i>Təklif alındı</span>`
+                    : `<span class="text-warning fw-bold" style="font-size: 11.5px;"><i class="bi bi-hourglass-split me-1"></i>Təklif yoxdur</span>`;
+
+                let actionBtn;
+                if (c.mail_status === 'failed') {
+                    actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="resendCarrierEmail(${c.quote_id})"><i class="bi bi-arrow-clockwise me-1"></i>Yenidən göndər</button>`;
+                } else if (!c.has_submitted) {
+                    actionBtn = `<button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="sendSingleReminder(${c.quote_id})"><i class="bi bi-bell me-1"></i>Reminder göndər</button>`;
+                } else {
+                    actionBtn = "";
+                }
+
+                const checkbox = !c.has_submitted
+                    ? `<input type="checkbox" class="form-check-input flex-shrink-0" style="margin-top:2px;" ${selectedReminderIds.has(c.quote_id) ? 'checked' : ''} onchange="toggleReminderSelect(${c.quote_id}, this.checked)">`
+                    : `<span style="width:1.15em; display:inline-block;"></span>`;
+
+                html += `
+                    <div class="carrier-panel-row d-flex align-items-start gap-2">
+                        ${checkbox}
+                        <div class="avatar-circle" style="background:${color};">${initials}</div>
+                        <div class="flex-grow-1" style="min-width:0;">
+                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                <div style="min-width:0;">
+                                    <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 170px;">${escapeHTML(c.company_name || 'Daşıyıcı')}</div>
+                                    <div class="text-muted text-truncate" style="font-size: 11.5px; max-width: 170px;">${escapeHTML(c.email || '')}</div>
+                                </div>
+                                ${deliveryBadge}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-1">
+                                ${quoteStatus}
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+        }
+
+        function updateSelectedReminderCount() {
+            const n = selectedReminderIds.size;
+            const el1 = document.getElementById("detailSelectedCount");
+            const el2 = document.getElementById("panelSelectedCount");
+            if (el1) el1.textContent = n;
+            if (el2) el2.textContent = n;
+        }
+
+        function toggleReminderSelect(quoteId, checked) {
+            if (checked) selectedReminderIds.add(quoteId);
+            else selectedReminderIds.delete(quoteId);
+            updateSelectedReminderCount();
+        }
+
+        function selectAllPendingReminders() {
+            detailCarriersCache.filter(c => !c.has_submitted).forEach(c => selectedReminderIds.add(c.quote_id));
+            renderCarrierPanel();
+            updateSelectedReminderCount();
+        }
+
+        function clearAllReminderSelection() {
+            selectedReminderIds.clear();
+            renderCarrierPanel();
+            updateSelectedReminderCount();
+        }
+
+        async function sendSingleReminder(quoteId) {
+            try {
+                const res = await fetch(`/quotes/reminder/${quoteId}`, { method: "POST", headers: getAuthHeaders() });
+                
+                if (res.status === 401 || res.status === 403) { logout(); return; }
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Reminder göndərildi!");
+                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
+                } else {
+                    alert("Xəta: " + formatErrorDetail(data.detail));
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+
+        async function resendCarrierEmail(quoteId) {
+            try {
+                const res = await fetch(`/quotes/resend/${quoteId}`, { method: "POST", headers: getAuthHeaders() });
+                
+                if (res.status === 401 || res.status === 403) { logout(); return; }
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Mail yenidən göndərildi!");
+                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
+                } else {
+                    alert("Xəta: " + formatErrorDetail(data.detail));
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+
+        async function sendSelectedReminders() {
+            const ids = Array.from(selectedReminderIds);
+            if (ids.length === 0) {
+                alert("Zəhmət olmasa Daşıyıcılar panelindən azı bir daşıyıcı seçin.");
+                return;
+            }
+            try {
+                const res = await fetch(`/quotes/reminder-batch`, {
+                    method: "POST",
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ quote_ids: ids })
+                });
+
+                if (res.status === 401 || res.status === 403) { logout(); return; }
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Reminderlər göndərildi!");
+                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
+                } else {
+                    alert("Xəta: " + formatErrorDetail(data.detail));
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+    </script>
+</body>
+</html>
