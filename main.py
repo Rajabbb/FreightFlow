@@ -4,6 +4,7 @@ import traceback
 import io
 import json
 import re
+import csv
 import asyncio
 import imaplib
 import email as email_lib
@@ -365,7 +366,7 @@ class BulkDeleteCarrierRequest(BaseModel):
     customer_id: int
     carrier_ids: List[int]
 
-class ReportRequest(BaseModel):
+class ReportGenerateRequest(BaseModel):
     customer_id: int
     report_type: str
     start_date: Optional[str] = None
@@ -402,6 +403,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str
     company_name: str
+
 
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
@@ -495,119 +497,92 @@ def get_customer_stats(customer_id: int):
 @app.get("/customer/recent-quotes/{customer_id}")
 def get_recent_quotes(customer_id: int):
     try:
-        res = supabase.table("shipment_requests").select("id, origin, destination, quotes(*, carriers(company_name, name))").eq("customer_id", customer_id).execute()
-        data = res.data or []
+        req_res = supabase.table("shipment_requests").select("id, origin, destination").eq("customer_id", customer_id).execute()
+        req_map = {r["id"]: {"origin": r["origin"], "destination": r["destination"]} for r in (req_res.data or [])}
+        if not req_map:
+            return {"status": "success", "quotes": []}
         
-        recent = []
-        now = datetime.utcnow()
+        quotes_res = supabase.table("quotes").select("*, carriers(company_name, name)").in_("request_id", list(req_map.keys())).execute()
+        quotes = quotes_res.data or []
         
-        for req in data:
-            for q in req.get("quotes", []):
-                extra = q.get("extra_details") or {}
-                if q.get("price") is not None or extra.get("submitted"):
-                    sub_time_str = extra.get("submitted_at")
-                    if not sub_time_str:
-                        hist = q.get("quote_history") or []
-                        if hist and "date" in hist[-1]:
-                            sub_time_str = hist[-1]["date"]
-                        else:
-                            sub_time_str = q.get("created_at")
-                    
-                    try:
-                        sub_time = datetime.fromisoformat(sub_time_str.replace("Z", "+00:00")).replace(tzinfo=None)
-                    except:
-                        sub_time = datetime.min
-                        
-                    diff = now - sub_time
-                    if diff.total_seconds() <= 3 * 24 * 3600: 
-                        carrier = q.get("carriers") or {}
-                        c_name = carrier.get("company_name") or carrier.get("name") or "Daşıyıcı"
-                        recent.append({
-                            "quote_id": q.get("id"),
-                            "request_id": req.get("id"),
-                            "origin": req.get("origin"),
-                            "destination": req.get("destination"),
-                            "carrier_name": c_name,
-                            "price": q.get("price"),
-                            "currency": q.get("currency", "AZN"),
-                            "submitted_at": sub_time_str
-                        })
-                        
-        recent.sort(key=lambda x: x["submitted_at"], reverse=True)
-        return {"status": "success", "quotes": recent[:5]}
+        recent_quotes = []
+        for q in quotes:
+            is_submitted = q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True)
+            if is_submitted:
+                carrier = q.get("carriers") or {}
+                carrier_name = carrier.get("company_name") or carrier.get("name") or "Daşıyıcı"
+                recent_quotes.append({
+                    "request_id": q["request_id"],
+                    "quote_id": q["id"],
+                    "origin": req_map[q["request_id"]]["origin"],
+                    "destination": req_map[q["request_id"]]["destination"],
+                    "carrier_name": carrier_name,
+                    "price": q.get("price"),
+                    "currency": q.get("currency", "AZN"),
+                    "submitted_at": q.get("created_at") 
+                })
+        recent_quotes.sort(key=lambda x: x["quote_id"], reverse=True)
+        return {"status": "success", "quotes": recent_quotes[:5]}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/reports/generate")
-def generate_report(payload: ReportRequest):
+def generate_excel_report(payload: ReportGenerateRequest):
     try:
-        res = supabase.table("shipment_requests").select("*, quotes(*, carriers(company_name, name))").eq("customer_id", payload.customer_id).execute()
-        data = res.data or []
+        query = supabase.table("shipment_requests").select("*, quotes(*, carriers(company_name))").eq("customer_id", payload.customer_id)
         
-        filtered = []
-        now = datetime.utcnow().date()
+        if payload.report_type == "selected" and payload.rfq_ids:
+            query = query.in_("id", payload.rfq_ids)
         
-        for req in data:
-            req_date_str = req.get("created_at", "")
-            try:
-                req_date = datetime.fromisoformat(req_date_str.replace("Z", "+00:00")).date()
-            except:
-                req_date = now
-                
-            if payload.report_type == 'today':
-                if req_date != now: continue
-            elif payload.report_type == 'date_range':
-                if payload.start_date:
-                    sd = datetime.strptime(payload.start_date, "%Y-%m-%d").date()
-                    if req_date < sd: continue
-                if payload.end_date:
-                    ed = datetime.strptime(payload.end_date, "%Y-%m-%d").date()
-                    if req_date > ed: continue
-            elif payload.report_type == 'selected':
-                if req.get("id") not in payload.rfq_ids: continue
-                
-            filtered.append(req)
-            
-        rows = []
-        filtered.sort(key=lambda x: x.get("id", 0))
+        res = query.order("id", desc=True).execute()
+        reqs = res.data or []
         
-        for req in filtered:
-            winner_name = "Seçilməyib"
-            winner_price = "-"
-            winner_transit = "-"
-            
-            for q in req.get("quotes", []):
-                if q.get("is_winner"):
-                    carrier = q.get("carriers") or {}
-                    winner_name = carrier.get("company_name") or carrier.get("name") or "Daşıyıcı"
-                    winner_price = f"{q.get('price', '')} {q.get('currency', 'AZN')}"
-                    winner_transit = f"{q.get('transit_time_days', '')} gün" if q.get("transit_time_days") else "-"
-                    break
-                    
-            rows.append({
-                "Sistem ID": req.get("id"),
-                "Yaradılma Tarixi": req.get("created_at", "")[:10],
-                "Marşrut": f"{req.get('origin', '')} -> {req.get('destination', '')}",
-                "Yük Növü": req.get("cargo_type", ""),
-                "Çəki (kq)": req.get("weight_kg", ""),
-                "Həcm (m3)": req.get("volume_m3", ""),
-                "Status": "Açıq" if req.get("status") == "open" else "Bağlı",
-                "Qalib Daşıyıcı": winner_name,
-                "Qiymət": winner_price,
-                "Müddət": winner_transit
-            })
-            
-        df = pd.DataFrame(rows)
-        if df.empty:
-            df = pd.DataFrame(columns=["Sistem ID", "Yaradılma Tarixi", "Marşrut", "Yük Növü", "Çəki (kq)", "Həcm (m3)", "Status", "Qalib Daşıyıcı", "Qiymət", "Müddət"])
-            
+        filtered_reqs = []
+        today_str = datetime.utcnow().strftime("%Y-%m-%d")
+        for r in reqs:
+            created_date = r.get("created_at", "")[:10] if r.get("created_at") else ""
+            if payload.report_type == "today":
+                if created_date != today_str: continue
+            elif payload.report_type == "date_range":
+                if payload.start_date and created_date < payload.start_date: continue
+                if payload.end_date and created_date > payload.end_date: continue
+            filtered_reqs.append(r)
+        
         output = io.StringIO()
-        df.to_csv(output, index=False, encoding='utf-8-sig')
+        output.write('\ufeff')
+        writer = csv.writer(output)
+        writer.writerow(["Sorğu ID", "Marşrut", "Yük Növü", "Çəki (kq)", "Yükləmə Tarixi", "Status", "Qalib Daşıyıcı", "Təsdiqlənmiş Qiymət", "Yaradılma Tarixi"])
         
-        headers = {'Content-Disposition': 'attachment; filename="Arachi_Hesabat.csv"'}
-        return Response(content=output.getvalue(), media_type="text/csv", headers=headers)
-        
+        for r in filtered_reqs:
+            route = f"{r.get('origin', '')} -> {r.get('destination', '')}"
+            quotes = r.get("quotes") or []
+            winner_quote = next((q for q in quotes if q.get("is_winner")), None)
+            
+            winner_name = "-"
+            winner_price = "-"
+            
+            if winner_quote:
+                carrier = winner_quote.get("carriers") or {}
+                winner_name = carrier.get("company_name", "Daşıyıcı")
+                if winner_quote.get("price") is not None:
+                    winner_price = f"{winner_quote.get('price')} {winner_quote.get('currency', 'AZN')}"
+            
+            writer.writerow([
+                r.get("id"),
+                route,
+                r.get("cargo_type", ""),
+                r.get("weight_kg", 0),
+                r.get("deadline", "-"),
+                r.get("status", "open"),
+                winner_name,
+                winner_price,
+                r.get("created_at", "")[:10]
+            ])
+            
+        output.seek(0)
+        filename = f"Arachi_Hesabat_{datetime.utcnow().strftime('%Y-%m-%d')}.csv"
+        return Response(content=output.getvalue(), media_type="text/csv", headers={"Content-Disposition": f"attachment; filename={filename}"})
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -973,7 +948,6 @@ async def submit_quote(token: str, price: Optional[str] = Form(None), currency: 
     parsed_price = float(price) if price and str(price).strip() else None
     parsed_extra = json.loads(extra_details) if extra_details else {}
     parsed_extra["submitted"] = True
-    parsed_extra["submitted_at"] = datetime.utcnow().isoformat()
 
     if carrier_file and carrier_file.filename:
         file_ext = os.path.splitext(carrier_file.filename)[1]
@@ -1018,7 +992,7 @@ def get_request_quotes(request_id: int):
         for item in quotes_res.data or []:
             raw_extra = item.get("extra_details") or {}
             if item.get("price") is None and raw_extra.get("submitted") != True: continue
-            filtered_extra = {k: v for k, v in raw_extra.items() if normalize_text(k) not in ['company', 'sirket', 'firma', 'email', 'mail', 'name', 'ad', 'dasiyici', 'submitted_at']}
+            filtered_extra = {k: v for k, v in raw_extra.items() if normalize_text(k) not in ['company', 'sirket', 'firma', 'email', 'mail', 'name', 'ad', 'dasiyici']}
             quotes_list.append({
                 "id": item.get("id"), "request_id": item.get("request_id"), "carrier_id": item.get("carrier_id"),
                 "carrier_company": item.get("carriers", {}).get("company_name", f"Daşıyıcı #{item.get('carrier_id')}"), "carrier_email": item.get("carriers", {}).get("email", ""),
