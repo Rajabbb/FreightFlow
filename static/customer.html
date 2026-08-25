@@ -629,7 +629,7 @@
                     <div class="section-title mb-1">
                         <i class="bi bi-clock-history text-primary"></i> Son Gələn Təkliflər
                     </div>
-                    <div class="section-desc mb-3">Son 72 saatda daşıyıcılardan gələn qiymət təklifləri.</div>
+                    <div class="section-desc mb-3">Son 24 saatda daşıyıcılardan gələn qiymət təklifləri.</div>
                     
                     <div class="table-responsive rounded-3 border">
                         <table class="table table-hover align-middle mb-0 text-sm">
@@ -1298,7 +1298,7 @@ Best regards,
         <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable mx-2 mx-sm-auto">
             <div class="modal-content">
                 <div class="modal-header d-flex justify-content-between align-items-center">
-                    <h5 class="modal-title fw-bold text-dark mb-0" style="font-size: 1.05rem;">
+                    <h5 class="modal-title fw-bold text-dark mb-0 d-flex align-items-center" style="font-size: 1.05rem;">
                         <i class="bi bi-info-circle-fill text-primary me-2"></i> RFQ-nun Əlavə Detalları
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -2895,4 +2895,206 @@ Best regards,
 
                 const total = detailCarriersCache.length;
                 const delivered = detailCarriersCache.filter(c => c.mail_status === 'delivered').length;
-                const viewed = detailCarriersCache.filter(cТакие вопросы и задачи не для меня. Я всего лишь языковая модель.
+                const viewed = detailCarriersCache.filter(c => c.is_viewed).length;
+                const quoted = detailCarriersCache.filter(c => c.has_submitted).length;
+                const failed = detailCarriersCache.filter(c => c.mail_status === 'failed').length;
+                const pending = detailCarriersCache.filter(c => !c.has_submitted).length;
+
+                document.getElementById("statSent").textContent = total;
+                document.getElementById("statDelivered").textContent = delivered;
+                document.getElementById("statViewed").textContent = viewed;
+                document.getElementById("statQuoted").textContent = quoted;
+                document.getElementById("statFailed").textContent = failed;
+
+                document.getElementById("mobileCarriersCount").textContent = total;
+                document.getElementById("statBtnCarriersCount").textContent = total;
+                document.getElementById("panelCarriersCount").textContent = total;
+
+                const pendingBanner = document.getElementById("detailNonResponders");
+                document.getElementById("detailPendingCount").textContent = pending;
+                if (pending > 0) {
+                    pendingBanner.classList.remove("d-none");
+                    pendingBanner.classList.add("d-flex");
+                } else {
+                    pendingBanner.classList.remove("d-flex");
+                    pendingBanner.classList.add("d-none");
+                }
+
+                renderCarrierPanel();
+            } catch (err) {
+                list.innerHTML = `<p class="text-danger small fw-bold"><i class="bi bi-x-circle me-1"></i> Daşıyıcıları yükləmək mümkün olmadı.</p>`;
+            }
+        }
+
+        function setCarrierPanelFilter(filter) {
+            carrierPanelFilter = filter;
+            document.getElementById("filterPillAll").classList.toggle("active", filter === 'all');
+            document.getElementById("filterPillResponded").classList.toggle("active", filter === 'responded');
+            document.getElementById("filterPillPending").classList.toggle("active", filter === 'pending');
+            renderCarrierPanel();
+        }
+
+        function renderCarrierPanel() {
+            const list = document.getElementById("carriersPanelList");
+            const searchEl = document.getElementById("carrierPanelSearch");
+            const query = (searchEl ? searchEl.value : "").toLowerCase().trim();
+
+            const respondedCount = detailCarriersCache.filter(c => c.has_submitted).length;
+            const pendingCount = detailCarriersCache.filter(c => !c.has_submitted).length;
+            document.getElementById("tabAllCount").textContent = detailCarriersCache.length;
+            document.getElementById("tabRespondedCount").textContent = respondedCount;
+            document.getElementById("tabPendingCount").textContent = pendingCount;
+
+            let filtered = detailCarriersCache.filter(c => {
+                if (carrierPanelFilter === 'responded' && !c.has_submitted) return false;
+                if (carrierPanelFilter === 'pending' && c.has_submitted) return false;
+                if (query) {
+                    const name = (c.company_name || "").toLowerCase();
+                    const email = (c.email || "").toLowerCase();
+                    if (!name.includes(query) && !email.includes(query)) return false;
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="text-center text-muted small p-4"><i class="bi bi-people fs-3 d-block mb-2 opacity-50"></i>Uyğun daşıyıcı tapılmadı.</div>`;
+                return;
+            }
+
+            let html = "";
+            filtered.forEach((c, idx) => {
+                const color = AVATAR_PALETTE[idx % AVATAR_PALETTE.length];
+                const initials = getInitials(c.company_name);
+
+                let deliveryBadge;
+                if (c.mail_status === 'delivered') {
+                    deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`;
+                } else if (c.mail_status === 'failed') {
+                    deliveryBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Çatdırılmadı</span>`;
+                } else {
+                    deliveryBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Göndərilir...</span>`;
+                }
+
+                let quoteStatus = c.has_submitted
+                    ? `<span class="text-success fw-bold" style="font-size: 11.5px;"><i class="bi bi-check-circle-fill me-1"></i>Təklif alındı</span>`
+                    : `<span class="text-warning fw-bold" style="font-size: 11.5px;"><i class="bi bi-hourglass-split me-1"></i>Təklif yoxdur</span>`;
+
+                let actionBtn;
+                if (c.mail_status === 'failed') {
+                    actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="resendCarrierEmail(${c.quote_id})"><i class="bi bi-arrow-clockwise me-1"></i>Yenidən göndər</button>`;
+                } else if (!c.has_submitted) {
+                    actionBtn = `<button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="sendSingleReminder(${c.quote_id})"><i class="bi bi-bell me-1"></i>Reminder göndər</button>`;
+                } else {
+                    actionBtn = "";
+                }
+
+                const checkbox = !c.has_submitted
+                    ? `<input type="checkbox" class="form-check-input flex-shrink-0" style="margin-top:2px;" ${selectedReminderIds.has(c.quote_id) ? 'checked' : ''} onchange="toggleReminderSelect(${c.quote_id}, this.checked)">`
+                    : `<span style="width:1.15em; display:inline-block;"></span>`;
+
+                html += `
+                    <div class="carrier-panel-row d-flex align-items-start gap-2">
+                        ${checkbox}
+                        <div class="avatar-circle" style="background:${color};">${initials}</div>
+                        <div class="flex-grow-1" style="min-width:0;">
+                            <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                                <div style="min-width:0;">
+                                    <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 170px;">${c.company_name || 'Daşıyıcı'}</div>
+                                    <div class="text-muted text-truncate" style="font-size: 11.5px; max-width: 170px;">${c.email || ''}</div>
+                                </div>
+                                ${deliveryBadge}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2 flex-wrap gap-1">
+                                ${quoteStatus}
+                                ${actionBtn}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            list.innerHTML = html;
+        }
+
+        function updateSelectedReminderCount() {
+            const n = selectedReminderIds.size;
+            const el1 = document.getElementById("detailSelectedCount");
+            const el2 = document.getElementById("panelSelectedCount");
+            if (el1) el1.textContent = n;
+            if (el2) el2.textContent = n;
+        }
+
+        function toggleReminderSelect(quoteId, checked) {
+            if (checked) selectedReminderIds.add(quoteId);
+            else selectedReminderIds.delete(quoteId);
+            updateSelectedReminderCount();
+        }
+
+        function selectAllPendingReminders() {
+            detailCarriersCache.filter(c => !c.has_submitted).forEach(c => selectedReminderIds.add(c.quote_id));
+            renderCarrierPanel();
+            updateSelectedReminderCount();
+        }
+
+        function clearAllReminderSelection() {
+            selectedReminderIds.clear();
+            renderCarrierPanel();
+            updateSelectedReminderCount();
+        }
+
+        async function sendSingleReminder(quoteId) {
+            try {
+                const res = await fetch(`/quotes/reminder/${quoteId}`, { method: "POST" });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Reminder göndərildi!");
+                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
+                } else {
+                    alert("Xəta: " + formatErrorDetail(data.detail));
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+
+        async function resendCarrierEmail(quoteId) {
+            try {
+                const res = await fetch(`/quotes/resend/${quoteId}`, { method: "POST" });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Mail yenidən göndərildi!");
+                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
+                } else {
+                    alert("Xəta: " + formatErrorDetail(data.detail));
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+
+        async function sendSelectedReminders() {
+            const ids = Array.from(selectedReminderIds);
+            if (ids.length === 0) {
+                alert("Zəhmət olmasa Daşıyıcılar panelindən azı bir daşıyıcı seçin.");
+                return;
+            }
+            try {
+                const res = await fetch(`/quotes/reminder-batch`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ quote_ids: ids })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    alert(data.message || "Reminderlər göndərildi!");
+                    if (currentDetailRequestId) loadDetailCarriersStatus(currentDetailRequestId);
+                } else {
+                    alert("Xəta: " + formatErrorDetail(data.detail));
+                }
+            } catch (err) {
+                alert("Server xətası!");
+            }
+        }
+    </script>
+</body>
+</html>
