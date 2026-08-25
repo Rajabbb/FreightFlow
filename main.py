@@ -11,12 +11,14 @@ import email as email_lib
 from datetime import datetime, timedelta
 from email.header import decode_header
 import pandas as pd
+import jwt  # YENİ ƏLAVƏ
 from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials # YENİ ƏLAVƏ
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -37,16 +39,43 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = FastAPI(title="Arachi Backend API")
 
+# ==========================================
+# 1. TƏHLÜKƏSİZLİK (JWT TOKEN VƏ IDOR QORUNMASI)
+# ==========================================
+security = HTTPBearer()
+JWT_SECRET = os.getenv("JWT_SECRET", "arachi-super-secret-key-2026-b2b") # Təhlükəsizlik açarı
+JWT_ALGORITHM = "HS256"
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=7) # Token 7 gün keçərlidir
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Sessiyanın vaxtı bitib. Zəhmət olmasa yenidən giriş edin.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Etibarsız token. Sistemə giriş qadağandır!")
+
+def check_ownership(requested_customer_id: int, current_user: dict):
+    """
+    IDOR (Insecure Direct Object Reference) Qorunması:
+    İstifadəçi yalnız ÖZÜNƏ aid olan məlumatları çəkə və dəyişə bilər.
+    """
+    if str(requested_customer_id) != str(current_user.get("sub")):
+        raise HTTPException(status_code=403, detail="Təhlükəsizlik Xəbərdarlığı: İcazə rədd edildi! Bu məlumat sizə aid deyil.")
+# ==========================================
+
 BOUNCE_CHECK_INTERVAL_SECONDS = int(os.getenv("BOUNCE_CHECK_INTERVAL_SECONDS", "300"))
 
 async def _bounce_check_loop():
     while True:
         try:
             result = await asyncio.to_thread(check_bounced_emails)
-            if result.get("updated"):
-                print(f"[bounce-check] {len(result['updated'])} quote(s) 'failed' olaraq yeniləndi: {result['updated']}")
-            if result.get("errors"):
-                print(f"[bounce-check] Xətalar: {result['errors']}")
         except Exception:
             traceback.print_exc()
         await asyncio.sleep(BOUNCE_CHECK_INTERVAL_SECONDS)
@@ -55,12 +84,10 @@ async def _bounce_check_loop():
 async def start_bounce_check_background_task():
     if ENABLE_BOUNCE_CHECK:
         asyncio.create_task(_bounce_check_loop())
-    else:
-        print("[bounce-check] Deaktivdir (ENABLE_BOUNCE_CHECK=false). Amazon SES + SNS ilə əvəz olunana qədər söndürülüb.")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Mərhələ 4-də buranı arachi.co domenlərinə kilidləyəcəyik
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -431,8 +458,13 @@ def get_carrier_quote_page(token: str):
     file_path = BASE_DIR / "static" / "carrier_quote.html"
     return FileResponse(file_path)
 
+# ===============================================
+# TOKEN TƏLƏB EDƏN (QORUNAN) API-LƏR (IDOR CHECKS)
+# ===============================================
+
 @app.get("/categories/customer/{customer_id}")
-def get_customer_categories(customer_id: int):
+def get_customer_categories(customer_id: int, current_user: dict = Depends(verify_token)):
+    check_ownership(customer_id, current_user)
     try:
         res = supabase.table("carrier_categories").select("*").eq("customer_id", customer_id).order("id", desc=False).execute()
         return {"status": "success", "categories": res.data or []}
@@ -440,7 +472,8 @@ def get_customer_categories(customer_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/categories/create")
-def create_category(payload: CategoryCreate):
+def create_category(payload: CategoryCreate, current_user: dict = Depends(verify_token)):
+    check_ownership(payload.customer_id, current_user)
     try:
         res = supabase.table("carrier_categories").insert({"customer_id": payload.customer_id, "name": payload.name}).execute()
         return {"status": "success", "category": res.data[0]}
@@ -448,7 +481,8 @@ def create_category(payload: CategoryCreate):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/categories/delete")
-def delete_category(payload: CategoryDelete):
+def delete_category(payload: CategoryDelete, current_user: dict = Depends(verify_token)):
+    check_ownership(payload.customer_id, current_user)
     try:
         supabase.table("carrier_categories").delete().eq("id", payload.category_id).eq("customer_id", payload.customer_id).execute()
         return {"status": "success"}
@@ -456,7 +490,8 @@ def delete_category(payload: CategoryDelete):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/carriers/set-category")
-def set_carrier_category(payload: CarrierSetCategory):
+def set_carrier_category(payload: CarrierSetCategory, current_user: dict = Depends(verify_token)):
+    check_ownership(payload.customer_id, current_user)
     try:
         val = payload.category_id if payload.category_id and payload.category_id > 0 else None
         supabase.table("carriers").update({"category_id": val}).eq("id", payload.carrier_id).eq("customer_id", payload.customer_id).execute()
@@ -465,7 +500,8 @@ def set_carrier_category(payload: CarrierSetCategory):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/carriers/bulk-set-category")
-def bulk_set_carrier_category(payload: CarrierBulkSetCategory):
+def bulk_set_carrier_category(payload: CarrierBulkSetCategory, current_user: dict = Depends(verify_token)):
+    check_ownership(payload.customer_id, current_user)
     try:
         val = payload.category_id if payload.category_id and payload.category_id > 0 else None
         if not payload.carrier_ids:
@@ -477,7 +513,8 @@ def bulk_set_carrier_category(payload: CarrierBulkSetCategory):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/customer/stats/{customer_id}")
-def get_customer_stats(customer_id: int):
+def get_customer_stats(customer_id: int, current_user: dict = Depends(verify_token)):
+    check_ownership(customer_id, current_user)
     try:
         reqs_res = supabase.table("shipment_requests").select("id, status").eq("customer_id", customer_id).execute()
         requests = reqs_res.data or []
@@ -495,7 +532,8 @@ def get_customer_stats(customer_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/customer/recent-quotes/{customer_id}")
-def get_recent_quotes(customer_id: int):
+def get_recent_quotes(customer_id: int, current_user: dict = Depends(verify_token)):
+    check_ownership(customer_id, current_user)
     try:
         req_res = supabase.table("shipment_requests").select("id, origin, destination").eq("customer_id", customer_id).execute()
         req_map = {r["id"]: {"origin": r["origin"], "destination": r["destination"]} for r in (req_res.data or [])}
@@ -527,7 +565,6 @@ def get_recent_quotes(customer_id: int):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-# ----------------- YENİ: EXCEL TARİX FORMATLAMA FUNKSİYASI -----------------
 def format_excel_date(date_str: Any, is_utc: bool = False, use_ampm: bool = False) -> str:
     if not date_str or str(date_str).strip() in ("-", "None", ""):
         return "-"
@@ -562,7 +599,8 @@ def format_excel_date(date_str: Any, is_utc: bool = False, use_ampm: bool = Fals
         return s.split(".")[0].replace("T", " ")
 
 @app.post("/reports/generate")
-def generate_excel_report(payload: ReportGenerateRequest):
+def generate_excel_report(payload: ReportGenerateRequest, current_user: dict = Depends(verify_token)):
+    check_ownership(payload.customer_id, current_user)
     try:
         all_reqs_res = supabase.table("shipment_requests").select("id").eq("customer_id", payload.customer_id).order("id", desc=True).execute()
         all_reqs = all_reqs_res.data or []
@@ -608,21 +646,12 @@ def generate_excel_report(payload: ReportGenerateRequest):
                     winner_price = f"{winner_quote.get('price')} {winner_quote.get('currency', 'AZN')}"
             
             disp_id = display_id_map.get(r.get("id"), r.get("id"))
-            
-            # YENİ ƏLAVƏ: Excel üçün səliqəli və AM/PM formatında vaxtlar
             raw_deadline = format_excel_date(r.get("deadline"), is_utc=False, use_ampm=True)
             raw_created = format_excel_date(r.get("created_at"), is_utc=True, use_ampm=False)
 
             writer.writerow([
-                f"RFQ #{disp_id}",
-                route,
-                r.get("cargo_type", ""),
-                r.get("weight_kg", 0),
-                raw_deadline,
-                r.get("status", "open").upper(),
-                winner_name,
-                winner_price,
-                raw_created
+                f"RFQ #{disp_id}", route, r.get("cargo_type", ""), r.get("weight_kg", 0),
+                raw_deadline, r.get("status", "open").upper(), winner_name, winner_price, raw_created
             ])
             
         output.seek(0)
@@ -633,7 +662,7 @@ def generate_excel_report(payload: ReportGenerateRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/carriers/manual")
-async def add_carriers_manual(request: Request):
+async def add_carriers_manual(request: Request, current_user: dict = Depends(verify_token)):
     try:
         body = {}
         content_type = request.headers.get("content-type", "")
@@ -647,36 +676,38 @@ async def add_carriers_manual(request: Request):
 
         customer_id = body.get("customer_id") or request.query_params.get("customer_id")
         if not customer_id: raise HTTPException(status_code=400, detail="customer_id tapılmadı.")
-        customer_id = int(customer_id)
+        check_ownership(int(customer_id), current_user)
+
         carriers = body.get("carriers")
         if not carriers:
             email = body.get("email")
             name = body.get("name") or body.get("company_name") or "Daşıyıcı"
             carriers = [{"name": name, "email": email}] if email else []
 
-        return filter_and_insert_carriers(customer_id, carriers)
+        return filter_and_insert_carriers(int(customer_id), carriers)
     except HTTPException as he: raise he
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/carriers/upload-excel")
-async def upload_carriers_excel(request: Request):
+async def upload_carriers_excel(request: Request, current_user: dict = Depends(verify_token)):
     try:
         form = await request.form()
         customer_id = form.get("customer_id") or request.query_params.get("customer_id")
+        if not customer_id: raise HTTPException(status_code=400, detail="customer_id əskikdir.")
+        check_ownership(int(customer_id), current_user)
+
         file = form.get("file")
-        if not customer_id or not file: raise HTTPException(status_code=400, detail="customer_id və ya fayl əskikdir.")
-        customer_id = int(customer_id)
         contents = await file.read()
         filename = getattr(file, "filename", "file.xlsx")
         df = pd.read_csv(io.BytesIO(contents)) if filename.lower().endswith('.csv') else pd.read_excel(io.BytesIO(contents))
-        return process_dataframe_and_insert(df, customer_id)
+        return process_dataframe_and_insert(df, int(customer_id))
     except HTTPException as he: raise he
     except Exception as e: raise HTTPException(status_code=400, detail=f"Fayl oxunarkən xəta: {str(e)}")
 
 @app.post("/carriers/upload-text")
-async def upload_carriers_text(request: Request):
+async def upload_carriers_text(request: Request, current_user: dict = Depends(verify_token)):
     try:
         body = {}
         content_type = request.headers.get("content-type", "")
@@ -684,19 +715,17 @@ async def upload_carriers_text(request: Request):
         else: body = dict(await request.form())
         
         customer_id = body.get("customer_id") or request.query_params.get("customer_id")
+        if not customer_id: raise HTTPException(status_code=400, detail="customer_id tələb olunur.")
+        check_ownership(int(customer_id), current_user)
+
         raw_text = body.get("raw_text") or body.get("text") or request.query_params.get("raw_text") or request.query_params.get("text") or ""
-
-        if not customer_id or not str(raw_text).strip(): raise HTTPException(status_code=400, detail="customer_id və raw_text tələb olunur.")
-        customer_id = int(customer_id)
-
         lines = raw_text.strip().split("\n")
         raw_list = []
         for line in lines:
             line = line.strip()
             if not line: continue
             parts = [p.strip() for p in re.split(r'[\t,;|]', line) if p.strip()]
-            email = None
-            name = "Daşıyıcı"
+            email, name = None, "Daşıyıcı"
             for part in parts:
                 extracted = extract_clean_email(part)
                 if extracted:
@@ -711,14 +740,15 @@ async def upload_carriers_text(request: Request):
             try:
                 df = pd.read_csv(io.StringIO(raw_text), sep="\t")
                 if len(df.columns) == 1: df = pd.read_csv(io.StringIO(raw_text), sep=",")
-                return process_dataframe_and_insert(df, customer_id)
-            except Exception: raise HTTPException(status_code=400, detail="Məlumat formatı düzgün deyil. E-poçt tapılmadı.")
-        return filter_and_insert_carriers(customer_id, raw_list)
+                return process_dataframe_and_insert(df, int(customer_id))
+            except Exception: raise HTTPException(status_code=400, detail="Məlumat formatı düzgün deyil.")
+        return filter_and_insert_carriers(int(customer_id), raw_list)
     except HTTPException as he: raise he
     except Exception as e: raise HTTPException(status_code=400, detail=f"Xəta: {str(e)}")
 
 @app.post("/carriers/delete")
-def delete_customer_carrier(payload: DeleteCarrierRequest):
+def delete_customer_carrier(payload: DeleteCarrierRequest, current_user: dict = Depends(verify_token)):
+    check_ownership(payload.customer_id, current_user)
     try:
         supabase.table("carriers").delete().eq("id", payload.carrier_id).eq("customer_id", payload.customer_id).execute()
         return {"status": "success", "message": "Daşıyıcı bazadan uğurla silindi!"}
@@ -727,27 +757,27 @@ def delete_customer_carrier(payload: DeleteCarrierRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/carriers/bulk-delete")
-def bulk_delete_customer_carriers(payload: BulkDeleteCarrierRequest):
+def bulk_delete_customer_carriers(payload: BulkDeleteCarrierRequest, current_user: dict = Depends(verify_token)):
+    check_ownership(payload.customer_id, current_user)
     try:
         if not payload.carrier_ids:
             return {"status": "success", "message": "Silinəcək daşıyıcı seçilməyib."}
-            
         supabase.table("carriers").delete().in_("id", payload.carrier_ids).eq("customer_id", payload.customer_id).execute()
-        
         return {"status": "success", "message": f"{len(payload.carrier_ids)} daşıyıcı bazadan uğurla silindi!"}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Silinmə zamanı xəta: {str(e)}")
 
 @app.get("/carriers/customer/{customer_id}")
-def get_customer_carriers(customer_id: int):
+def get_customer_carriers(customer_id: int, current_user: dict = Depends(verify_token)):
+    check_ownership(customer_id, current_user)
     try:
         res = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute()
         return res.data if res.data is not None else []
     except Exception as e: raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/requests/upload-attachment")
-async def upload_request_attachment(file: UploadFile = File(...)):
+async def upload_request_attachment(file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
     try:
         file_ext = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_ext}"
@@ -757,7 +787,8 @@ async def upload_request_attachment(file: UploadFile = File(...)):
     except Exception as e: raise HTTPException(status_code=500, detail=f"Fayl yüklənərkən xəta: {str(e)}")
 
 @app.post("/requests/create")
-async def create_shipment_request(payload: ShipmentRequestCreate, background_tasks: BackgroundTasks = BackgroundTasks()):
+async def create_shipment_request(payload: ShipmentRequestCreate, background_tasks: BackgroundTasks = BackgroundTasks(), current_user: dict = Depends(verify_token)):
+    check_ownership(payload.customer_id, current_user)
     try:
         parsed_required = []
         for item in (payload.required_fields or []):
@@ -814,7 +845,6 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
             carrier_name = carrier.get("company_name") or "Daşıyıcı"
             carrier_email = carrier.get("email")
             initial_status = "pending" if carrier_email else "failed"
-
             supabase.table("quotes").insert({"request_id": request_id, "carrier_id": carrier["id"], "token": unique_token, "mail_status": initial_status, "is_viewed": False}).execute()
 
             if carrier_email:
@@ -830,7 +860,8 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/requests/customer/{customer_id}")
-def get_customer_requests(customer_id: int):
+def get_customer_requests(customer_id: int, current_user: dict = Depends(verify_token)):
+    check_ownership(customer_id, current_user)
     res = supabase.table("shipment_requests").select("*, quotes(id, price, extra_details, quote_history)").eq("customer_id", customer_id).order("id", desc=True).execute()
     requests = res.data or []
     for req in requests:
@@ -840,7 +871,7 @@ def get_customer_requests(customer_id: int):
     return {"status": "success", "requests": requests}
 
 @app.get("/requests/carriers-status/{request_id}")
-def get_request_carriers_status(request_id: int):
+def get_request_carriers_status(request_id: int, current_user: dict = Depends(verify_token)):
     try:
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
         result_carriers = []
@@ -860,6 +891,7 @@ def get_request_carriers_status(request_id: int):
 
 @app.get("/requests/details/{target_id}")
 def get_request_details(target_id: str):
+    # Bu endpoint Daşıyıcıların linki açması üçündür (Müştəri panelində də istifadə olunur). Public qalır.
     quote_res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", target_id).execute()
     if quote_res.data:
         quote = quote_res.data[0]
@@ -876,7 +908,6 @@ def get_request_details(target_id: str):
         cleaned_extra = dict(extra)
         cleaned_extra.pop("submitted", None)
         quote["extra_details"] = cleaned_extra
-        
         return {"already_submitted": is_already_submitted, "request": shipment, "quote": quote}
     
     if target_id.isdigit():
@@ -923,7 +954,7 @@ def track_email_view(token: str):
     return Response(content=transparent_gif, media_type="image/gif")
 
 @app.post("/quotes/resend/{quote_id}")
-async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks):
+async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
     try:
         res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").eq("id", quote_id).execute()
         if not res.data: raise HTTPException(status_code=404, detail="Təklif qeydi tapılmadı.")
@@ -941,7 +972,7 @@ async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/quotes/reminder/{quote_id}")
-async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks):
+async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
     try:
         res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").eq("id", quote_id).execute()
         if not res.data: raise HTTPException(status_code=404, detail="Qeyd tapılmadı.")
@@ -959,7 +990,7 @@ async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks)
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/quotes/reminder-batch")
-async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: BackgroundTasks):
+async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
     try:
         if not payload.quote_ids: raise HTTPException(status_code=400, detail="Heç bir ID seçilməyib.")
         res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").in_("id", payload.quote_ids).execute()
@@ -1030,7 +1061,7 @@ async def submit_quote(token: str, price: Optional[str] = Form(None), currency: 
     return {"status": "success", "message": "Təklif qəbul edildi!", "data": update_res.data}
 
 @app.get("/quotes/request/{request_id}")
-def get_request_quotes(request_id: int):
+def get_request_quotes(request_id: int, current_user: dict = Depends(verify_token)):
     try:
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
         quotes_list = []
@@ -1051,7 +1082,7 @@ def get_request_quotes(request_id: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/quotes/select-winner/{quote_id}")
-def select_winner_path(quote_id: int):
+def select_winner_path(quote_id: int, current_user: dict = Depends(verify_token)):
     quote_res = supabase.table("quotes").select("request_id").eq("id", quote_id).execute()
     if not quote_res.data: raise HTTPException(status_code=404, detail="Təklif tapılmadı.")
     request_id = quote_res.data[0]["request_id"]
@@ -1061,7 +1092,7 @@ def select_winner_path(quote_id: int):
     return {"status": "success", "message": "Təklif qalib olaraq seçildi!"}
 
 @app.post("/quotes/select-winner")
-async def select_winner_body(payload: SelectWinnerRequest):
+async def select_winner_body(payload: SelectWinnerRequest, current_user: dict = Depends(verify_token)):
     supabase.table("quotes").update({"is_winner": False}).eq("request_id", payload.request_id).execute()
     supabase.table("quotes").update({"is_winner": True}).eq("id", payload.quote_id).execute()
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
@@ -1146,21 +1177,23 @@ def process_registration(data: RegisterRequest):
         error_msg = str(e)
         raise HTTPException(status_code=500, detail=f"Baza xətası: {error_msg}")
 
-
+# API Login hissəsində artıq Token generasiya edirik
 @app.post("/auth/login")
 async def login(data: LoginRequest):
     customer = supabase.table("customers").select("*").eq("email", data.email).execute()
     if customer.data:
         user = customer.data[0]
         if pwd_context.verify(data.password, user.get("password", "")):
-            return {"status": "success", "role": "customer", "user": user}
+            token = create_access_token({"sub": str(user["id"]), "role": "customer", "email": user["email"]})
+            return {"status": "success", "role": "customer", "token": token, "user": user}
         else: raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
     
     carrier = supabase.table("carriers").select("*").eq("email", data.email).execute()
     if carrier.data:
         user = carrier.data[0]
         if pwd_context.verify(data.password, user.get("password", "")):
-            return {"status": "success", "role": "carrier", "user": user}
+            token = create_access_token({"sub": str(user["id"]), "role": "carrier", "email": user["email"]})
+            return {"status": "success", "role": "carrier", "token": token, "user": user}
         else: raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
 
     raise HTTPException(status_code=404, detail="Bu e-poçt ilə qeydiyyatlı hesab tapılmadı.")
