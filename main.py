@@ -116,6 +116,7 @@ async def validate_file(file: UploadFile):
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="Təhlükəsizlik: Faylın həcmi maksimum 10 MB ola bilər.")
 
+
 # ==========================================
 # CORS QORUNMASI (Sıxlaşdırıldı)
 # ==========================================
@@ -693,22 +694,55 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                 disp_id = display_id_map.get(r.get("id"), r.get("id"))
                 
                 req_fields = r.get("required_fields") or []
-                req_str = " | ".join([str(f) for f in req_fields]) if req_fields else "Yoxdur"
+                
+                # Ekstra sahələri çıxarmaq üçün lüğət
+                opts = {
+                    "Incoterm": "",
+                    "ADR": "",
+                    "Temperature": "",
+                    "Delivery": "",
+                    "Info": ""
+                }
+                
+                for f in req_fields:
+                    f_str = str(f)
+                    lower_f = f_str.lower()
+                    if lower_f.startswith("incoterm:"):
+                        opts["Incoterm"] = f_str.split(":", 1)[1].strip()
+                    elif lower_f.startswith("dangerous goods") or lower_f.startswith("adr:"):
+                        opts["ADR"] = f_str.split(":", 1)[1].strip()
+                    elif lower_f.startswith("temperature") or lower_f.startswith("temp:"):
+                        opts["Temperature"] = f_str.split(":", 1)[1].strip()
+                    elif lower_f.startswith("delivery deadline") or lower_f.startswith("deliv_date:"):
+                        opts["Delivery"] = f_str.split(":", 1)[1].strip()
+                    elif lower_f.startswith("additional info") or lower_f.startswith("info:"):
+                        opts["Info"] = f_str.split(":", 1)[1].strip()
+
+                stackable_val = r.get("stackable")
+                if stackable_val is True: stackable_str = "Bəli"
+                elif stackable_val is False: stackable_str = "Xeyr"
+                else: stackable_str = "Qeyd edilməyib"
+
+                main_notes = r.get("additional_notes", "").strip()
+                all_notes = " | ".join(filter(None, [main_notes, opts["Info"]]))
 
                 report_data.append({
                     "Sorğu ID": f"RFQ #{disp_id}",
                     "Marşrut": f"{r.get('origin', '')} -> {r.get('destination', '')}",
                     "Yük Növü": r.get("cargo_type", ""),
                     "Çəki (kq)": r.get("weight_kg", 0),
-                    "Həcm (CBM)": r.get("volume_m3", "Qeyd edilməyib"),
-                    "Nəqliyyat Növü": r.get("transportation_mode", "Qeyd edilməyib"),
-                    "Yükləmə Tarixi": format_excel_date(r.get("deadline"), is_utc=False, use_ampm=True),
-                    "Maşın Növü": r.get("truck_type", "Qeyd edilməyib"),
-                    "HS Kod": r.get("hs_code", "Qeyd edilməyib"),
-                    "Stackable": "Bəli" if r.get("stackable") is True else ("Xeyr" if r.get("stackable") is False else "Qeyd edilməyib"),
-                    "Yük Tipi (FTL/LTL)": r.get("shipment_type", "Qeyd edilməyib"),
-                    "Əlavə Tələblər": req_str,
-                    "Qeydlər": r.get("additional_notes", ""),
+                    "Həcm (CBM)": r.get("volume_m3", "") or "Qeyd edilməyib",
+                    "Nəqliyyat Növü": r.get("transportation_mode", "") or "Qeyd edilməyib",
+                    "Yükləmə Tarixi": format_excel_date(r.get("deadline"), is_utc=False, use_ampm=True) if r.get("deadline") else "Qeyd edilməyib",
+                    "Maşın Növü": r.get("truck_type", "") or "Qeyd edilməyib",
+                    "HS Kod": r.get("hs_code", "") or "Qeyd edilməyib",
+                    "Stackable": stackable_str,
+                    "Yük Tipi (FTL/LTL)": r.get("shipment_type", "") or "Qeyd edilməyib",
+                    "Incoterm": opts["Incoterm"] or "Qeyd edilməyib",
+                    "ADR (Təhlükəli Yük)": opts["ADR"] or "Qeyd edilməyib",
+                    "Temperatur": opts["Temperature"] or "Qeyd edilməyib",
+                    "Çatdırılma Tarixi": opts["Delivery"] or "Qeyd edilməyib",
+                    "Əlavə Qeydlər / Fayl": all_notes or "Qeyd edilməyib",
                     "Status": r.get("status", "open").upper(),
                     "Yaradılma Tarixi": format_excel_date(r.get("created_at"), is_utc=True, use_ampm=False)
                 })
