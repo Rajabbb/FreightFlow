@@ -1275,15 +1275,18 @@ Best regards,
             return parseInt(String(currentUserId).replace(/[^0-9]/g, ''));
         }
 
-        // --- TARİX FORMATLAMA FUNKSİYASI (SAAT QURŞAĞI HƏLLİ İLƏ) ---
-        function formatDateTime(str) {
+        // --- TARİX FORMATLAMA FUNKSİYASI ---
+        function formatDateTime(str, isUtc = false) {
             if (!str) return "Qeyd edilməyib";
             
             let s = String(str);
 
-            // 1. Supabase-dən gələn UTC (Qrinviç) vaxtdırsa (Sonunda Z və ya +00:00 varsa)
-            // Biz bunu avtomatik olaraq istifadəçinin yerli saatına (məs: Bakı +4) çeviririk.
-            if (s.endsWith("Z") || s.includes("+00:00") || s.includes("+00")) {
+            // 1. Əgər BAZADAN gələn vaxtdırsa (Yaradılıb), onu məcburi şəkildə yerli vaxta çeviririk
+            if (isUtc) {
+                // Əgər sonunda saat qurşağı (Z) yoxdursa, biz əlavə edirik ki, JS UTC olduğunu anlasın
+                if (!s.endsWith("Z") && !s.includes("+")) {
+                    s += "Z"; 
+                }
                 const d = new Date(s);
                 if (!isNaN(d.getTime())) {
                     const year = d.getFullYear();
@@ -1294,8 +1297,8 @@ Best regards,
                     return `${year}-${month}-${day} ${hours}:${minutes}`;
                 }
             }
-
-            // 2. İstifadəçinin formdan daxil etdiyi yerli vaxtdırsa (Yükləmə tarixi)
+            
+            // 2. Əgər istifadəçinin özünün əllə seçdiyi vaxtdırsa (Yükləmə tarixi), heç nəyə toxunmuruq
             if (s.includes("T")) {
                 let parts = s.split("T");
                 let datePart = parts[0];
@@ -1311,9 +1314,10 @@ Best regards,
                 }
                 return datePart + " " + timePart;
             }
-
+            
             return s.replace(/\s00:00:00/g, '').replace(/\s00:00/g, '').trim();
         }
+
         function formatErrorDetail(errDetail) {
             if (!errDetail) return "Naməlum xəta";
             if (typeof errDetail === 'string') return errDetail;
@@ -1975,7 +1979,7 @@ Best regards,
 
             if(document.getElementById("chk_loading_date")?.checked) {
                 let val = document.getElementById("inp_loading_date")?.value.trim();
-                if(val) requiredFieldsList.push(`Loading Date: ${formatDateTime(val)}`);
+                if(val) requiredFieldsList.push(`Loading Date: ${formatDateTime(val, false)}`);
             }
             if(document.getElementById("chk_truck_type")?.checked) {
                 let val = document.getElementById("inp_truck_type")?.value.trim();
@@ -2007,7 +2011,7 @@ Best regards,
             }
             if(document.getElementById("chk_deliv_date")?.checked) {
                 let val = document.getElementById("inp_deliv_date")?.value.trim();
-                if(val) requiredFieldsList.push(`Delivery Deadline: ${formatDateTime(val)}`);
+                if(val) requiredFieldsList.push(`Delivery Deadline: ${formatDateTime(val, false)}`);
             }
             if(document.getElementById("chk_info")?.checked) {
                 let textVal = document.getElementById("inp_info_text")?.value.trim() || "";
@@ -2155,7 +2159,7 @@ Best regards,
                 let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
                 let statusText = (req.status || 'Aktiv').toUpperCase();
 
-                let formattedDeadline = req.deadline ? formatDateTime(req.deadline) : '';
+                let formattedDeadline = req.deadline ? formatDateTime(req.deadline, false) : '';
                 let deadlineField = req.deadline ? `<div class="col-12 col-sm-4"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə tarixi: <strong class="text-dark">${formattedDeadline}</strong></div>` : '';
 
                 html += `
@@ -2578,8 +2582,8 @@ Best regards,
             const weight = req.weight_kg || req.weight;
             document.getElementById("detailWeight").textContent = weight ? `${weight} kq` : "Qeyd edilməyib";
             
-            document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline) : "Qeyd edilməyib";
-            document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at) : "Qeyd edilməyib";
+            document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false) : "Qeyd edilməyib";
+            document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at, true) : "Qeyd edilməyib";
 
             const statusBadge = document.getElementById("detailStatusBadge");
             const isOpen = (req.status || "open") === "open";
