@@ -89,6 +89,9 @@
                     localStorage.setItem('user', JSON.stringify(result.user));
                     localStorage.setItem('role', result.role);
                     
+                    // YENİ TƏHLÜKƏSİZLİK: Tokeni yadda saxlamaq
+                    localStorage.setItem('token', result.token);
+                    
                     if (result.user && result.user.id) {
                         localStorage.setItem('customer_id', result.user.id);
                     }
