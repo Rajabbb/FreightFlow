@@ -1349,7 +1349,7 @@ Best regards,
 
         // --- TARİX FORMATLAMA FUNKSİYASI ---
         function formatDateTime(str, isUtc = false, useAmPm = false) {
-            if (!str) return "Qeyd edilməyib";
+            if (!str) return "—";
             
             let s = String(str);
 
@@ -1450,7 +1450,7 @@ Best regards,
                         }
                         
                         let timeStr = formatDateTime(q.submitted_at, true, true);
-                        let timeHtml = timeStr !== "Qeyd edilməyib" ? `<br><span class="text-muted fw-normal" style="font-size: 10px;">${timeStr}</span>` : "";
+                        let timeHtml = timeStr !== "—" ? `<br><span class="text-muted fw-normal" style="font-size: 10px;">${timeStr}</span>` : "";
                         
                         html += `
                             <tr>
@@ -2382,8 +2382,8 @@ Best regards,
                 let bgClass = req.status === 'open' ? 'bg-primary' : 'bg-success';
                 let statusText = (req.status || 'Aktiv').toUpperCase();
 
-                let formattedDeadline = req.deadline ? formatDateTime(req.deadline, false, true) : '';
-                let deadlineField = req.deadline ? `<div class="col-12 col-sm-4"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə tarixi: <strong class="text-dark">${formattedDeadline}</strong></div>` : '';
+                let formattedDeadline = req.deadline ? formatDateTime(req.deadline, false, true) : '—';
+                let formattedCreatedAt = req.created_at ? formatDateTime(req.created_at, true, false) : '—';
 
                 html += `
                     <div class="request-card">
@@ -2401,9 +2401,10 @@ Best regards,
                         </div>
                         <div class="request-meta-box mb-3">
                             <div class="row text-muted small fw-medium g-2">
-                                <div class="col-12 col-sm-4"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type || req.cargo || ''}</strong></div>
-                                <div class="col-12 col-sm-4"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg || req.weight || 0} kq</strong></div>
-                                ${deadlineField}
+                                <div class="col-12 col-sm-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${req.cargo_type || req.cargo || '—'}</strong></div>
+                                <div class="col-12 col-sm-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${req.weight_kg || req.weight || 0} kq</strong></div>
+                                <div class="col-12 col-sm-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${formattedDeadline}</strong></div>
+                                <div class="col-12 col-sm-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
                             </div>
                         </div>
                         <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
@@ -2805,8 +2806,8 @@ Best regards,
             const weight = req.weight_kg || req.weight;
             document.getElementById("detailWeight").textContent = weight ? `${weight} kq` : "Qeyd edilməyib";
             
-            document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false, true) : "Qeyd edilməyib";
-            document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at, true, false) : "Qeyd edilməyib";
+            document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false, true) : "—";
+            document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at, true, false) : "—";
 
             const statusBadge = document.getElementById("detailStatusBadge");
             const isOpen = (req.status || "open") === "open";
