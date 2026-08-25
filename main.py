@@ -11,19 +11,24 @@ import email as email_lib
 from datetime import datetime, timedelta
 from email.header import decode_header
 import pandas as pd
-import jwt  # YENİ ƏLAVƏ
+import jwt
 from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials # YENİ ƏLAVƏ
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from passlib.context import CryptContext
 from pathlib import Path
+
+# --- YENİ TƏHLÜKƏSİZLİK KİTABXANALARI ---
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 BASE_DIR = Path(__file__).resolve().parent
@@ -40,15 +45,22 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = FastAPI(title="Arachi Backend API")
 
 # ==========================================
-# 1. TƏHLÜKƏSİZLİK (JWT TOKEN VƏ IDOR QORUNMASI)
+# MƏRHƏLƏ 4: BOT VƏ BRUTE-FORCE QORUNMASI (RATE LIMITING)
+# ==========================================
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ==========================================
+# MƏRHƏLƏ 1: JWT TOKEN VƏ IDOR QORUNMASI
 # ==========================================
 security = HTTPBearer()
-JWT_SECRET = os.getenv("JWT_SECRET", "arachi-super-secret-key-2026-b2b") # Təhlükəsizlik açarı
+JWT_SECRET = os.getenv("JWT_SECRET", "arachi-super-secret-key-2026-b2b")
 JWT_ALGORITHM = "HS256"
 
 def create_access_token(data: dict):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=7) # Token 7 gün keçərlidir
+    expire = datetime.utcnow() + timedelta(days=7) 
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
@@ -62,13 +74,55 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=401, detail="Etibarsız token. Sistemə giriş qadağandır!")
 
 def check_ownership(requested_customer_id: int, current_user: dict):
-    """
-    IDOR (Insecure Direct Object Reference) Qorunması:
-    İstifadəçi yalnız ÖZÜNƏ aid olan məlumatları çəkə və dəyişə bilər.
-    """
     if str(requested_customer_id) != str(current_user.get("sub")):
         raise HTTPException(status_code=403, detail="Təhlükəsizlik Xəbərdarlığı: İcazə rədd edildi! Bu məlumat sizə aid deyil.")
+
 # ==========================================
+# MƏRHƏLƏ 3: ZƏRƏRLİ FAYL QORUNMASI (MALICIOUS UPLOADS)
+# ==========================================
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".xlsx", ".csv"}
+ALLOWED_MIME_TYPES = {
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/csv"
+}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # Maksimum 10 MB
+
+async def validate_file(file: UploadFile):
+    ext = os.path.splitext(file.filename)[1].lower()
+    
+    # 1. Həm genişlənməni, həm də gerçək MIME tipini yoxlayırıq
+    if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(status_code=400, detail="Təhlükəsizlik: Yalnız PDF, PNG, JPG, XLSX və ya CSV formatında sənəd yükləyə bilərsiniz.")
+    
+    # 2. Faylın həcmini yoxlayırıq (Max 10 MB)
+    file.file.seek(0, 2)
+    file_size = file.file.tell()
+    file.file.seek(0)
+    if file_size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="Təhlükəsizlik: Faylın həcmi maksimum 10 MB ola bilər.")
+
+
+# ==========================================
+# CORS QORUNMASI (Sıxlaşdırıldı)
+# ==========================================
+ALLOWED_ORIGINS = [
+    "https://arachi.co",
+    "https://www.arachi.co",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 BOUNCE_CHECK_INTERVAL_SECONDS = int(os.getenv("BOUNCE_CHECK_INTERVAL_SECONDS", "300"))
 
@@ -76,6 +130,10 @@ async def _bounce_check_loop():
     while True:
         try:
             result = await asyncio.to_thread(check_bounced_emails)
+            if result.get("updated"):
+                print(f"[bounce-check] {len(result['updated'])} quote(s) 'failed' olaraq yeniləndi: {result['updated']}")
+            if result.get("errors"):
+                print(f"[bounce-check] Xətalar: {result['errors']}")
         except Exception:
             traceback.print_exc()
         await asyncio.sleep(BOUNCE_CHECK_INTERVAL_SECONDS)
@@ -84,14 +142,8 @@ async def _bounce_check_loop():
 async def start_bounce_check_background_task():
     if ENABLE_BOUNCE_CHECK:
         asyncio.create_task(_bounce_check_loop())
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"], # Mərhələ 4-də buranı arachi.co domenlərinə kilidləyəcəyik
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+    else:
+        print("[bounce-check] Deaktivdir.")
 
 os.makedirs("static", exist_ok=True)
 UPLOAD_DIR = "static/uploads"
@@ -458,10 +510,6 @@ def get_carrier_quote_page(token: str):
     file_path = BASE_DIR / "static" / "carrier_quote.html"
     return FileResponse(file_path)
 
-# ===============================================
-# TOKEN TƏLƏB EDƏN (QORUNAN) API-LƏR (IDOR CHECKS)
-# ===============================================
-
 @app.get("/categories/customer/{customer_id}")
 def get_customer_categories(customer_id: int, current_user: dict = Depends(verify_token)):
     check_ownership(customer_id, current_user)
@@ -778,6 +826,7 @@ def get_customer_carriers(customer_id: int, current_user: dict = Depends(verify_
 
 @app.post("/requests/upload-attachment")
 async def upload_request_attachment(file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
+    await validate_file(file) # YENİ TƏHLÜKƏSİZLİK: FAYL YOXLANIŞI
     try:
         file_ext = os.path.splitext(file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_ext}"
@@ -891,7 +940,6 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
 
 @app.get("/requests/details/{target_id}")
 def get_request_details(target_id: str):
-    # Bu endpoint Daşıyıcıların linki açması üçündür (Müştəri panelində də istifadə olunur). Public qalır.
     quote_res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", target_id).execute()
     if quote_res.data:
         quote = quote_res.data[0]
@@ -1015,8 +1063,10 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
     res = supabase.table("quotes").insert({"request_id": payload.request_id, "price": payload.price, "transit_time_days": payload.transit_time_days, "extra_details": payload.extra_details, "currency": payload.currency or "AZN"}).execute()
     return {"status": "success", "message": "Təklif qəbul edildi!", "data": res.data}
 
+# YENİ TƏHLÜKƏSİZLİK: Təklif verəndə həm faylı yoxlayır, həm də botlardan qoruyur
 @app.post("/quotes/submit/{token}")
-async def submit_quote(token: str, price: Optional[str] = Form(None), currency: Optional[str] = Form("AZN"), transit_time_days: Optional[int] = Form(None), extra_details: Optional[str] = Form("{}"), carrier_file: Optional[UploadFile] = File(None)):
+@limiter.limit("5/minute")
+async def submit_quote(request: Request, token: str, price: Optional[str] = Form(None), currency: Optional[str] = Form("AZN"), transit_time_days: Optional[int] = Form(None), extra_details: Optional[str] = Form("{}"), carrier_file: Optional[UploadFile] = File(None)):
     res = supabase.table("quotes").select("*").eq("token", token).execute()
     if not res.data: raise HTTPException(status_code=404, detail="Xətalı link!")
     quote = res.data[0]
@@ -1026,6 +1076,7 @@ async def submit_quote(token: str, price: Optional[str] = Form(None), currency: 
     parsed_extra["submitted"] = True
 
     if carrier_file and carrier_file.filename:
+        await validate_file(carrier_file) # FAYLI YOXLA (VIRUS, PHP, EXE OLUB-OLMADIĞINI)
         file_ext = os.path.splitext(carrier_file.filename)[1]
         unique_filename = f"{uuid.uuid4()}{file_ext}"
         with open(os.path.join(UPLOAD_DIR, unique_filename), "wb") as buffer: buffer.write(await carrier_file.read())
@@ -1145,8 +1196,10 @@ def register_page(request: Request, token: str = None):
         traceback.print_exc()
         return HTMLResponse("<h1>Xəta: register.html faylı tapılmadı! Zəhmət olmasa static/ qovluğunda yaradın.</h1>", status_code=404)
 
+# YENİ TƏHLÜKƏSİZLİK: Qeydiyyatı Botlardan qoruyuruq (Dəqiqədə maksimum 3 qeydiyyat)
 @app.post("/api/register")
-def process_registration(data: RegisterRequest):
+@limiter.limit("3/minute")
+def process_registration(request: Request, data: RegisterRequest):
     try:
         res = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
         valid_token = res.data[0] if res.data else None
@@ -1177,9 +1230,10 @@ def process_registration(data: RegisterRequest):
         error_msg = str(e)
         raise HTTPException(status_code=500, detail=f"Baza xətası: {error_msg}")
 
-# API Login hissəsində artıq Token generasiya edirik
+# YENİ TƏHLÜKƏSİZLİK: Logini Botlardan qoruyuruq (Dəqiqədə maksimum 5 cəhd)
 @app.post("/auth/login")
-async def login(data: LoginRequest):
+@limiter.limit("5/minute")
+async def login(request: Request, data: LoginRequest):
     customer = supabase.table("customers").select("*").eq("email", data.email).execute()
     if customer.data:
         user = customer.data[0]
