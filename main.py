@@ -85,13 +85,17 @@ def check_ownership(requested_customer_id: int, current_user: dict):
 # ==========================================
 # MƏRHƏLƏ 3: ZƏRƏRLİ FAYL QORUNMASI (MALICIOUS UPLOADS)
 # ==========================================
-ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".xlsx", ".csv"}
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".xlsx", ".xls", ".doc", ".docx", ".csv", ".txt"}
 ALLOWED_MIME_TYPES = {
     "application/pdf",
     "image/png",
     "image/jpeg",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "text/csv"
+    "application/vnd.ms-excel",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "text/csv",
+    "text/plain"
 }
 MAX_FILE_SIZE = 10 * 1024 * 1024  # Maksimum 10 MB
 
@@ -100,7 +104,10 @@ async def validate_file(file: UploadFile):
     
     # 1. Həm genişlənməni, həm də gerçək MIME tipini yoxlayırıq
     if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
-        raise HTTPException(status_code=400, detail="Təhlükəsizlik: Yalnız PDF, PNG, JPG, XLSX və ya CSV formatında sənəd yükləyə bilərsiniz.")
+        raise HTTPException(
+            status_code=400, 
+            detail="Təhlükəsizlik: Yalnız PDF, Word (DOC/DOCX), Excel (XLS/XLSX), CSV, TXT və ya Şəkil (PNG/JPG) yükləyə bilərsiniz."
+        )
     
     # 2. Faylın həcmini yoxlayırıq (Max 10 MB)
     file.file.seek(0, 2)
@@ -108,7 +115,6 @@ async def validate_file(file: UploadFile):
     file.file.seek(0)
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="Təhlükəsizlik: Faylın həcmi maksimum 10 MB ola bilər.")
-
 
 # ==========================================
 # CORS QORUNMASI (Sıxlaşdırıldı)
