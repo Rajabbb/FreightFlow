@@ -2080,6 +2080,11 @@ Best regards,
                 }
 
                 if (res.ok) {
+                    let totalReqs = requestsList.length;
+                    requestsList.forEach((req, index) => {
+                        req.display_id = totalReqs - index; 
+                    });
+
                     globalRequestsCache = requestsList;
                     filterRequests(); // Yenilənəndə mövcud filtrə əsasən ekrana yazdırır
                 } else {
@@ -2116,7 +2121,7 @@ Best regards,
                     <div class="request-card">
                         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-2">
                             <h6 class="fw-bold text-dark mb-0 d-flex align-items-center fs-6 flex-wrap gap-1">
-                                <span class="badge bg-light text-secondary border shadow-sm">ID: ${req.id}</span> 
+                                <span class="badge bg-light text-secondary border shadow-sm">RFQ #${req.display_id || req.id}</span> 
                                 <span class="text-break">${req.origin || req.loading_location || ''}</span> 
                                 <i class="bi bi-arrow-right-short mx-1 text-primary fs-5"></i> 
                                 <span class="text-break">${req.destination || req.delivery_location || ''}</span>
@@ -2156,7 +2161,7 @@ Best regards,
                 const origin = (req.origin || req.loading_location || '').toLowerCase();
                 const destination = (req.destination || req.delivery_location || '').toLowerCase();
                 const cargo = (req.cargo_type || req.cargo || '').toLowerCase();
-                const idStr = String(req.id || '').toLowerCase();
+                const idStr = String(req.display_id || req.id || '').toLowerCase();
                 
                 const matchesSearch = origin.includes(query) || destination.includes(query) || cargo.includes(query) || idStr.includes(query);
 
@@ -2523,8 +2528,8 @@ Best regards,
         }
 
         function renderDetailHeader(req) {
-            document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.id}`;
-            document.getElementById("detailIdBadge").textContent = `ID: ${req.id}`;
+            document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.display_id || req.id}`;
+            document.getElementById("detailIdBadge").textContent = `RFQ #${req.display_id || req.id}`;
             document.getElementById("detailOrigin").textContent = req.origin || req.loading_location || "—";
             document.getElementById("detailDestination").textContent = req.destination || req.delivery_location || "—";
             document.getElementById("detailCargoType").textContent = req.cargo_type || req.cargo || "—";
