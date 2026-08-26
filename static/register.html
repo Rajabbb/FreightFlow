@@ -57,7 +57,10 @@
             <div class="mb-4">
                 <label class="form-label text-muted fw-bold small">Şifrə təyin edin</label>
                 <input type="password" class="form-control" id="password" required placeholder="••••••••">
-                <small class="text-success" style="font-size: 11px;">Şifrəniz xüsusi alqoritmlə (Hash) qorunur və bizim tərəfimizdən görülə bilməz.</small>
+                <!-- YENİ: Müştəriyə şifrə tələbləri göstərilir -->
+                <small class="text-secondary d-block mt-2" style="font-size: 11px;">
+                    <strong>Tələb olunur:</strong> Ən azı 8 simvol, 1 böyük hərf, 1 kiçik hərf və 1 rəqəm.
+                </small>
             </div>
             
             <button type="submit" class="btn btn-primary w-100" id="submitBtn">Qeydiyyatı Tamamla</button>
@@ -70,6 +73,15 @@
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             const errorMsg = document.getElementById('errorMsg');
+            const password = document.getElementById('password').value;
+            
+            // YENİ: Brauzer tərəfində şifrənin dərhal yoxlanılması (Regex)
+            const passRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+            if (!passRegex.test(password)) {
+                errorMsg.innerText = "Şifrə tələblərə cavab vermir. Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm yazın.";
+                errorMsg.classList.remove('d-none');
+                return;
+            }
             
             btn.disabled = true;
             btn.innerText = "Gözləyin...";
@@ -79,7 +91,7 @@
                 token: document.getElementById('token').value,
                 company_name: document.getElementById('company_name').value,
                 email: document.getElementById('email').value,
-                password: document.getElementById('password').value
+                password: password
             };
 
             try {
