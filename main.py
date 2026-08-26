@@ -351,7 +351,7 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
 
     if duplicate_emails:
         unique_dups = ", ".join(list(set(duplicate_emails)))
-        raise HTTPException(status_code=400, detail=f"Bu e-poçt ünvanı artıq bazada və ya siyahıda mövcuddur: {unique_dups}")
+        raise HTTPException(status_code=400, detail=f"Bu e-poçt ünvanı artıq bazada və siyahıda mövcuddur: {unique_dups}")
     if not carriers_to_insert:
         raise HTTPException(status_code=400, detail="Daxil edilən e-poçt ünvanı etibarsızdır və ya artıq mövcuddur.")
     supabase.table("carriers").insert(carriers_to_insert).execute()
@@ -425,12 +425,10 @@ class ShipmentRequestCreate(BaseModel):
     stackable: Optional[Any] = None
     shipment_type: Optional[str] = ""
     required_fields: Optional[List[Any]] = []
-    
     send_to_all: bool = True
     send_option: Optional[str] = "all"
     carrier_ids: Optional[List[int]] = []
     category_ids: Optional[List[int]] = []
-    
     attachment_url: Optional[str] = None
     additional_notes: Optional[str] = ""
     note: Optional[str] = ""
@@ -496,6 +494,10 @@ class RegisterRequest(BaseModel):
     password: str
     company_name: str
 
+# YENİ ƏLAVƏ: ŞİFRƏNİ DƏYİŞDİRMƏK ÜÇÜN MODEL
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
 
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
@@ -669,10 +671,8 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
         display_id_map = {req["id"]: (total_reqs - i) for i, req in enumerate(all_reqs)}
         
         query = supabase.table("shipment_requests").select("*, quotes(*, carriers(company_name, email))").eq("customer_id", payload.customer_id)
-        
         if payload.report_type == "selected" and payload.rfq_ids:
             query = query.in_("id", payload.rfq_ids)
-        
         res = query.order("id", desc=True).execute()
         reqs = res.data or []
         
@@ -692,43 +692,26 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
         if payload.report_category == "rfq":
             for r in filtered_reqs:
                 disp_id = display_id_map.get(r.get("id"), r.get("id"))
-                
                 req_fields = r.get("required_fields") or []
                 
-                opts = {
-                    "Incoterm": "",
-                    "ADR": "",
-                    "Temperature": "",
-                    "Delivery": "",
-                    "Info": ""
-                }
-                
+                opts = {"Incoterm": "", "ADR": "", "Temperature": "", "Delivery": "", "Info": ""}
                 for f in req_fields:
                     f_str = str(f)
                     lower_f = f_str.lower()
-                    
-                    # TƏHLÜKƏSİZLİK: Əgər ':' yoxdursa xəta verməsin deyə yoxlayırıq
                     val = ""
-                    if ":" in f_str:
-                        val = f_str.split(":", 1)[1].strip()
+                    if ":" in f_str: val = f_str.split(":", 1)[1].strip()
 
-                    if lower_f.startswith("incoterm:"):
-                        opts["Incoterm"] = val
-                    elif lower_f.startswith("dangerous goods") or lower_f.startswith("adr:"):
-                        opts["ADR"] = val
-                    elif lower_f.startswith("temperature") or lower_f.startswith("temp:"):
-                        opts["Temperature"] = val
-                    elif lower_f.startswith("delivery deadline") or lower_f.startswith("deliv_date:"):
-                        opts["Delivery"] = val
-                    elif lower_f.startswith("additional info") or lower_f.startswith("info:"):
-                        opts["Info"] = val
+                    if lower_f.startswith("incoterm:"): opts["Incoterm"] = val
+                    elif lower_f.startswith("dangerous goods") or lower_f.startswith("adr:"): opts["ADR"] = val
+                    elif lower_f.startswith("temperature") or lower_f.startswith("temp:"): opts["Temperature"] = val
+                    elif lower_f.startswith("delivery deadline") or lower_f.startswith("deliv_date:"): opts["Delivery"] = val
+                    elif lower_f.startswith("additional info") or lower_f.startswith("info:"): opts["Info"] = val
 
                 stackable_val = r.get("stackable")
                 if stackable_val is True: stackable_str = "Bəli"
                 elif stackable_val is False: stackable_str = "Xeyr"
                 else: stackable_str = "Qeyd edilməyib"
 
-                # TƏHLÜKƏSİZLİK: r.get("additional_notes") NoneType olmaması üçün
                 main_notes = (r.get("additional_notes") or "").strip()
                 all_notes = " | ".join(filter(None, [main_notes, opts["Info"]]))
 
@@ -767,7 +750,6 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
 
                     carrier = q.get("carriers") or {}
                     extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k not in ("submitted", "submitted_at") and v])
-                    
                     date_val = extra.get("submitted_at") or q.get("updated_at") or q.get("created_at")
 
                     report_data.append({
@@ -1272,7 +1254,6 @@ def register_page(request: Request, token: str = None):
 @app.post("/api/register")
 @limiter.limit("3/minute")
 def process_registration(request: Request, data: RegisterRequest):
-    # YENİ: Şifrənin mürəkkəbliyini (kompleksliyini) yoxlayırıq
     if len(data.password) < 8 or not re.search(r"[A-Z]", data.password) or not re.search(r"[a-z]", data.password) or not re.search(r"[0-9]", data.password):
         raise HTTPException(
             status_code=400, 
@@ -1318,3 +1299,31 @@ async def login(request: Request, data: LoginRequest):
         else: raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
 
     raise HTTPException(status_code=404, detail="Bu e-poçt ilə qeydiyyatlı hesab tapılmadı.")
+
+@app.post("/api/change-password")
+@limiter.limit("5/minute")
+def change_password(request: Request, data: ChangePasswordRequest, current_user: dict = Depends(verify_token)):
+    user_id = current_user.get("sub")
+    role = current_user.get("role")
+    
+    if role != "customer":
+        raise HTTPException(status_code=403, detail="Yalnız müştərilər şifrəsini dəyişə bilər.")
+        
+    user_res = supabase.table("customers").select("*").eq("id", user_id).execute()
+    if not user_res.data:
+        raise HTTPException(status_code=404, detail="İstifadəçi tapılmadı.")
+    user = user_res.data[0]
+    
+    if not pwd_context.verify(data.current_password, user.get("password", "")):
+        raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
+        
+    if len(data.new_password) < 8 or not re.search(r"[A-Z]", data.new_password) or not re.search(r"[a-z]", data.new_password) or not re.search(r"[0-9]", data.new_password):
+        raise HTTPException(
+            status_code=400, 
+            detail="Təhlükəsizlik: Yeni şifrə ən azı 8 simvol olmalı, 1 böyük hərf, 1 kiçik hərf və 1 rəqəm ehtiva etməlidir!"
+        )
+        
+    new_hashed_password = pwd_context.hash(data.new_password)
+    supabase.table("customers").update({"password": new_hashed_password}).eq("id", user_id).execute()
+    
+    return {"status": "success", "message": "Şifrəniz uğurla dəyişdirildi!"}
