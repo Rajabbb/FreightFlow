@@ -5,19 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Müştəri Paneli - Arachi</title>
     
-    <!-- GOOGLE BOTA QADAĞA: Səhifə axtarışa düşməyəcək -->
     <meta name="robots" content="noindex, nofollow, nosnippet">
     <meta name="googlebot" content="noindex, nofollow, nosnippet">
     <meta name="description" content="Arachi Logistics - Şəxsi Müştəri Paneli. Yalnız qeydiyyatdan keçmiş və təsdiqlənmiş istifadəçilər üçün nəzərdə tutulub.">
 
     <link rel="icon" type="image/png" href="/static/arachi-logo.png">
-    <link rel="apple-touch-icon" href="/static/arachi-logo.png">
-    <link rel="shortcut icon" href="/static/arachi-logo.png">
     
-    <!-- PDF Formatında yükləmə üçün kitabxana -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
-    <!-- TƏHLÜKƏSİZLİK YOXLAMASI -->
     <script>
         function checkAuthStatus() {
             var token = localStorage.getItem("token");
@@ -133,7 +128,9 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+
         .main-app-tabs::-webkit-scrollbar { display: none; }
+
         .main-app-tabs .nav-link {
             border: 1px solid transparent;
             border-radius: var(--radius-md);
@@ -145,36 +142,17 @@
             background: rgba(255, 255, 255, 0.6);
             transition: all 0.25s ease;
         }
+
         .main-app-tabs .nav-link:hover {
             color: var(--primary-blue);
             background: rgba(255, 255, 255, 0.9);
         }
+
         .main-app-tabs .nav-link.active {
             color: #fff;
             background: linear-gradient(135deg, var(--primary-blue) 0%, #3b82f6 100%);
             box-shadow: 0 8px 16px -8px rgba(79, 70, 229, 0.5);
             border-color: transparent;
-        }
-        @media (max-width: 576px) {
-            .main-app-tabs .nav-link { font-size: 12px; padding: 9px 12px; }
-        }
-        @media (max-width: 640px) {
-            .main-app-tabs {
-                display: grid !important;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 8px;
-                overflow: visible !important;
-            }
-            .main-app-tabs .nav-item { width: 100%; }
-            .main-app-tabs .nav-link {
-                width: 100%;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                white-space: normal;
-                line-height: 1.2;
-            }
         }
 
         .form-control, .form-select {
@@ -196,16 +174,6 @@
             box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12), inset 0 1px 2px rgba(0, 0, 0, 0.02);
             outline: none;
             transform: translateY(-1px);
-        }
-
-        .form-control::placeholder { color: #94a3b8; }
-
-        .form-label {
-            font-size: 12.5px;
-            font-weight: 700;
-            color: #1e293b;
-            margin-bottom: 6px;
-            letter-spacing: -0.01em;
         }
 
         .btn-primary {
@@ -287,24 +255,10 @@
             transition: all 0.2s ease;
         }
 
-        .form-check-input {
-            width: 1.15em;
-            height: 1.15em;
-            border: 2px solid #cbd5e1;
-            transition: all 0.2s ease;
-            cursor: pointer;
-            flex-shrink: 0;
-        }
-        
         .form-check-input:checked {
             background-color: var(--primary-blue);
             border-color: var(--primary-blue);
             box-shadow: 0 0 8px rgba(79, 70, 229, 0.3);
-        }
-
-        .form-check-label {
-            cursor: pointer;
-            font-size: 13.5px;
         }
 
         .carrier-select-box {
@@ -321,11 +275,7 @@
             border: 1px solid transparent;
         }
 
-        .carrier-item-row:hover {
-            background: #f8fafc;
-        }
-
-        .history-item:hover { filter: brightness(0.95); }
+        .carrier-item-row:hover { background: #f8fafc; }
 
         .request-card {
             border: 1px solid rgba(226, 232, 240, 0.9);
@@ -361,27 +311,9 @@
             overflow: hidden;
         }
 
-        .modal-header {
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            padding: 18px 22px;
-        }
-        
+        .modal-header { background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 18px 22px; }
         .modal-body { padding: 22px; }
-        
-        .modal-footer {
-            background: #f8fafc;
-            border-top: 1px solid #e2e8f0;
-            padding: 14px 22px;
-        }
-
-        .badge {
-            padding: 5px 10px;
-            border-radius: 30px;
-            font-weight: 700;
-            font-size: 11px;
-            letter-spacing: 0.3px;
-        }
+        .modal-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 22px; }
 
         .table-container-responsive {
             width: 100%;
@@ -401,53 +333,6 @@
             white-space: nowrap;
         }
 
-        img, svg { max-width: 100%; height: auto; }
-
-        .table-container-responsive.overflow-hidden {
-            overflow-x: auto !important;
-            overflow-y: hidden !important;
-        }
-
-        @media (max-width: 768px) {
-            .container-fluid { padding-left: 12px; padding-right: 12px; }
-            .stats-card h3 { font-size: 28px; }
-            .section-title { font-size: 16px; }
-        }
-
-        @media (max-width: 576px) {
-            .card { padding: 16px; }
-            .optional-box { padding: 12px; }
-            .stats-card { padding: 16px; }
-            .stats-card h3 { font-size: 24px; }
-            .navbar-brand { font-size: 1rem; }
-            body { font-size: 13.5px; }
-            .section-title { font-size: 15px; }
-            .section-desc { font-size: 12.5px; }
-            .modal-body { padding: 16px; }
-            .modal-header { padding: 14px 16px; }
-            .modal-footer { padding: 12px 16px; }
-            .btn { white-space: normal; }
-            #userCompanyName { max-width: 100px; }
-        }
-
-        @media (max-width: 400px) {
-            .navbar-brand { font-size: 0.9rem; }
-            .navbar-brand i { font-size: 0.95rem; }
-            #userCompanyName { max-width: 76px; font-size: 11.5px; padding-left: 8px !important; padding-right: 8px !important; }
-            .stats-card h3 { font-size: 21px; }
-            .section-title { font-size: 14px; flex-wrap: wrap; }
-            .section-title i { font-size: 17px; }
-            .card { padding: 12px; }
-            .request-card { padding: 14px; }
-            .badge { font-size: 10px; padding: 4px 8px; }
-            body { font-size: 13px; }
-        }
-
-        @media (max-width: 340px) {
-            #userCompanyName { display: none; }
-        }
-
-        /* ============ RFQ DETAIL PAGE ============ */
         .detail-header-card {
             border-radius: var(--radius-lg);
             padding: 20px;
@@ -460,17 +345,6 @@
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 10px;
-        }
-
-        @media (max-width: 700px) {
-            .mini-stat-grid {
-                grid-auto-flow: column;
-                grid-auto-columns: minmax(96px, 1fr);
-                grid-template-columns: none;
-                overflow-x: auto;
-                padding-bottom: 4px;
-                -webkit-overflow-scrolling: touch;
-            }
         }
 
         .mini-stat-box {
@@ -507,6 +381,7 @@
             background: #fff;
             transition: all 0.2s ease;
         }
+
         .carrier-panel-row:hover { border-color: #c7d2fe; background: #f8fafc; }
 
         .filter-pills-wrapper {
@@ -518,9 +393,7 @@
             scrollbar-width: none;
             -webkit-overflow-scrolling: touch;
         }
-        .filter-pills-wrapper::-webkit-scrollbar {
-            display: none;
-        }
+
         .filter-pill {
             border: 1px solid #e2e8f0;
             background: #fff;
@@ -534,16 +407,8 @@
             transition: all 0.2s ease;
             flex-shrink: 0;
         }
-        .filter-pill.active {
-            background: var(--primary-blue);
-            border-color: var(--primary-blue);
-            color: #fff;
-        }
 
-        #carriersPanel {
-            width: 100%;
-            max-width: 400px;
-        }
+        .filter-pill.active { background: var(--primary-blue); border-color: var(--primary-blue); color: #fff; }
 
         .envelope-box {
             width: 100%;
@@ -551,6 +416,32 @@
             border-radius: var(--radius-lg);
             background: linear-gradient(135deg, #eef2ff 0%, #e0f2fe 100%);
             display: flex; align-items: center; justify-content: center;
+        }
+
+        @media (max-width: 768px) {
+            .stats-card h3 { font-size: 28px; }
+            .section-title { font-size: 16px; }
+            .mini-stat-grid {
+                grid-auto-flow: column;
+                grid-auto-columns: minmax(96px, 1fr);
+                grid-template-columns: none;
+                overflow-x: auto;
+                padding-bottom: 4px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .card { padding: 16px; }
+            .optional-box { padding: 12px; }
+            .stats-card { padding: 16px; }
+            .stats-card h3 { font-size: 24px; }
+            body { font-size: 13.5px; }
+            .section-title { font-size: 15px; }
+        }
+
+        @media (max-width: 400px) {
+            .stats-card h3 { font-size: 21px; }
+            .request-card { padding: 14px; }
         }
     </style>
 </head>
@@ -563,9 +454,13 @@
                 <img src="/static/arachi-logo.png" alt="Arachi" style="height: 26px; width: auto;" class="me-1">
                 <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">| Müştəri Paneli</span>
             </a>
-            <div class="ms-auto d-flex align-items-center gap-2">
+            <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
-                <button onclick="openChangePasswordModal()" class="btn btn-outline-primary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap me-2" style="font-size: 12.5px;">
+                
+                <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
+                    <i class="bi bi-envelope me-1"></i> E-poçtu Dəyiş
+                </button>
+                <button onclick="openChangePasswordModal()" class="btn btn-outline-primary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
                     <i class="bi bi-key me-1"></i> Şifrəni Dəyiş
                 </button>
                 <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
@@ -603,7 +498,7 @@
 
         <div class="tab-content" id="mainAppTabsContent">
 
-        <!-- ================= TAB 1: ANALİTİKA VƏ PANEL (DASHBOARD) ================= -->
+        <!-- ================= TAB 1: DASHBOARD ================= -->
         <div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel" aria-labelledby="tab-dashboard-btn">
         
         <!-- STATS ROW -->
@@ -663,7 +558,6 @@
                     </div>
                     <div class="section-desc mb-3">Sistemdən RFQ və ya Təklif məlumatlarını endirin.</div>
                     
-                    <!-- Hesabatın Məzmunu (RFQ vs Təklif) -->
                     <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm">
                         <label class="form-label text-muted small fw-bold mb-2 d-block">Hesabatın Məzmunu</label>
                         <div class="form-check mb-2">
@@ -676,7 +570,6 @@
                         </div>
                     </div>
 
-                    <!-- Zaman və Seçim Aralığı -->
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-bold">Sorğu aralığı</label>
                         <select class="form-select shadow-sm" id="reportTypeSelect" onchange="toggleReportOptions()" style="font-size: 13px;">
@@ -687,7 +580,6 @@
                         </select>
                     </div>
 
-                    <!-- Tarix Aralığı Seçimləri -->
                     <div id="reportDateRangeOptions" class="d-none mb-3 p-3 bg-white border rounded-3 shadow-sm">
                         <div class="mb-2">
                             <label class="form-label text-muted" style="font-size: 11px;">Başlanğıc Tarixi</label>
@@ -699,7 +591,6 @@
                         </div>
                     </div>
 
-                    <!-- Seçilmiş RFQ-lər -->
                     <div id="reportSelectedOptions" class="d-none mb-3 p-2 bg-white border rounded-3 shadow-sm" style="max-height: 150px; overflow-y: auto;">
                         <small class="text-muted fw-bold d-block mb-2 ps-1" style="font-size: 11px;">Aşağıdan sorğuları seçin:</small>
                         <div id="reportRfqCheckboxes">
@@ -707,7 +598,6 @@
                         </div>
                     </div>
 
-                    <!-- Fayl Formatı (Excel vs PDF) -->
                     <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm d-flex justify-content-between">
                         <div class="form-check">
                             <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportFormat" id="fmtExcel" value="csv" checked>
@@ -729,15 +619,14 @@
         </div>
         <!-- ================= /TAB 1 ================= -->
 
-        <!-- ================= TAB 2: DAŞIYICI BAZASI VƏ QRUPLAŞDIRMA ================= -->
+        <!-- ================= TAB 2: DAŞIYICI BAZASI ================= -->
         <div class="tab-pane fade" id="tab-vendors" role="tabpanel" aria-labelledby="tab-vendors-btn">
 
-        <!-- KATEQORİYALARIN İDARƏ EDİLMƏSİ -->
         <div class="card shadow-sm border-0 mb-4 bg-light">
             <div class="section-title mb-1">
                 <i class="bi bi-tags-fill text-primary"></i> Daşıyıcı Kateqoriyaları
             </div>
-            <div class="section-desc mb-3">Daşıyıcılarınızı qruplaşdırmaq üçün kateqoriyalar yaradın (məs: VIP, Türkiyə, FTL, Hava yolu və s.).</div>
+            <div class="section-desc mb-3">Daşıyıcılarınızı qruplaşdırmaq üçün kateqoriyalar yaradın.</div>
             
             <div class="d-flex gap-2 mb-3 flex-wrap">
                 <input type="text" id="newCategoryName" class="form-control form-control-sm" placeholder="Yeni kateqoriya adı daxil edin..." style="max-width: 300px;">
@@ -749,7 +638,6 @@
             </div>
         </div>
 
-        <!-- DAŞIYICI BAZASINI İDARƏ ETMƏK -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="section-title mb-1">
                 <i class="bi bi-people-fill text-primary"></i> Daşıyıcı Bazasını İdarə Etmək
@@ -865,7 +753,6 @@
         <!-- ================= TAB 3: YENİ RFQ YARAT ================= -->
         <div class="tab-pane fade" id="tab-builder" role="tabpanel" aria-labelledby="tab-builder-btn">
 
-        <!-- YENİ YÜK SORĞUSU (RFQ) YARAT -->
         <div class="card">
             <div class="section-title">
                 <i class="bi bi-box-seam-fill"></i> Yeni Yük Sorğusu (RFQ) Yarat
@@ -1059,7 +946,6 @@ Best regards,
                         </label>
                     </div>
 
-                    <!-- Kateqoriya Seçim Qutusu -->
                     <div id="categorySelectionContainer" class="d-none mt-2 p-2 p-sm-3 bg-light rounded-4 border mb-3">
                         <small class="text-muted fw-bold text-uppercase tracking-wider d-block mb-2" style="font-size: 11px;">Aşağıdan göndəriləcək kateqoriyaları seçin:</small>
                         <div class="carrier-select-box p-2" id="categoryCheckboxList">
@@ -1067,7 +953,6 @@ Best regards,
                         </div>
                     </div>
 
-                    <!-- Fərdi Daşıyıcı Seçim Qutusu -->
                     <div id="carrierSelectionContainer" class="d-none mt-2 p-2 p-sm-3 bg-light rounded-4 border">
                         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                             <small class="text-muted fw-bold text-uppercase tracking-wider" style="font-size: 11px;">Daşıyıcıları seçin:</small>
@@ -1106,7 +991,6 @@ Best regards,
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider">Sorğu Siyahısı</h5>
                 <div class="d-flex align-items-center gap-2">
-                    <!-- YENİ ƏLAVƏ EDİLƏN STATUS FİLTER DÜYMƏLƏRİ -->
                     <div class="btn-group" role="group">
                         <input type="radio" class="btn-check" name="statusFilter" id="filterAll" value="all" checked onchange="filterRequests()">
                         <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterAll">Hamısı</label>
@@ -1301,7 +1185,6 @@ Best regards,
                 <input type="text" id="carrierPanelSearch" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." oninput="renderCarrierPanel()">
             </div>
 
-            <!-- DƏYİŞDİRİLMİŞ: YENİ DİZAYNLı FILTER DÜYMƏLƏRİ -->
             <div class="d-flex gap-2 mb-3 flex-nowrap overflow-auto filter-pills-container" style="padding-bottom: 5px;">
                 <span class="filter-pill active" id="filterPillAll" onclick="setCarrierPanelFilter('all')">Hamısı (<span id="tabAllCount">0</span>)</span>
                 <span class="filter-pill" id="filterPillResponded" onclick="setCarrierPanelFilter('responded')">Təklif verənlər (<span id="tabRespondedCount">0</span>)</span>
@@ -1342,7 +1225,7 @@ Best regards,
         </div>
     </div>
 
-    <!-- YENİ ƏLAVƏ: ŞİFRƏNİ DƏYİŞ MODALI -->
+    <!-- ŞİFRƏNİ DƏYİŞ MODALI -->
     <div class="modal fade" id="changePasswordModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -1367,6 +1250,32 @@ Best regards,
                         </div>
                         <button type="submit" class="btn btn-primary w-100" id="cp_submitBtn">Şifrəni Yenilə</button>
                         <div id="cp_errorMsg" class="text-danger small mt-3 text-center d-none"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- E-POÇTU DƏYİŞ MODALI -->
+    <div class="modal fade" id="changeEmailModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-envelope text-primary me-2"></i> E-poçtu Dəyiş</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changeEmailForm" onsubmit="submitEmailChange(event)">
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-bold small">Yeni E-poçt</label>
+                            <input type="email" class="form-control" id="ce_new" required placeholder="Yeni e-poçt ünvanınızı yazın">
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label text-muted fw-bold small">Cari Şifrə (Təsdiq üçün)</label>
+                            <input type="password" class="form-control" id="ce_current_pass" required placeholder="Təhlükəsizlik üçün hazırkı şifrənizi daxil edin">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="ce_submitBtn">E-poçtu Yenilə</button>
+                        <div id="ce_errorMsg" class="text-danger small mt-3 text-center d-none"></div>
                     </form>
                 </div>
             </div>
@@ -1533,7 +1442,7 @@ Best regards,
         
         initData();
 
-        // YENİ ƏLAVƏ: ŞİFRƏ DƏYİŞMƏ FUNKSİYALARI
+        // ŞİFRƏ DƏYİŞMƏ FUNKSİYALARI
         function openChangePasswordModal() {
             document.getElementById("changePasswordForm").reset();
             document.getElementById("cp_errorMsg").classList.add("d-none");
@@ -1589,6 +1498,58 @@ Best regards,
             } finally {
                 btn.disabled = false;
                 btn.innerText = "Şifrəni Yenilə";
+            }
+        }
+
+        // E-POÇTU DƏYİŞMƏ FUNKSİYALARI
+        function openChangeEmailModal() {
+            document.getElementById("changeEmailForm").reset();
+            document.getElementById("ce_errorMsg").classList.add("d-none");
+            new bootstrap.Modal(document.getElementById("changeEmailModal")).show();
+        }
+
+        async function submitEmailChange(e) {
+            e.preventDefault();
+            const btn = document.getElementById('ce_submitBtn');
+            const errorMsg = document.getElementById('ce_errorMsg');
+            
+            const newEmail = document.getElementById('ce_new').value;
+            const currentPass = document.getElementById('ce_current_pass').value;
+            
+            btn.disabled = true;
+            btn.innerText = "Gözləyin...";
+            errorMsg.classList.add('d-none');
+
+            try {
+                const res = await fetch('/api/change-email', {
+                    method: 'POST',
+                    headers: getAuthHeaders(),
+                    body: JSON.stringify({ new_email: newEmail, current_password: currentPass })
+                });
+                
+                if (res.status === 401 || res.status === 403) { logout(); return; }
+                const data = await res.json();
+                
+                if (res.ok) {
+                    alert(data.message || "E-poçtunuz uğurla dəyişdirildi!");
+                    if(activeUser) {
+                        activeUser.email = newEmail;
+                        localStorage.setItem("user", JSON.stringify(activeUser));
+                        if (!activeUser.company_name) {
+                            document.getElementById("userCompanyName").innerText = activeUser.email;
+                        }
+                    }
+                    bootstrap.Modal.getInstance(document.getElementById("changeEmailModal")).hide();
+                } else {
+                    errorMsg.innerText = data.detail || "Xəta baş verdi";
+                    errorMsg.classList.remove('d-none');
+                }
+            } catch (err) {
+                errorMsg.innerText = "Sistemlə əlaqə kəsildi.";
+                errorMsg.classList.remove('d-none');
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "E-poçtu Yenilə";
             }
         }
 
@@ -2885,7 +2846,8 @@ Best regards,
             });
 
             if (filtered.length === 0) {
-                list.innerHTML = `<div class="text-center text-muted small p-4"><i class="bi bi-people fs-3 d-block mb-2 opacity-50"></i>Uyğun daşıyıcı tapılmadı.</div>`; return;
+                list.innerHTML = `<div class="text-center text-muted small p-4"><i class="bi bi-people fs-3 d-block mb-2 opacity-50"></i>Uyğun daşıyıcı tapılmadı.</div>`;
+                return;
             }
 
             let html = "";
