@@ -45,7 +45,7 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = FastAPI(title="Arachi Backend API")
 
 # ==========================================
-# MƏRHƏLƏ 4: BOT VƏ BRUTE-FORCE QORUNMASI (RATE LIMITING)
+# MƏRHƏLƏ 4: BOT VƏ BRUTE-FORCE QORUNMASI
 # ==========================================
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
@@ -56,7 +56,6 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 # ==========================================
 security = HTTPBearer()
 
-# DƏYİŞDİRİLDİ: Açıq şifrə silindi, yalnız .env faylından oxunur
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
     raise ValueError("JWT_SECRET təyin olunmayıb! Zəhmət olmasa .env faylına əlavə edin.")
@@ -83,7 +82,7 @@ def check_ownership(requested_customer_id: int, current_user: dict):
         raise HTTPException(status_code=403, detail="Təhlükəsizlik Xəbərdarlığı: İcazə rədd edildi! Bu məlumat sizə aid deyil.")
 
 # ==========================================
-# MƏRHƏLƏ 3: ZƏRƏRLİ FAYL QORUNMASI (MALICIOUS UPLOADS)
+# MƏRHƏLƏ 3: ZƏRƏRLİ FAYL QORUNMASI
 # ==========================================
 ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".xlsx", ".xls", ".doc", ".docx", ".csv", ".txt"}
 ALLOWED_MIME_TYPES = {
@@ -97,19 +96,15 @@ ALLOWED_MIME_TYPES = {
     "text/csv",
     "text/plain"
 }
-MAX_FILE_SIZE = 10 * 1024 * 1024  # Maksimum 10 MB
+MAX_FILE_SIZE = 10 * 1024 * 1024  
 
 async def validate_file(file: UploadFile):
     ext = os.path.splitext(file.filename)[1].lower()
-    
-    # 1. Həm genişlənməni, həm də gerçək MIME tipini yoxlayırıq
     if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
             status_code=400, 
             detail="Təhlükəsizlik: Yalnız PDF, Word (DOC/DOCX), Excel (XLS/XLSX), CSV, TXT və ya Şəkil (PNG/JPG) yükləyə bilərsiniz."
         )
-    
-    # 2. Faylın həcmini yoxlayırıq (Max 10 MB)
     file.file.seek(0, 2)
     file_size = file.file.tell()
     file.file.seek(0)
@@ -118,7 +113,7 @@ async def validate_file(file: UploadFile):
 
 
 # ==========================================
-# CORS QORUNMASI (Sıxlaşdırıldı)
+# CORS QORUNMASI
 # ==========================================
 ALLOWED_ORIGINS = [
     "https://arachi.co",
@@ -134,7 +129,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 BOUNCE_CHECK_INTERVAL_SECONDS = int(os.getenv("BOUNCE_CHECK_INTERVAL_SECONDS", "300"))
 
@@ -351,7 +345,7 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
 
     if duplicate_emails:
         unique_dups = ", ".join(list(set(duplicate_emails)))
-        raise HTTPException(status_code=400, detail=f"Bu e-poçt ünvanı artıq bazada və siyahıda mövcuddur: {unique_dups}")
+        raise HTTPException(status_code=400, detail=f"Bu e-poçt ünvanı artıq bazada və ya siyahıda mövcuddur: {unique_dups}")
     if not carriers_to_insert:
         raise HTTPException(status_code=400, detail="Daxil edilən e-poçt ünvanı etibarsızdır və ya artıq mövcuddur.")
     supabase.table("carriers").insert(carriers_to_insert).execute()
@@ -494,14 +488,14 @@ class RegisterRequest(BaseModel):
     password: str
     company_name: str
 
+# YENİ ƏLAVƏLƏR: ŞİFRƏ VƏ E-POÇT DƏYİŞDİRMƏ MODELLƏRİ
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
 
-# YENİ ƏLAVƏ: E-poçtu dəyişmək üçün model
 class ChangeEmailRequest(BaseModel):
-    current_password: str
     new_email: EmailStr
+    current_password: str
 
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
@@ -1332,7 +1326,6 @@ def change_password(request: Request, data: ChangePasswordRequest, current_user:
     
     return {"status": "success", "message": "Şifrəniz uğurla dəyişdirildi!"}
 
-# YENİ ƏLAVƏ: E-POÇTU DƏYİŞDİRMƏK ÜÇÜN API ROUTE
 @app.post("/api/change-email")
 @limiter.limit("5/minute")
 def change_email(request: Request, data: ChangeEmailRequest, current_user: dict = Depends(verify_token)):
@@ -1351,10 +1344,13 @@ def change_email(request: Request, data: ChangeEmailRequest, current_user: dict 
         raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
         
     existing_cust = supabase.table("customers").select("id").eq("email", data.new_email).execute()
-    existing_carr = supabase.table("carriers").select("id").eq("email", data.new_email).execute()
-    if existing_cust.data or existing_carr.data:
+    if existing_cust.data and str(existing_cust.data[0]["id"]) != str(user_id):
         raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq başqa hesab tərəfindən istifadə olunur.")
+        
+    existing_carrier = supabase.table("carriers").select("id").eq("email", data.new_email).execute()
+    if existing_carrier.data:
+        raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı Daşıyıcı bazasında mövcuddur. Fərqli e-poçt istifadə edin.")
         
     supabase.table("customers").update({"email": data.new_email}).eq("id", user_id).execute()
     
-    return {"status": "success", "message": "E-poçtunuz uğurla dəyişdirildi!", "new_email": data.new_email}
+    return {"status": "success", "message": "E-poçtunuz uğurla dəyişdirildi!"}
