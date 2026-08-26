@@ -1272,6 +1272,13 @@ def register_page(request: Request, token: str = None):
 @app.post("/api/register")
 @limiter.limit("3/minute")
 def process_registration(request: Request, data: RegisterRequest):
+    # YENİ: Şifrənin mürəkkəbliyini (kompleksliyini) yoxlayırıq
+    if len(data.password) < 8 or not re.search(r"[A-Z]", data.password) or not re.search(r"[a-z]", data.password) or not re.search(r"[0-9]", data.password):
+        raise HTTPException(
+            status_code=400, 
+            detail="Təhlükəsizlik: Şifrə ən azı 8 simvol olmalı, həmçinin ən azı 1 böyük hərf, 1 kiçik hərf və 1 rəqəm ehtiva etməlidir!"
+        )
+
     try:
         res = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
         valid_token = res.data[0] if res.data else None
