@@ -494,10 +494,14 @@ class RegisterRequest(BaseModel):
     password: str
     company_name: str
 
-# YENİ ƏLAVƏ: ŞİFRƏNİ DƏYİŞDİRMƏK ÜÇÜN MODEL
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+# YENİ ƏLAVƏ: E-poçtu dəyişmək üçün model
+class ChangeEmailRequest(BaseModel):
+    current_password: str
+    new_email: EmailStr
 
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
@@ -1327,3 +1331,30 @@ def change_password(request: Request, data: ChangePasswordRequest, current_user:
     supabase.table("customers").update({"password": new_hashed_password}).eq("id", user_id).execute()
     
     return {"status": "success", "message": "Şifrəniz uğurla dəyişdirildi!"}
+
+# YENİ ƏLAVƏ: E-POÇTU DƏYİŞDİRMƏK ÜÇÜN API ROUTE
+@app.post("/api/change-email")
+@limiter.limit("5/minute")
+def change_email(request: Request, data: ChangeEmailRequest, current_user: dict = Depends(verify_token)):
+    user_id = current_user.get("sub")
+    role = current_user.get("role")
+    
+    if role != "customer":
+        raise HTTPException(status_code=403, detail="Yalnız müştərilər e-poçtunu dəyişə bilər.")
+        
+    user_res = supabase.table("customers").select("*").eq("id", user_id).execute()
+    if not user_res.data:
+        raise HTTPException(status_code=404, detail="İstifadəçi tapılmadı.")
+    user = user_res.data[0]
+    
+    if not pwd_context.verify(data.current_password, user.get("password", "")):
+        raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
+        
+    existing_cust = supabase.table("customers").select("id").eq("email", data.new_email).execute()
+    existing_carr = supabase.table("carriers").select("id").eq("email", data.new_email).execute()
+    if existing_cust.data or existing_carr.data:
+        raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq başqa hesab tərəfindən istifadə olunur.")
+        
+    supabase.table("customers").update({"email": data.new_email}).eq("id", user_id).execute()
+    
+    return {"status": "success", "message": "E-poçtunuz uğurla dəyişdirildi!", "new_email": data.new_email}
