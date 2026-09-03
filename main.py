@@ -1123,7 +1123,7 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
 
 @app.post("/quotes/submit/{token}")
 @limiter.limit("5/minute")
-async def submit_quote(request: Request, token: str, price: Optional[str] = Form(None), currency: Optional[str] = Form("AZN"), transit_time_days: Optional[int] = Form(None), extra_details: Optional[str] = Form("{}"), carrier_file: Optional[UploadFile] = File(None)):
+async def submit_quote(request: Request, token: str, price: Optional[str] = Form(None), currency: Optional[str] = Form("AZN"), transit_time_days: Optional[int] = Form(None), extra_details: Optional[str] = Form("{}"), carrier_file: Optional[UploadFile] = File(None), is_alternative: str = Form("false")):
     res = supabase.table("quotes").select("*").eq("token", token).execute()
     if not res.data: raise HTTPException(status_code=404, detail="Xətalı link!")
     quote = res.data[0]
@@ -1143,6 +1143,22 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
 
     parsed_currency = (currency or "AZN").strip().upper()
     if parsed_currency not in ("AZN", "USD", "EUR", "TRY", "RUB", "GBP"): parsed_currency = "AZN"
+
+    if is_alternative.lower() == "true":
+        new_token = str(uuid.uuid4())
+        new_quote_data = {
+            "request_id": quote["request_id"],
+            "carrier_id": quote["carrier_id"],
+            "token": new_token,
+            "price": parsed_price,
+            "currency": parsed_currency,
+            "transit_time_days": transit_time_days,
+            "extra_details": parsed_extra,
+            "mail_status": "delivered",
+            "is_viewed": True
+        }
+        insert_res = supabase.table("quotes").insert(new_quote_data).execute()
+        return {"status": "success", "message": "Alternativ təklif qəbul edildi!", "data": insert_res.data}
 
     history = quote.get("quote_history") or []
     existing_price = quote.get("price")
