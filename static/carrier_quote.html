@@ -20,7 +20,7 @@
         <!-- Re-submission Notice -->
         <div id="update_notice" class="hidden bg-indigo-900/40 border border-indigo-800 text-indigo-200 p-3 rounded-lg mb-6 text-sm">
             <span class="block font-semibold mb-1">ℹ️ You have previously submitted a quote.</span>
-            You can either update your existing offer OR submit a completely new alternative option (e.g., for a different transport mode or transit time).
+            You can select an option below to update it OR submit a completely new alternative option.
         </div>
 
         <!-- Cargo Details -->
@@ -106,6 +106,9 @@
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
 
+        let allCarrierQuotes = [];
+        let currentEditingToken = token;
+
         // YENİ TƏHLÜKƏSİZLİK: XSS QORUNMASI (ESCAPE HTML)
         function escapeHTML(str) {
             if (str === null || str === undefined) return '';
@@ -145,6 +148,65 @@
             return s.replace(/\s00:00:00/g, '').replace(/\s00:00/g, '').trim();
         }
 
+        function renderOptionsTabs() {
+            let container = document.getElementById("options_tabs_container");
+            if (!container) {
+                container = document.createElement("div");
+                container.id = "options_tabs_container";
+                const formEl = document.getElementById("quote_form");
+                formEl.parentNode.insertBefore(container, formEl);
+            }
+
+            let tabsHtml = `<div class="flex gap-2 overflow-x-auto mb-5 pb-2" style="scrollbar-width: thin; scrollbar-color: #4f46e5 transparent;">`;
+            allCarrierQuotes.forEach((q, index) => {
+                let isSub = q.price !== null || (q.extra_details && q.extra_details.submitted_at);
+                let label = isSub ? `Option ${index + 1}` : `Draft Option`;
+                let priceLabel = q.price ? `${q.price} ${q.currency}` : '';
+                
+                tabsHtml += `<button type="button" id="tab_${q.token}" onclick="selectQuoteOption('${q.token}')" class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-all whitespace-nowrap quote-tab-btn flex flex-col items-center min-w-[100px]">
+                    <span class="block">${label}</span>
+                    ${priceLabel ? `<span class="text-xs text-emerald-400 font-bold mt-1">${priceLabel}</span>` : ''}
+                </button>`;
+            });
+            tabsHtml += `</div>`;
+            container.innerHTML = tabsHtml;
+        }
+
+        function selectQuoteOption(selectedToken) {
+            currentEditingToken = selectedToken;
+            const q = allCarrierQuotes.find(x => x.token === selectedToken);
+            if (!q) return;
+
+            // UI Tab Yeniləmə
+            document.querySelectorAll(".quote-tab-btn").forEach(btn => {
+                btn.classList.remove("bg-indigo-600", "text-white", "border-indigo-500");
+                btn.classList.add("bg-slate-800", "text-slate-400", "border-slate-700");
+            });
+            const activeTab = document.getElementById(`tab_${selectedToken}`);
+            if (activeTab) {
+                activeTab.classList.remove("bg-slate-800", "text-slate-400", "border-slate-700");
+                activeTab.classList.add("bg-indigo-600", "text-white", "border-indigo-500");
+            }
+
+            // Məlumatları Doldurma
+            document.getElementById("price").value = q.price !== null ? q.price : "";
+            document.getElementById("currency").value = q.currency || "AZN";
+            document.getElementById("transit_time_days").value = q.transit_time_days !== null ? q.transit_time_days : "";
+            
+            if (q.extra_details && q.extra_details["Carrier Note"]) {
+                document.getElementById("carrier_note").value = q.extra_details["Carrier Note"];
+            } else {
+                document.getElementById("carrier_note").value = "";
+            }
+
+            let isSub = q.price !== null || (q.extra_details && q.extra_details.submitted_at);
+            if (isSub) {
+                document.getElementById("submit_btn").innerHTML = "🔄 Update Selected Quote";
+            } else {
+                document.getElementById("submit_btn").innerHTML = "🚀 Submit Quote";
+            }
+        }
+
         async function loadRequestDetails() {
             try {
                 const response = await fetch(`/requests/details/${token}`);
@@ -153,19 +215,29 @@
                 if (response.ok) {
                     const req = data.request;
                     
-                    if (data.already_submitted) {
-                        document.getElementById("update_notice").classList.remove("hidden");
-                        document.getElementById("submit_btn").innerHTML = "🔄 Update Existing Quote";
+                    if (data.all_quotes && data.all_quotes.length > 0) {
+                        allCarrierQuotes = data.all_quotes;
+                        const submittedQuotes = allCarrierQuotes.filter(q => q.price !== null || (q.extra_details && q.extra_details.submitted_at));
                         
-                        const altBtn = document.getElementById("submit_alt_btn");
-                        if (altBtn) altBtn.classList.remove("hidden");
-                        
-                        document.getElementById("price").value = data.quote.price || "";
-                        document.getElementById("currency").value = data.quote.currency || "AZN";
-                        document.getElementById("transit_time_days").value = data.quote.transit_time_days || "";
-                        
-                        if (data.quote.extra_details && data.quote.extra_details["Carrier Note"]) {
-                            document.getElementById("carrier_note").value = data.quote.extra_details["Carrier Note"];
+                        if (submittedQuotes.length > 0) {
+                            document.getElementById("update_notice").classList.remove("hidden");
+                            
+                            const altBtn = document.getElementById("submit_alt_btn");
+                            if (altBtn) altBtn.classList.remove("hidden");
+                            
+                            renderOptionsTabs();
+                            
+                            // Əgər URL-dəki token varsa onu seç, yoxsa ilk təklifi
+                            const defaultQuote = allCarrierQuotes.find(q => q.token === token) || allCarrierQuotes[0];
+                            selectQuoteOption(defaultQuote.token);
+                        } else {
+                            // Tamamilə ilk təklif
+                            document.getElementById("price").value = data.quote.price || "";
+                            document.getElementById("currency").value = data.quote.currency || "AZN";
+                            document.getElementById("transit_time_days").value = data.quote.transit_time_days || "";
+                            if (data.quote.extra_details && data.quote.extra_details["Carrier Note"]) {
+                                document.getElementById("carrier_note").value = data.quote.extra_details["Carrier Note"];
+                            }
                         }
                     }
 
@@ -306,7 +378,8 @@
             formData.append("is_alternative", isAlternative ? "true" : "false");
 
             try {
-                const response = await fetch(`/quotes/submit/${token}`, { method: "POST", body: formData });
+                // Diqqət: İndi URL tokeninə yox, seçilmiş Tab-ın tokeninə müraciət edir!
+                const response = await fetch(`/quotes/submit/${currentEditingToken}`, { method: "POST", body: formData });
                 let result = {};
                 try { result = await response.json(); } catch (e) {}
 
