@@ -1201,6 +1201,18 @@ def select_winner_path(quote_id: int, current_user: dict = Depends(verify_token)
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", request_id).execute()
     return {"status": "success", "message": "Təklif qalib olaraq seçildi!"}
 
+@app.post("/quotes/cancel-winner/{quote_id}")
+def cancel_winner_path(quote_id: int, current_user: dict = Depends(verify_token)):
+    quote_res = supabase.table("quotes").select("request_id").eq("id", quote_id).execute()
+    if not quote_res.data: raise HTTPException(status_code=404, detail="Təklif tapılmadı.")
+    
+    request_id = quote_res.data[0]["request_id"]
+    
+    supabase.table("quotes").update({"is_winner": False}).eq("request_id", request_id).execute()
+    supabase.table("shipment_requests").update({"status": "open"}).eq("id", request_id).execute()
+    
+    return {"status": "success", "message": "Qalib seçimi ləğv edildi. Başqa təklif seçə bilərsiniz!"}
+
 @app.post("/quotes/select-winner")
 async def select_winner_body(payload: SelectWinnerRequest, current_user: dict = Depends(verify_token)):
     supabase.table("quotes").update({"is_winner": False}).eq("request_id", payload.request_id).execute()
@@ -1343,12 +1355,9 @@ def change_email(request: Request, data: ChangeEmailRequest, current_user: dict 
     if not pwd_context.verify(data.current_password, user.get("password", "")):
         raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
         
-    # Yalnız digər MÜŞTƏRİLƏRİN bu e-poçtu istifadə edib-etmədiyini yoxlayırıq
     existing_cust = supabase.table("customers").select("id").eq("email", data.new_email).execute()
     if existing_cust.data and str(existing_cust.data[0]["id"]) != str(user_id):
         raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq başqa müştəri hesabı tərəfindən istifadə olunur.")
-        
-    # QEYD: Daşıyıcı (carrier) yoxlanış bloku buradan tamamilə silindi!
         
     supabase.table("customers").update({"email": data.new_email}).eq("id", user_id).execute()
     
