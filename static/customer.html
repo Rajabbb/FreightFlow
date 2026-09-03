@@ -2476,6 +2476,8 @@ Best regards,
                         if (v !== null && v !== undefined && v !== "") {
                             if (k === 'carrier_attachment_url') {
                                 extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${escapeHTML(v)}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
+                            } else if (k === 'submitted_at') {
+                                extraStr += `<div><strong class="text-dark">Tarix:</strong> ${escapeHTML(formatDateTime(v, true, false))}</div>`;
                             } else {
                                 extraStr += `<div><strong class="text-dark">${escapeHTML(k)}:</strong> ${escapeHTML(v)}</div>`;
                             }
