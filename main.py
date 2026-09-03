@@ -1124,66 +1124,75 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
 @app.post("/quotes/submit/{token}")
 @limiter.limit("5/minute")
 async def submit_quote(request: Request, token: str, price: Optional[str] = Form(None), currency: Optional[str] = Form("AZN"), transit_time_days: Optional[int] = Form(None), extra_details: Optional[str] = Form("{}"), carrier_file: Optional[UploadFile] = File(None), is_alternative: str = Form("false")):
-    res = supabase.table("quotes").select("*").eq("token", token).execute()
-    if not res.data: raise HTTPException(status_code=404, detail="Xətalı link!")
-    quote = res.data[0]
-    
-    parsed_price = float(price) if price and str(price).strip() else None
-    parsed_extra = json.loads(extra_details) if extra_details else {}
-    parsed_extra["submitted"] = True
-    parsed_extra["submitted_at"] = datetime.utcnow().isoformat()
+    try:
+        res = supabase.table("quotes").select("*").eq("token", token).execute()
+        if not res.data: raise HTTPException(status_code=404, detail="Xətalı link!")
+        quote = res.data[0]
+        
+        parsed_price = float(price) if price and str(price).strip() else None
+        parsed_extra = json.loads(extra_details) if extra_details else {}
+        parsed_extra["submitted"] = True
+        parsed_extra["submitted_at"] = datetime.utcnow().isoformat()
 
-    if carrier_file and carrier_file.filename:
-        await validate_file(carrier_file)
-        file_ext = os.path.splitext(carrier_file.filename)[1]
-        unique_filename = f"{uuid.uuid4()}{file_ext}"
-        with open(os.path.join(UPLOAD_DIR, unique_filename), "wb") as buffer: buffer.write(await carrier_file.read())
-        parsed_extra["carrier_attachment_url"] = f"/uploads/{unique_filename}"
-        parsed_extra["carrier_attachment_name"] = carrier_file.filename
+        if carrier_file and carrier_file.filename:
+            await validate_file(carrier_file)
+            file_ext = os.path.splitext(carrier_file.filename)[1]
+            unique_filename = f"{uuid.uuid4()}{file_ext}"
+            with open(os.path.join(UPLOAD_DIR, unique_filename), "wb") as buffer: buffer.write(await carrier_file.read())
+            parsed_extra["carrier_attachment_url"] = f"/uploads/{unique_filename}"
+            parsed_extra["carrier_attachment_name"] = carrier_file.filename
 
-    parsed_currency = (currency or "AZN").strip().upper()
-    if parsed_currency not in ("AZN", "USD", "EUR", "TRY", "RUB", "GBP"): parsed_currency = "AZN"
+        parsed_currency = (currency or "AZN").strip().upper()
+        if parsed_currency not in ("AZN", "USD", "EUR", "TRY", "RUB", "GBP"): parsed_currency = "AZN"
 
-    if is_alternative.lower() == "true":
-        new_token = str(uuid.uuid4())
-        new_quote_data = {
-            "request_id": quote["request_id"],
-            "carrier_id": quote["carrier_id"],
-            "token": new_token,
-            "price": parsed_price,
+        if is_alternative.lower() == "true":
+            new_token = str(uuid.uuid4())
+            new_quote_data = {
+                "request_id": quote["request_id"],
+                "carrier_id": quote["carrier_id"],
+                "token": new_token,
+                "price": parsed_price,
+                "currency": parsed_currency,
+                "transit_time_days": transit_time_days,
+                "extra_details": parsed_extra,
+                "mail_status": "delivered",
+                "is_viewed": True
+            }
+            insert_res = supabase.table("quotes").insert(new_quote_data).execute()
+            return {"status": "success", "message": "Alternativ təklif qəbul edildi!", "data": insert_res.data}
+
+        history = quote.get("quote_history") or []
+        existing_price = quote.get("price")
+        existing_extra = quote.get("extra_details") or {}
+
+        if existing_price is not None or existing_extra.get("submitted"):
+            old_state = {
+                "version": len(history) + 1,
+                "price": existing_price,
+                "currency": quote.get("currency"),
+                "transit_time_days": quote.get("transit_time_days"),
+                "extra_details": existing_extra,
+                "date": datetime.utcnow().isoformat()
+            }
+            history.append(old_state)
+
+        update_res = supabase.table("quotes").update({
+            "price": parsed_price, 
+            "transit_time_days": transit_time_days, 
+            "extra_details": parsed_extra, 
             "currency": parsed_currency,
-            "transit_time_days": transit_time_days,
-            "extra_details": parsed_extra,
-            "mail_status": "delivered",
-            "is_viewed": True
-        }
-        insert_res = supabase.table("quotes").insert(new_quote_data).execute()
-        return {"status": "success", "message": "Alternativ təklif qəbul edildi!", "data": insert_res.data}
-
-    history = quote.get("quote_history") or []
-    existing_price = quote.get("price")
-    existing_extra = quote.get("extra_details") or {}
-
-    if existing_price is not None or existing_extra.get("submitted"):
-        old_state = {
-            "version": len(history) + 1,
-            "price": existing_price,
-            "currency": quote.get("currency"),
-            "transit_time_days": quote.get("transit_time_days"),
-            "extra_details": existing_extra,
-            "date": datetime.utcnow().isoformat()
-        }
-        history.append(old_state)
-
-    update_res = supabase.table("quotes").update({
-        "price": parsed_price, 
-        "transit_time_days": transit_time_days, 
-        "extra_details": parsed_extra, 
-        "currency": parsed_currency,
-        "quote_history": history
-    }).eq("token", token).execute()
-    
-    return {"status": "success", "message": "Təklif qəbul edildi!", "data": update_res.data}
+            "quote_history": history
+        }).eq("token", token).execute()
+        
+        return {"status": "success", "message": "Təklif qəbul edildi!", "data": update_res.data}
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        traceback.print_exc()
+        err_str = str(e)
+        if "duplicate key value" in err_str.lower() or "unique constraint" in err_str.lower():
+            raise HTTPException(status_code=400, detail="Məhdudiyyət: Bazada eyni daşıyıcının çoxsaylı təklif göndərməsinə icazə verilməyib. Zəhmət olmasa Supabase-də quotes cədvəlindən UNIQUE indeksini silin.")
+        raise HTTPException(status_code=400, detail=f"Sistem xətası: {err_str}")
 
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int, current_user: dict = Depends(verify_token)):
@@ -1370,7 +1379,6 @@ def change_email(request: Request, data: ChangeEmailRequest, current_user: dict 
     if not pwd_context.verify(data.current_password, user.get("password", "")):
         raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
         
-    # Yalnız digər MÜŞTƏRİLƏRİN bu e-poçtu istifadə edib-etmədiyini yoxlayırıq
     existing_cust = supabase.table("customers").select("id").eq("email", data.new_email).execute()
     if existing_cust.data and str(existing_cust.data[0]["id"]) != str(user_id):
         raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq başqa müştəri hesabı tərəfindən istifadə olunur.")
