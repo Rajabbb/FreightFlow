@@ -488,7 +488,6 @@ class RegisterRequest(BaseModel):
     password: str
     company_name: str
 
-# YENİ ƏLAVƏLƏR: ŞİFRƏ VƏ E-POÇT DƏYİŞDİRMƏ MODELLƏRİ
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
@@ -1355,6 +1354,7 @@ def change_email(request: Request, data: ChangeEmailRequest, current_user: dict 
     if not pwd_context.verify(data.current_password, user.get("password", "")):
         raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
         
+    # Yalnız digər MÜŞTƏRİLƏRİN bu e-poçtu istifadə edib-etmədiyini yoxlayırıq
     existing_cust = supabase.table("customers").select("id").eq("email", data.new_email).execute()
     if existing_cust.data and str(existing_cust.data[0]["id"]) != str(user_id):
         raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq başqa müştəri hesabı tərəfindən istifadə olunur.")
