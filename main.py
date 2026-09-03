@@ -1009,12 +1009,33 @@ def get_request_details(target_id: str):
             if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]: shipment["volume_m3"] = "Qeyd edilməyib"
             deadline = shipment.get("deadline")
             if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()): shipment["deadline"] = None
+        
+        # --- ƏLAVƏ EDİLƏN HİSSƏ BAŞLAYIR ---
+        all_quotes_data = []
+        req_id = quote.get("request_id")
+        car_id = quote.get("carrier_id")
+        if req_id and car_id:
+            all_q_res = supabase.table("quotes").select("*").eq("request_id", req_id).eq("carrier_id", car_id).order("id").execute()
+            for q in (all_q_res.data or []):
+                ex = q.get("extra_details") or {}
+                cex = dict(ex)
+                cex.pop("submitted", None)
+                q["extra_details"] = cex
+                all_quotes_data.append(q)
+        # --- ƏLAVƏ EDİLƏN HİSSƏ BİTİR ---
+
         extra = quote.get("extra_details") or {}
         is_already_submitted = (quote.get("price") is not None) or (extra.get("submitted") == True)
         cleaned_extra = dict(extra)
         cleaned_extra.pop("submitted", None)
         quote["extra_details"] = cleaned_extra
-        return {"already_submitted": is_already_submitted, "request": shipment, "quote": quote}
+        
+        return {
+            "already_submitted": is_already_submitted, 
+            "request": shipment, 
+            "quote": quote,
+            "all_quotes": all_quotes_data
+        }
     
     if target_id.isdigit():
         req_res = supabase.table("shipment_requests").select("*").eq("id", int(target_id)).execute()
