@@ -1086,7 +1086,7 @@ Best regards,
                     </div>
                     <div class="row text-muted small fw-medium g-2 mb-3">
                         <div class="col-6 col-lg-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark" id="detailCargoType">—</strong></div>
-                        <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark" id="detailWeight">—</strong></div>
+                        <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki / Həcm: <strong class="text-dark" id="detailWeight">—</strong></div>
                         <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə tarixi: <strong class="text-dark" id="detailDeadline">—</strong></div>
                         <div class="col-6 col-lg-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark" id="detailCreatedAt">—</strong></div>
                     </div>
@@ -2401,6 +2401,7 @@ Best regards,
 
                 let formattedDeadline = req.deadline ? formatDateTime(req.deadline, false, true) : '—';
                 let formattedCreatedAt = req.created_at ? formatDateTime(req.created_at, true, false) : '—';
+                let volDisplay = (req.volume_m3 && req.volume_m3 !== "Qeyd edilməyib" && req.volume_m3 != 0) ? ` / ${escapeHTML(req.volume_m3)} m³` : "";
 
                 html += `
                     <div class="request-card">
@@ -2416,7 +2417,7 @@ Best regards,
                         <div class="request-meta-box mb-3">
                             <div class="row text-muted small fw-medium g-2">
                                 <div class="col-6 col-lg-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${escapeHTML(req.cargo_type || req.cargo || '—')}</strong></div>
-                                <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki: <strong class="text-dark">${escapeHTML(req.weight_kg || req.weight || 0)} kq</strong></div>
+                                <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki / Həcm: <strong class="text-dark">${escapeHTML(req.weight_kg || req.weight || 0)} kq${volDisplay}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${formattedDeadline}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
                             </div>
@@ -2745,7 +2746,12 @@ Best regards,
             document.getElementById("detailCargoType").textContent = escapeHTML(req.cargo_type || req.cargo || "—");
 
             const weight = req.weight_kg || req.weight;
-            document.getElementById("detailWeight").textContent = weight ? `${escapeHTML(weight)} kq` : "Qeyd edilməyib";
+            let weightStr = weight ? `${escapeHTML(weight)} kq` : "Qeyd edilməyib";
+            if (req.volume_m3 && req.volume_m3 !== "Qeyd edilməyib" && req.volume_m3 != 0) {
+                weightStr += ` / ${escapeHTML(req.volume_m3)} m³`;
+            }
+            document.getElementById("detailWeight").textContent = weightStr;
+            
             document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false, true) : "—";
             document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at, true, false) : "—";
 
@@ -2768,7 +2774,6 @@ Best regards,
                     ["Daşınma növü / Truck type", req.truck_type],
                     ["Yük tipi (Shipment type)", req.shipment_type],
                     ["HS Kodu", req.hs_code],
-                    ["Həcm (m3)", req.volume_m3],
                     ["Stiflənə bilər (Stackable)", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
                     ["Əlavə qeydlər", req.additional_notes || req.note]
                 ];
