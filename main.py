@@ -621,7 +621,7 @@ def get_recent_quotes(customer_id: int, current_user: dict = Depends(verify_toke
                     "submitted_at": q.get("created_at") 
                 })
         recent_quotes.sort(key=lambda x: x["quote_id"], reverse=True)
-        return {"status": "success", "quotes": recent_quotes[:5]}
+        return {"status": "success", "quotes": recent_quotes[:10]}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
