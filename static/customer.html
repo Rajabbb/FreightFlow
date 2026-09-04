@@ -765,6 +765,25 @@
                 <i class="bi bi-box-seam-fill"></i> Yeni Yük Sorğusu (RFQ) Yarat
             </div>
             <div class="section-desc">Logistika parametrlərini ətraflı daxil edin və sorğunuzu göndərin.</div>
+
+            <!-- AI PARSER CARD -->
+            <div class="mb-4 p-4 rounded-xl border border-indigo-200" style="background: linear-gradient(145deg, #eef2ff 0%, #f8fafc 100%);">
+                <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+                    <div>
+                        <h6 class="fw-bold text-indigo-600 mb-1"><i class="bi bi-magic me-1"></i> Aİ ilə Avtomatik Doldur (Beta)</h6>
+                        <span class="text-muted small">Müştəridən aldığınız faylı (PDF, Şəkil, Excel) yükləyin, Aİ formu avtomatik doldursun.</span>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <input type="file" class="form-control form-control-sm border-indigo-200 shadow-sm" id="aiDocumentInput" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx">
+                    <button type="button" class="btn btn-sm btn-primary fw-bold text-nowrap shadow-sm" id="aiParseBtn" onclick="parseDocumentWithAI()">
+                        <i class="bi bi-robot me-1"></i> Analiz Et
+                    </button>
+                </div>
+                <div id="aiLoadingStatus" class="d-none mt-2 small text-primary fw-bold">
+                    <span class="spinner-border spinner-border-sm me-1"></span> Aİ faylı oxuyur və analiz edir, lütfən gözləyin...
+                </div>
+            </div>
             
             <form id="rfqForm" onsubmit="createRfq(event)">
                 <div class="row g-2 g-md-3 mb-2">
@@ -1557,6 +1576,91 @@ Best regards,
             } finally {
                 btn.disabled = false;
                 btn.innerText = "E-poçtu Yenilə";
+            }
+        }
+
+        async function parseDocumentWithAI() {
+            const fileInput = document.getElementById("aiDocumentInput");
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Zəhmət olmasa analiz üçün bir fayl seçin.");
+                return;
+            }
+            
+            const btn = document.getElementById("aiParseBtn");
+            const status = document.getElementById("aiLoadingStatus");
+            
+            btn.disabled = true;
+            status.classList.remove("d-none");
+            
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+            
+            try {
+                const res = await fetch("/requests/parse-ai", {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` },
+                    body: formData
+                });
+                
+                if (res.status === 401 || res.status === 403) { logout(); return; }
+                const result = await res.json();
+                
+                if (res.ok && result.status === "success") {
+                    const d = result.data;
+                    
+                    // Standart xanaları doldururuq
+                    if(d.origin) document.getElementById("origin").value = d.origin;
+                    if(d.destination) document.getElementById("destination").value = d.destination;
+                    if(d.cargo_type) document.getElementById("cargo_type").value = d.cargo_type;
+                    if(d.weight_kg) document.getElementById("weight_kg").value = d.weight_kg;
+                    if(d.volume_m3) document.getElementById("volume_cbm").value = d.volume_m3;
+                    
+                    if(d.transportation_mode) {
+                        const sel = document.getElementById("transportation_mode");
+                        for(let i=0; i<sel.options.length; i++) {
+                            if(sel.options[i].value.toLowerCase().includes(d.transportation_mode.toLowerCase().split(' ')[0])) {
+                                sel.selectedIndex = i; break;
+                            }
+                        }
+                    }
+                    
+                    // İxtiyari (Optional) xanaları doldururuq
+                    const optMap = {
+                        'truck_type': 'truck_type',
+                        'hs_code': 'hs_code',
+                        'stackable': 'stackable',
+                        'shipment_type': 'shipment_type',
+                        'incoterm': 'incoterm',
+                        'adr': 'adr',
+                        'temperature': 'temp',
+                        'deadline': 'loading_date'
+                    };
+                    
+                    for(let [jsonKey, inpKey] of Object.entries(optMap)) {
+                        if(d[jsonKey]) {
+                            document.getElementById(`chk_${inpKey}`).checked = true;
+                            toggleOptField(inpKey);
+                            document.getElementById(`inp_${inpKey}`).value = d[jsonKey];
+                        }
+                    }
+                    
+                    if(d.additional_notes) {
+                        document.getElementById("chk_info").checked = true;
+                        toggleOptField('info');
+                        document.getElementById("inp_info_text").value = d.additional_notes;
+                    }
+                    
+                    alert("✅ Aİ faylı uğurla oxudu və formu doldurdu! Məlumatları gözdən keçirib sorğunu göndərə bilərsiniz.");
+                } else {
+                    alert("Xəta: " + (result.detail || "Faylı analiz etmək mümkün olmadı."));
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Serverlə əlaqə qurulmadı. Aİ emalı baş tutmadı.");
+            } finally {
+                btn.disabled = false;
+                status.classList.add("d-none");
+                fileInput.value = "";
             }
         }
 
