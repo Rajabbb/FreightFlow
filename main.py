@@ -13,6 +13,9 @@ from datetime import datetime, timedelta
 from email.header import decode_header
 import pandas as pd
 import jwt
+import urllib.request
+import urllib.error
+import base64
 from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
@@ -935,8 +938,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
     """
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        contents = [prompt]
+        parts = [{"text": prompt}]
 
         if ext in [".xls", ".xlsx", ".csv"]:
             contents_bytes = await file.read()
@@ -944,26 +946,45 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
                 df = pd.read_csv(io.BytesIO(contents_bytes))
             else:
                 df = pd.read_excel(io.BytesIO(contents_bytes))
-            contents.append(df.to_string())
+            parts.append({"text": df.to_string()})
 
         elif ext == ".txt":
             contents_bytes = await file.read()
-            contents.append(contents_bytes.decode("utf-8", errors="ignore"))
+            parts.append({"text": contents_bytes.decode("utf-8", errors="ignore")})
 
         elif ext in [".pdf", ".png", ".jpg", ".jpeg"]:
-            # File API-dən və discovery xətasından qaçmaq üçün faylı yaddaşdan inline göndəririk
             contents_bytes = await file.read()
-            contents.append({
-                "mime_type": file.content_type,
-                "data": contents_bytes
+            base64_encoded = base64.b64encode(contents_bytes).decode('utf-8')
+            mime = "application/pdf" if ext == ".pdf" else file.content_type
+            parts.append({
+                "inlineData": {
+                    "mimeType": mime,
+                    "data": base64_encoded
+                }
             })
         else:
             raise HTTPException(status_code=400, detail="Aİ analizi yalnız PDF, Şəkil, Excel, CSV və TXT dəstəkləyir.")
 
-        response = model.generate_content(contents)
+        # XƏTALI KİTABXANANI BYPASS EDİRİK: Birbaşa REST API Sorğusu
+        url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=){GEMINI_API_KEY}"
+        payload = {
+            "contents": [{"parts": parts}]
+        }
+        
+        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
+        
+        try:
+            with urllib.request.urlopen(req) as response:
+                res_body = response.read()
+                res_json = json.loads(res_body)
+        except urllib.error.HTTPError as e:
+            error_info = e.read().decode()
+            print("Gemini REST API Xətası:", error_info)
+            raise HTTPException(status_code=500, detail=f"Google Aİ Xətası. Status: {e.code}")
 
-        res_text = response.text.strip()
-        res_text = re.sub(r'^```json', '', res_text)
+        res_text = res_json['candidates'][0]['content']['parts'][0]['text'].strip()
+        
+        res_text = re.sub(r'^```json', '', res_text, flags=re.IGNORECASE)
         res_text = re.sub(r'^```', '', res_text)
         res_text = re.sub(r'```$', '', res_text).strip()
 
