@@ -7,6 +7,7 @@ import re
 import csv
 import asyncio
 import imaplib
+import tempfile
 import email as email_lib
 from datetime import datetime, timedelta
 from email.header import decode_header
@@ -25,6 +26,8 @@ from dotenv import load_dotenv
 from passlib.context import CryptContext
 from pathlib import Path
 
+import google.generativeai as genai
+
 # --- YENİ TƏHLÜKƏSİZLİK KİTABXANALARI ---
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -37,9 +40,13 @@ load_dotenv()
 BASE_URL = os.getenv("BASE_URL", "https://arachi.co")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("SUPABASE_URL və ya SUPABASE_KEY təyin olunmayıb! Zəhmət olmasa .env faylını yoxlayın.")
+
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = FastAPI(title="Arachi Backend API")
@@ -893,6 +900,95 @@ async def upload_request_attachment(file: UploadFile = File(...), current_user: 
         return {"status": "success", "attachment_url": f"/uploads/{unique_filename}", "filename": file.filename}
     except Exception as e: raise HTTPException(status_code=500, detail=f"Fayl yüklənərkən xəta: {str(e)}")
 
+# ==========================================
+# YENİ ƏLAVƏ: Aİ İLƏ FAYL OXUMA ENDPOINTİ
+# ==========================================
+@app.post("/requests/parse-ai")
+@limiter.limit("5/minute")
+async def parse_document_with_ai(request: Request, file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
+    if not GEMINI_API_KEY:
+        raise HTTPException(status_code=500, detail="Gemini API açarı təyin olunmayıb. .env faylını yoxlayın.")
+
+    await validate_file(file)
+    ext = os.path.splitext(file.filename)[1].lower()
+
+    prompt = """Sən logistika və forwarding üzrə ekspertsən. Sənə verilən sənədi/mətni analiz et və YALNIZ aşağıdakı formatda JSON qaytar.
+    Heç bir əlavə mətn və ya markdown (```json ...) istifadə etmə! Yalnız təmiz JSON obyekti olsun:
+    {
+        "origin": "Yükləmə yeri (məs: Bakı, AZ)",
+        "destination": "Boşaltma yeri (məs: Berlin, DE)",
+        "cargo_type": "Yükün növü və qısa təsviri",
+        "weight_kg": ədəd (kq ilə, məs: 1500.5, yoxdursa null),
+        "volume_m3": ədəd (m3 ilə, məs: 20.0, yoxdursa null),
+        "transportation_mode": "Quru (Road) / Hava (Air) / Su/Dəniz (Sea) / Dəmiryolu (Rail)",
+        "truck_type": "Maşın növü",
+        "hs_code": "HS Kod",
+        "stackable": "Stackable və ya Non-stackable",
+        "shipment_type": "FTL, LTL, FCL, LCL",
+        "incoterm": "Incoterm (EXW, FOB və s.)",
+        "adr": "Təhlükəli yük sinfi (ADR)",
+        "temperature": "Temperatur tələbi",
+        "deadline": "YYYY-MM-DDTHH:MM",
+        "additional_notes": "Sənəddəki digər vacib tələblər və qeydlər"
+    }
+    Əgər bir məlumat sənəddə yoxdursa stringlər üçün "" (boş), ədədlər üçün null qaytar. Yalnız JSON qaytar.
+    """
+
+    tmp_path = None
+    uploaded_file = None
+
+    try:
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        contents = [prompt]
+
+        if ext in [".xls", ".xlsx", ".csv"]:
+            contents_bytes = await file.read()
+            if ext == ".csv":
+                df = pd.read_csv(io.BytesIO(contents_bytes))
+            else:
+                df = pd.read_excel(io.BytesIO(contents_bytes))
+            contents.append(df.to_string())
+
+        elif ext in [".pdf", ".png", ".jpg", ".jpeg", ".txt", ".doc", ".docx"]:
+            # Save temp file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+                tmp.write(await file.read())
+                tmp_path = tmp.name
+
+            if ext == ".txt":
+                with open(tmp_path, "r", encoding="utf-8") as f:
+                    contents.append(f.read())
+            else:
+                uploaded_file = genai.upload_file(path=tmp_path)
+                contents.append(uploaded_file)
+        else:
+            raise HTTPException(status_code=400, detail="Aİ analizi yalnız PDF, Şəkil, Excel, CSV və TXT dəstəkləyir.")
+
+        response = model.generate_content(contents)
+
+        res_text = response.text.strip()
+        res_text = re.sub(r'^```json', '', res_text)
+        res_text = re.sub(r'^```', '', res_text)
+        res_text = re.sub(r'```$', '', res_text).strip()
+
+        parsed_json = json.loads(res_text)
+        return {"status": "success", "data": parsed_json}
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Aİ düzgün formatda cavab qaytarmadı.")
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Aİ analizi xətası: {str(e)}")
+    finally:
+        # Cleanup
+        try:
+            if uploaded_file:
+                genai.delete_file(uploaded_file.name)
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except:
+            pass
+
 @app.post("/requests/create")
 async def create_shipment_request(payload: ShipmentRequestCreate, background_tasks: BackgroundTasks = BackgroundTasks(), current_user: dict = Depends(verify_token)):
     check_ownership(payload.customer_id, current_user)
@@ -1010,7 +1106,6 @@ def get_request_details(target_id: str):
             deadline = shipment.get("deadline")
             if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()): shipment["deadline"] = None
         
-        # --- ƏLAVƏ EDİLƏN HİSSƏ BAŞLAYIR ---
         all_quotes_data = []
         req_id = quote.get("request_id")
         car_id = quote.get("carrier_id")
@@ -1022,7 +1117,6 @@ def get_request_details(target_id: str):
                 cex.pop("submitted", None)
                 q["extra_details"] = cex
                 all_quotes_data.append(q)
-        # --- ƏLAVƏ EDİLƏN HİSSƏ BİTİR ---
 
         extra = quote.get("extra_details") or {}
         is_already_submitted = (quote.get("price") is not None) or (extra.get("submitted") == True)
