@@ -934,9 +934,6 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
     Əgər bir məlumat sənəddə yoxdursa stringlər üçün "" (boş), ədədlər üçün null qaytar. Yalnız JSON qaytar.
     """
 
-    tmp_path = None
-    uploaded_file = None
-
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
         contents = [prompt]
@@ -949,18 +946,17 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
                 df = pd.read_excel(io.BytesIO(contents_bytes))
             contents.append(df.to_string())
 
-        elif ext in [".pdf", ".png", ".jpg", ".jpeg", ".txt", ".doc", ".docx"]:
-            # Save temp file
-            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
-                tmp.write(await file.read())
-                tmp_path = tmp.name
+        elif ext == ".txt":
+            contents_bytes = await file.read()
+            contents.append(contents_bytes.decode("utf-8", errors="ignore"))
 
-            if ext == ".txt":
-                with open(tmp_path, "r", encoding="utf-8") as f:
-                    contents.append(f.read())
-            else:
-                uploaded_file = genai.upload_file(path=tmp_path)
-                contents.append(uploaded_file)
+        elif ext in [".pdf", ".png", ".jpg", ".jpeg"]:
+            # File API-dən və discovery xətasından qaçmaq üçün faylı yaddaşdan inline göndəririk
+            contents_bytes = await file.read()
+            contents.append({
+                "mime_type": file.content_type,
+                "data": contents_bytes
+            })
         else:
             raise HTTPException(status_code=400, detail="Aİ analizi yalnız PDF, Şəkil, Excel, CSV və TXT dəstəkləyir.")
 
@@ -979,15 +975,6 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Aİ analizi xətası: {str(e)}")
-    finally:
-        # Cleanup
-        try:
-            if uploaded_file:
-                genai.delete_file(uploaded_file.name)
-            if tmp_path and os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-        except:
-            pass
 
 @app.post("/requests/create")
 async def create_shipment_request(payload: ShipmentRequestCreate, background_tasks: BackgroundTasks = BackgroundTasks(), current_user: dict = Depends(verify_token)):
