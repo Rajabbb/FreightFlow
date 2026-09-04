@@ -13,9 +13,6 @@ from datetime import datetime, timedelta
 from email.header import decode_header
 import pandas as pd
 import jwt
-import urllib.request
-import urllib.error
-import base64
 from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
@@ -30,6 +27,7 @@ from passlib.context import CryptContext
 from pathlib import Path
 
 import google.generativeai as genai
+from google.oauth2 import service_account
 
 # --- YENİ TƏHLÜKƏSİZLİK KİTABXANALARI ---
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -43,13 +41,23 @@ load_dotenv()
 BASE_URL = os.getenv("BASE_URL", "https://arachi.co")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("SUPABASE_URL və ya SUPABASE_KEY təyin olunmayıb! Zəhmət olmasa .env faylını yoxlayın.")
 
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+# ==========================================
+# GEMINI API JSON (OAUTH2) BAĞLANTISI
+# ==========================================
+CREDENTIALS_PATH = os.path.join(BASE_DIR, "service_account.json")
+try:
+    credentials = service_account.Credentials.from_service_account_file(
+        CREDENTIALS_PATH, 
+        scopes=['https://www.googleapis.com/auth/cloud-platform']
+    )
+    genai.configure(credentials=credentials)
+    print("Gemini API Service Account (OAuth2) ilə uğurla qoşuldu!")
+except Exception as e:
+    print(f"XƏTA: service_account.json tapılmadı və ya səhvdir: {e}")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = FastAPI(title="Arachi Backend API")
@@ -904,14 +912,11 @@ async def upload_request_attachment(file: UploadFile = File(...), current_user: 
     except Exception as e: raise HTTPException(status_code=500, detail=f"Fayl yüklənərkən xəta: {str(e)}")
 
 # ==========================================
-# YENİ ƏLAVƏ: Aİ İLƏ FAYL OXUMA ENDPOINTİ
+# YENİ ƏLAVƏ: Aİ İLƏ FAYL OXUMA ENDPOINTİ (JSON OAuth)
 # ==========================================
 @app.post("/requests/parse-ai")
 @limiter.limit("5/minute")
 async def parse_document_with_ai(request: Request, file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
-    if not GEMINI_API_KEY:
-        raise HTTPException(status_code=500, detail="Gemini API açarı təyin olunmayıb. .env faylını yoxlayın.")
-
     await validate_file(file)
     ext = os.path.splitext(file.filename)[1].lower()
 
@@ -934,62 +939,31 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
         "deadline": "YYYY-MM-DDTHH:MM",
         "additional_notes": "Sənəddəki digər vacib tələblər və qeydlər"
     }
-    Əgər bir məlumat sənəddə yoxdursa stringlər üçün "" (boş), ədədlər üçün null qaytar. Yalnız JSON qaytar.
-    """
+    Əgər bir məlumat sənəddə yoxdursa stringlər üçün "" (boş), ədədlər üçün null qaytar. Yalnız JSON qaytar."""
 
     try:
-        parts = [{"text": prompt}]
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        contents = [prompt]
 
         if ext in [".xls", ".xlsx", ".csv"]:
             contents_bytes = await file.read()
-            if ext == ".csv":
-                df = pd.read_csv(io.BytesIO(contents_bytes))
-            else:
-                df = pd.read_excel(io.BytesIO(contents_bytes))
-            parts.append({"text": df.to_string()})
-
+            df = pd.read_csv(io.BytesIO(contents_bytes)) if ext == ".csv" else pd.read_excel(io.BytesIO(contents_bytes))
+            contents.append(df.to_string())
         elif ext == ".txt":
             contents_bytes = await file.read()
-            parts.append({"text": contents_bytes.decode("utf-8", errors="ignore")})
-
+            contents.append(contents_bytes.decode("utf-8", errors="ignore"))
         elif ext in [".pdf", ".png", ".jpg", ".jpeg"]:
             contents_bytes = await file.read()
-            base64_encoded = base64.b64encode(contents_bytes).decode('utf-8')
-            mime = "application/pdf" if ext == ".pdf" else file.content_type
-            parts.append({
-                "inlineData": {
-                    "mimeType": mime,
-                    "data": base64_encoded
-                }
+            contents.append({
+                "mime_type": "application/pdf" if ext == ".pdf" else file.content_type,
+                "data": contents_bytes
             })
         else:
             raise HTTPException(status_code=400, detail="Aİ analizi yalnız PDF, Şəkil, Excel, CSV və TXT dəstəkləyir.")
 
-        # XƏTALI KİTABXANANI BYPASS EDİRİK: Birbaşa REST API Sorğusu
-        url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=){GEMINI_API_KEY}"
-        payload = {
-            "contents": [{"parts": parts}]
-        }
-        
-        req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={'Content-Type': 'application/json'})
-        
-        try:
-            with urllib.request.urlopen(req) as response:
-                res_body = response.read()
-                res_json = json.loads(res_body)
-        except urllib.error.HTTPError as e:
-            error_info = e.read().decode()
-            print("Gemini REST API Xətası:", error_info)
-            raise HTTPException(status_code=500, detail=f"Google Aİ Xətası. Status: {e.code}")
-
-        res_text = res_json['candidates'][0]['content']['parts'][0]['text'].strip()
-        
-        res_text = re.sub(r'^```json', '', res_text, flags=re.IGNORECASE)
-        res_text = re.sub(r'^```', '', res_text)
-        res_text = re.sub(r'```$', '', res_text).strip()
-
-        parsed_json = json.loads(res_text)
-        return {"status": "success", "data": parsed_json}
+        response = model.generate_content(contents)
+        res_text = re.sub(r'^```json|^```|```$', '', response.text.strip(), flags=re.IGNORECASE).strip()
+        return {"status": "success", "data": json.loads(res_text)}
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Aİ düzgün formatda cavab qaytarmadı.")
