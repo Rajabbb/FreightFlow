@@ -13,6 +13,10 @@ from datetime import datetime, timedelta
 from email.header import decode_header
 import pandas as pd
 import jwt
+import urllib.request
+import urllib.error
+import base64
+import google.auth.transport.requests
 from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
@@ -26,7 +30,6 @@ from dotenv import load_dotenv
 from passlib.context import CryptContext
 from pathlib import Path
 
-import google.generativeai as genai
 from google.oauth2 import service_account
 
 # --- YENİ TƏHLÜKƏSİZLİK KİTABXANALARI ---
@@ -46,7 +49,7 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("SUPABASE_URL və ya SUPABASE_KEY təyin olunmayıb! Zəhmət olmasa .env faylını yoxlayın.")
 
 # ==========================================
-# GEMINI API JSON (OAUTH2) BAĞLANTISI
+# GEMINI API JSON (OAUTH2 REST API) BAĞLANTISI
 # ==========================================
 CREDENTIALS_PATH = os.path.join(BASE_DIR, "service_account.json")
 try:
@@ -54,10 +57,10 @@ try:
         CREDENTIALS_PATH, 
         scopes=['https://www.googleapis.com/auth/cloud-platform']
     )
-    genai.configure(credentials=credentials)
-    print("Gemini API Service Account (OAuth2) ilə uğurla qoşuldu!")
+    print("Service Account (OAuth2) JSON uğurla oxundu!")
 except Exception as e:
     print(f"XƏTA: service_account.json tapılmadı və ya səhvdir: {e}")
+    credentials = None
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = FastAPI(title="Arachi Backend API")
@@ -128,7 +131,6 @@ async def validate_file(file: UploadFile):
     file.file.seek(0)
     if file_size > MAX_FILE_SIZE:
         raise HTTPException(status_code=400, detail="Təhlükəsizlik: Faylın həcmi maksimum 10 MB ola bilər.")
-
 
 # ==========================================
 # CORS QORUNMASI
@@ -912,11 +914,14 @@ async def upload_request_attachment(file: UploadFile = File(...), current_user: 
     except Exception as e: raise HTTPException(status_code=500, detail=f"Fayl yüklənərkən xəta: {str(e)}")
 
 # ==========================================
-# YENİ ƏLAVƏ: Aİ İLƏ FAYL OXUMA ENDPOINTİ (JSON OAuth)
+# YENİ ƏLAVƏ: Aİ İLƏ FAYL OXUMA ENDPOINTİ (JSON OAuth REST API)
 # ==========================================
 @app.post("/requests/parse-ai")
 @limiter.limit("5/minute")
 async def parse_document_with_ai(request: Request, file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
+    if not credentials:
+        raise HTTPException(status_code=500, detail="Server xətası: JSON Service Account faylı tapılmadı və ya səhvdir.")
+
     await validate_file(file)
     ext = os.path.splitext(file.filename)[1].lower()
 
@@ -942,31 +947,64 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
     Əgər bir məlumat sənəddə yoxdursa stringlər üçün "" (boş), ədədlər üçün null qaytar. Yalnız JSON qaytar."""
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        contents = [prompt]
+        parts = [{"text": prompt}]
 
         if ext in [".xls", ".xlsx", ".csv"]:
             contents_bytes = await file.read()
-            df = pd.read_csv(io.BytesIO(contents_bytes)) if ext == ".csv" else pd.read_excel(io.BytesIO(contents_bytes))
-            contents.append(df.to_string())
+            if ext == ".csv":
+                df = pd.read_csv(io.BytesIO(contents_bytes))
+            else:
+                df = pd.read_excel(io.BytesIO(contents_bytes))
+            parts.append({"text": df.to_string()})
+
         elif ext == ".txt":
             contents_bytes = await file.read()
-            contents.append(contents_bytes.decode("utf-8", errors="ignore"))
+            parts.append({"text": contents_bytes.decode("utf-8", errors="ignore")})
+
         elif ext in [".pdf", ".png", ".jpg", ".jpeg"]:
             contents_bytes = await file.read()
-            contents.append({
-                "mime_type": "application/pdf" if ext == ".pdf" else file.content_type,
-                "data": contents_bytes
+            base64_encoded = base64.b64encode(contents_bytes).decode('utf-8')
+            mime = "application/pdf" if ext == ".pdf" else file.content_type
+            parts.append({
+                "inlineData": {
+                    "mimeType": mime,
+                    "data": base64_encoded
+                }
             })
         else:
             raise HTTPException(status_code=400, detail="Aİ analizi yalnız PDF, Şəkil, Excel, CSV və TXT dəstəkləyir.")
 
-        response = model.generate_content(contents)
-        res_text = re.sub(r'^```json|^```|```$', '', response.text.strip(), flags=re.IGNORECASE).strip()
-        return {"status": "success", "data": json.loads(res_text)}
+        # Bearer Token yaradılır
+        req = google.auth.transport.requests.Request()
+        credentials.refresh(req)
+        
+        # Birbaşa Google REST API-yə müraciət
+        url = "[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent)"
+        payload = {"contents": [{"parts": parts}]}
+        api_request = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={
+            "Authorization": f"Bearer {credentials.token}",
+            "Content-Type": "application/json"
+        })
+
+        try:
+            with urllib.request.urlopen(api_request) as response:
+                res_body = response.read()
+                res_json = json.loads(res_body)
+        except urllib.error.HTTPError as e:
+            error_msg = e.read().decode('utf-8', errors='ignore')
+            print(f"Google Aİ API Xətası ({e.code}): {error_msg}")
+            raise HTTPException(status_code=500, detail=f"Google Aİ Xətası: {e.code}")
+
+        res_text = res_json['candidates'][0]['content']['parts'][0]['text'].strip()
+        res_text = re.sub(r'^```json|^```|```$', '', res_text, flags=re.IGNORECASE).strip()
+
+        parsed_json = json.loads(res_text)
+        return {"status": "success", "data": parsed_json}
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Aİ düzgün formatda cavab qaytarmadı.")
+    except HTTPException as he:
+        raise he
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Aİ analizi xətası: {str(e)}")
