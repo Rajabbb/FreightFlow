@@ -995,7 +995,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
             })
 
         response = await aclient.chat.completions.create(
-            model="gpt-4o", # Qabaqcıl oxuma bacarığı üçün
+            model="gpt-4o-mini", # Qabaqcıl oxuma bacarığı üçün
             messages=messages,
             response_format={ "type": "json_object" } # Dəqiq JSON məcburiyyəti
         )
