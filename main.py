@@ -16,7 +16,6 @@ import jwt
 import urllib.request
 import urllib.error
 import base64
-import google.auth.transport.requests
 from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
@@ -30,9 +29,11 @@ from dotenv import load_dotenv
 from passlib.context import CryptContext
 from pathlib import Path
 
-from google.oauth2 import service_account
+# --- YENİ: OPENAI VƏ PDF KİTABXANALARI ---
+from openai import AsyncOpenAI
+import PyPDF2
 
-# --- YENİ TƏHLÜKƏSİZLİK KİTABXANALARI ---
+# --- TƏHLÜKƏSİZLİK KİTABXANALARI ---
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -49,18 +50,15 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     raise ValueError("SUPABASE_URL və ya SUPABASE_KEY təyin olunmayıb! Zəhmət olmasa .env faylını yoxlayın.")
 
 # ==========================================
-# GEMINI API JSON (OAUTH2 REST API) BAĞLANTISI
+# OPENAI (CHATGPT) API BAĞLANTISI
 # ==========================================
-CREDENTIALS_PATH = os.path.join(BASE_DIR, "service_account.json")
-try:
-    credentials = service_account.Credentials.from_service_account_file(
-        CREDENTIALS_PATH, 
-        scopes=['https://www.googleapis.com/auth/cloud-platform']
-    )
-    print("Service Account (OAuth2) JSON uğurla oxundu!")
-except Exception as e:
-    print(f"XƏTA: service_account.json tapılmadı və ya səhvdir: {e}")
-    credentials = None
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    print("XƏBƏRDARLIQ: OPENAI_API_KEY təyin olunmayıb! .env faylını yoxlayın.")
+else:
+    print("OpenAI API açarı tapıldı!")
+
+aclient = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 app = FastAPI(title="Arachi Backend API")
@@ -914,19 +912,19 @@ async def upload_request_attachment(file: UploadFile = File(...), current_user: 
     except Exception as e: raise HTTPException(status_code=500, detail=f"Fayl yüklənərkən xəta: {str(e)}")
 
 # ==========================================
-# YENİ ƏLAVƏ: Aİ İLƏ FAYL OXUMA ENDPOINTİ (JSON OAuth REST API)
+# YENİ ƏLAVƏ: Aİ İLƏ FAYL OXUMA ENDPOINTİ (OPENAI CHATGPT)
 # ==========================================
 @app.post("/requests/parse-ai")
 @limiter.limit("5/minute")
 async def parse_document_with_ai(request: Request, file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
-    if not credentials:
-        raise HTTPException(status_code=500, detail="Server xətası: JSON Service Account faylı tapılmadı və ya səhvdir.")
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="Server xətası: OpenAI API açarı təyin olunmayıb (.env faylında OPENAI_API_KEY yoxdur).")
 
     await validate_file(file)
     ext = os.path.splitext(file.filename)[1].lower()
 
     prompt = """Sən logistika və forwarding üzrə ekspertsən. Sənə verilən sənədi/mətni analiz et və YALNIZ aşağıdakı formatda JSON qaytar.
-    Heç bir əlavə mətn və ya markdown (```json ...) istifadə etmə! Yalnız təmiz JSON obyekti olsun:
+    Heç bir əlavə mətn və ya markdown istifadə etmə! Yalnız təmiz JSON obyekti olsun.
     {
         "origin": "Yükləmə yeri (məs: Bakı, AZ)",
         "destination": "Boşaltma yeri (məs: Berlin, DE)",
@@ -944,10 +942,11 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
         "deadline": "YYYY-MM-DDTHH:MM",
         "additional_notes": "Sənəddəki digər vacib tələblər və qeydlər"
     }
-    Əgər bir məlumat sənəddə yoxdursa stringlər üçün "" (boş), ədədlər üçün null qaytar. Yalnız JSON qaytar."""
+    Əgər bir məlumat sənəddə yoxdursa stringlər üçün "" (boş), ədədlər üçün null qaytar."""
 
     try:
-        parts = [{"text": prompt}]
+        text_content = ""
+        image_content = None
 
         if ext in [".xls", ".xlsx", ".csv"]:
             contents_bytes = await file.read()
@@ -955,50 +954,55 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
                 df = pd.read_csv(io.BytesIO(contents_bytes))
             else:
                 df = pd.read_excel(io.BytesIO(contents_bytes))
-            parts.append({"text": df.to_string()})
+            text_content = df.to_string()
 
         elif ext == ".txt":
-            contents_bytes = await file.read()
-            parts.append({"text": contents_bytes.decode("utf-8", errors="ignore")})
+            text_content = (await file.read()).decode("utf-8", errors="ignore")
 
-        elif ext in [".pdf", ".png", ".jpg", ".jpeg"]:
+        elif ext == ".pdf":
+            # PDF faylından mətni oxuyuruq
+            pdf_reader = PyPDF2.PdfReader(io.BytesIO(await file.read()))
+            text_content = "\n".join([page.extract_text() for page in pdf_reader.pages if page.extract_text()])
+            if not text_content.strip():
+                raise HTTPException(status_code=400, detail="PDF faylından mətn oxunmadı. Zəhmət olmasa təmiz mətnli (skan olunmamış) PDF yükləyin və ya şəkil kimi yükləyin.")
+
+        elif ext in [".png", ".jpg", ".jpeg"]:
             contents_bytes = await file.read()
             base64_encoded = base64.b64encode(contents_bytes).decode('utf-8')
-            mime = "application/pdf" if ext == ".pdf" else file.content_type
-            parts.append({
-                "inlineData": {
-                    "mimeType": mime,
-                    "data": base64_encoded
-                }
-            })
+            mime = "image/jpeg" if ext == ".jpg" else file.content_type
+            image_content = f"data:{mime};base64,{base64_encoded}"
+
         else:
             raise HTTPException(status_code=400, detail="Aİ analizi yalnız PDF, Şəkil, Excel, CSV və TXT dəstəkləyir.")
 
-        # Bearer Token yaradılır
-        req = google.auth.transport.requests.Request()
-        credentials.refresh(req)
-        
-        # Birbaşa Google REST API-yə müraciət
-        url = "[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent)"
-        payload = {"contents": [{"parts": parts}]}
-        api_request = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), headers={
-            "Authorization": f"Bearer {credentials.token}",
-            "Content-Type": "application/json"
-        })
+        # OpenAI API-yə müraciət üçün mesaj strukturu
+        messages = [
+            {"role": "system", "content": prompt}
+        ]
 
-        try:
-            with urllib.request.urlopen(api_request) as response:
-                res_body = response.read()
-                res_json = json.loads(res_body)
-        except urllib.error.HTTPError as e:
-            error_msg = e.read().decode('utf-8', errors='ignore')
-            print(f"Google Aİ API Xətası ({e.code}): {error_msg}")
-            raise HTTPException(status_code=500, detail=f"Google Aİ Xətası: {e.code}")
+        if image_content:
+            messages.append({
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": "Aşağıdakı şəkildə olan sənədi analiz et və göstərilən JSON formatında çıxar:"},
+                    {"type": "image_url", "image_url": {"url": image_content}}
+                ]
+            })
+        else:
+            messages.append({
+                "role": "user",
+                "content": f"Aşağıdakı sənəd məzmununu analiz et və göstərilən JSON formatında çıxar:\n\n{text_content}"
+            })
 
-        res_text = res_json['candidates'][0]['content']['parts'][0]['text'].strip()
-        res_text = re.sub(r'^```json|^```|```$', '', res_text, flags=re.IGNORECASE).strip()
+        response = await aclient.chat.completions.create(
+            model="gpt-4o", # Qabaqcıl oxuma bacarığı üçün
+            messages=messages,
+            response_format={ "type": "json_object" } # Dəqiq JSON məcburiyyəti
+        )
 
+        res_text = response.choices[0].message.content.strip()
         parsed_json = json.loads(res_text)
+
         return {"status": "success", "data": parsed_json}
 
     except json.JSONDecodeError:
