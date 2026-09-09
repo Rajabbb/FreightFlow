@@ -514,19 +514,6 @@ class ChangeEmailRequest(BaseModel):
     new_email: EmailStr
     current_password: str
 
-# YENİ ƏLAVƏ: Təklifin Müştəriyə PDF Üçün Yadda Saxlanılması
-class CustomerQuoteCreate(BaseModel):
-    customer_id: int
-    request_id: int
-    quote_id: int
-    base_price: float
-    margin_type: str
-    margin_value: float
-    final_price: float
-    currency: str
-    valid_until: Optional[str] = None
-    terms_conditions: Optional[str] = ""
-
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
     if os.path.exists("static/index.html"): return FileResponse("static/index.html")
@@ -1538,6 +1525,19 @@ def change_email(request: Request, data: ChangeEmailRequest, current_user: dict 
     supabase.table("customers").update({"email": data.new_email}).eq("id", user_id).execute()
     
     return {"status": "success", "message": "E-poçtunuz uğurla dəyişdirildi!"}
+
+# YENİ ƏLAVƏ: Təklifin Müştəriyə PDF Üçün Yadda Saxlanılması
+class CustomerQuoteCreate(BaseModel):
+    customer_id: int
+    request_id: int
+    quote_id: int
+    base_price: float
+    margin_type: str
+    margin_value: float
+    final_price: float
+    currency: str
+    valid_until: Optional[str] = None
+    terms_conditions: Optional[str] = ""
 
 @app.post("/customer-quotes/create")
 def create_customer_quote(payload: CustomerQuoteCreate, current_user: dict = Depends(verify_token)):
