@@ -527,21 +527,21 @@
             <!-- SON TƏKLİFLƏR PANELİ -->
             <div class="col-12 col-lg-8">
                 <div class="card h-100 mb-0 shadow-sm border-0">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
                         <div>
                             <div class="section-title mb-1">
                                 <i class="bi bi-clock-history text-primary me-2"></i> Son Gələn Təkliflər
                             </div>
                             <div class="section-desc" style="font-size: 13px;">Daşıyıcılardan gələn son 10 qiymət təklifi.</div>
                         </div>
-                        <button onclick="loadRecentQuotes()" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm d-flex align-items-center" style="font-size: 12px; font-weight: 500; transition: all 0.2s;">
+                        <button onclick="loadRecentQuotes()" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm d-flex align-items-center text-nowrap flex-shrink-0" style="font-size: 12px; font-weight: 500; transition: all 0.2s;">
                             <i class="bi bi-arrow-clockwise me-1" style="font-size: 14px;"></i> Yenilə
                         </button>
                     </div>
                     
                     <div class="table-responsive rounded-3 border">
                         <table class="table table-hover align-middle mb-0 text-sm">
-                            <thead class="bg-light text-muted" style="font-size: 12.5px;">
+                            <thead class="bg-light text-muted text-nowrap" style="font-size: 12.5px;">
                                 <tr>
                                     <th class="py-3 px-3">Sorğu (RFQ)</th>
                                     <th class="py-3 px-3">Daşıyıcı</th>
@@ -717,15 +717,15 @@
 
             <!-- BAŞLIQ VƏ AXTARIŞ/YENİLƏ PANELLƏRİ -->
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <span class="fw-bold text-dark small text-uppercase tracking-wider">
+                <span class="fw-bold text-dark small text-uppercase tracking-wider w-100 w-sm-auto">
                     <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
                 </span>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="input-group input-group-sm shadow-sm" style="width: auto;">
+                <div class="d-flex align-items-center flex-wrap gap-2 w-100 justify-content-sm-end">
+                    <div class="input-group input-group-sm shadow-sm flex-grow-1" style="width: auto; min-width: 150px; max-width: 100%;">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" id="carrierSearchInput" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="max-width: 160px; font-size: 12px;">
+                        <input type="text" id="carrierSearchInput" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="font-size: 12px;">
                     </div>
-                    <button type="button" class="btn btn-sm btn-light border shadow-sm px-3" onclick="loadManageCarriersList()" title="Yenilə">
+                    <button type="button" class="btn btn-sm btn-light border shadow-sm px-3 flex-shrink-0" onclick="loadManageCarriersList()" title="Yenilə">
                         <i class="bi bi-arrow-clockwise"></i>
                     </button>
                 </div>
@@ -1015,9 +1015,9 @@ Best regards,
             <div class="section-desc">Yaratdığınız sorğuların statusunu izləyin və təklifləri analiz edin.</div>
             
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider">Sorğu Siyahısı</h5>
-                <div class="d-flex align-items-center gap-2">
-                    <div class="btn-group" role="group">
+                <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider w-100 w-sm-auto">Sorğu Siyahısı</h5>
+                <div class="d-flex align-items-center flex-wrap gap-2 w-100 justify-content-sm-end">
+                    <div class="btn-group flex-shrink-0" role="group">
                         <input type="radio" class="btn-check" name="statusFilter" id="filterAll" value="all" checked onchange="filterRequests()">
                         <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterAll">Hamısı</label>
 
@@ -1028,8 +1028,8 @@ Best regards,
                         <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterClosed">Bağlı</label>
                     </div>
 
-                    <input type="text" id="requestSearchInput" class="form-control form-control-sm" placeholder="Sorğularda axtar..." onkeyup="filterRequests()" style="width: 180px; font-size: 12px;">
-                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1" onclick="loadRequests()" style="font-size: 12px;">
+                    <input type="text" id="requestSearchInput" class="form-control form-control-sm flex-grow-1" placeholder="Sorğularda axtar..." onkeyup="filterRequests()" style="min-width: 120px; width: auto; font-size: 12px;">
+                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1 text-nowrap flex-shrink-0" onclick="loadRequests()" style="font-size: 12px;">
                         <i class="bi bi-arrow-clockwise"></i> Yenilə
                     </button>
                 </div>
@@ -1690,13 +1690,13 @@ Best regards,
                         
                         html += `
                             <tr>
-                                <td class="py-3 px-3">
+                                <td class="py-3 px-3 text-nowrap">
                                     <span class="fw-bold text-dark d-block">RFQ #${displayId}</span>
                                     <span class="text-muted" style="font-size: 11.5px;">${escapeHTML(q.origin)} &rarr; ${escapeHTML(q.destination)}</span>
                                 </td>
-                                <td class="py-3 px-3 fw-medium text-dark">${escapeHTML(q.carrier_name)}</td>
-                                <td class="py-3 px-3">${priceDisplay}${timeHtml}</td>
-                                <td class="py-3 px-3 text-end">
+                                <td class="py-3 px-3 fw-medium text-dark text-nowrap">${escapeHTML(q.carrier_name)}</td>
+                                <td class="py-3 px-3 text-nowrap">${priceDisplay}${timeHtml}</td>
+                                <td class="py-3 px-3 text-end text-nowrap">
                                     <button class="btn btn-sm btn-outline-primary rounded-pill px-3" onclick="openRfqDetail(${q.request_id})" style="font-size: 11px;">Bax</button>
                                 </td>
                             </tr>
@@ -2563,11 +2563,11 @@ Best regards,
             let html = `<div class="table-container-responsive rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
                 <thead style="background: #f8fafc;">
                     <tr>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Daşıyıcı Şirkət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Qiymət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Müddət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold">Qeydlər</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-center">Əməliyyat</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Daşıyıcı Şirkət</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Qiymət</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Müddət</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Qeydlər</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-center text-nowrap">Əməliyyat</th>
                     </tr>
                 </thead>
                 <tbody>`;
@@ -2596,16 +2596,16 @@ Best regards,
 
                 html += `
                     <tr class="${q.is_winner ? 'table-success' : ''}">
-                        <td class="px-3 fw-bold text-dark py-2.5" style="min-width: 130px;">${escapeHTML(q.carrier_company || 'Daşıyıcı')}</td>
-                        <td class="px-3 text-success fw-bold py-2.5" style="min-width: 100px;">${priceDisplay}</td>
-                        <td class="px-3 fw-medium text-dark py-2.5" style="min-width: 90px;">${transitDisplay}</td>
-                        <td class="px-3 py-2.5" style="min-width: 160px;">
+                        <td class="px-3 fw-bold text-dark py-2.5 text-nowrap" style="min-width: 130px;">${escapeHTML(q.carrier_company || 'Daşıyıcı')}</td>
+                        <td class="px-3 text-success fw-bold py-2.5 text-nowrap" style="min-width: 100px;">${priceDisplay}</td>
+                        <td class="px-3 fw-medium text-dark py-2.5 text-nowrap" style="min-width: 90px;">${transitDisplay}</td>
+                        <td class="px-3 py-2.5 text-nowrap" style="min-width: 160px;">
                             <div class="text-muted mb-1 text-truncate" style="max-width: 180px;">${extraStr || 'Məlumat yoxdur'}</div>
                             <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none text-nowrap" style="font-size: 11.5px;" onclick="openQuoteModal(${requestId}, ${q.id})">
                                 Daha Ətraflı <i class="bi bi-arrow-right-short"></i>
                             </button>
                         </td>
-                        <td class="px-3 text-center py-2.5" style="min-width: 100px;">
+                        <td class="px-3 text-center py-2.5 text-nowrap" style="min-width: 100px;">
                             ${q.is_winner ? `
                                 <div class="d-flex align-items-center justify-content-center gap-2">
                                     <span class="badge bg-success rounded-pill px-3 py-2" style="font-size: 13px;">
