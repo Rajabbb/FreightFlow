@@ -1901,7 +1901,7 @@ Best regards,
                         
                     } else if (format === 'pdf') {
                         let tableHtml = `
-                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; width: 1600px; background-color: #fff;">
+                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; width: 1600px; background-color: #fff; color: #000;">
                             <h2 style="color: #4f46e5; margin-bottom: 5px; font-size: 24px;">Arachi Logistics</h2>
                             <h3 style="color: #64748b; margin-bottom: 25px; font-size: 16px;">${category === 'rfq' ? 'RFQ Detalları Hesabatı' : 'Daşıyıcı Təklifləri Hesabatı'}</h3>
                             <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
@@ -1927,7 +1927,7 @@ Best regards,
                             margin:       0.3,
                             filename:     `${fileNamePrefix}.pdf`,
                             image:        { type: 'jpeg', quality: 1 },
-                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1600 },
+                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
                             jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' }
                         };
                         
