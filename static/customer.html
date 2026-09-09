@@ -1901,14 +1901,14 @@ Best regards,
                         
                     } else if (format === 'pdf') {
                         let tableHtml = `
-                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px;">
+                        <div style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 20px; width: 1500px; box-sizing: border-box;">
                             <h2 style="color: #4f46e5; margin-bottom: 5px; font-size: 24px;">Arachi Logistics</h2>
                             <h3 style="color: #64748b; margin-bottom: 25px; font-size: 16px;">${category === 'rfq' ? 'RFQ Detalları Hesabatı' : 'Daşıyıcı Təklifləri Hesabatı'}</h3>
-                            <table style="width: 100%; border-collapse: collapse; font-size: 10px; table-layout: auto;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                                 <thead>
                                     <tr style="background-color: #f1f5f9; text-align: left; color: #334155;">`;
                         headers.forEach(h => { 
-                            tableHtml += `<th style="padding: 10px 8px; border: 1px solid #cbd5e1; white-space: normal; word-break: break-word; line-height: 1.5; vertical-align: middle;">${h}</th>`; 
+                            tableHtml += `<th style="padding: 10px 8px; border: 1px solid #cbd5e1; white-space: normal; line-height: 1.4; vertical-align: middle;">${h}</th>`; 
                         });
                         tableHtml += `</tr></thead><tbody>`;
                         
@@ -1917,21 +1917,30 @@ Best regards,
                             tableHtml += `<tr style="background-color: ${bg};">`;
                             headers.forEach(h => {
                                 let val = row[h] !== null && row[h] !== undefined ? String(row[h]) : "";
-                                tableHtml += `<td style="padding: 10px 8px; border: 1px solid #e2e8f0; color: #0f172a; white-space: normal; word-break: break-word; line-height: 1.5; vertical-align: top;">${val}</td>`;
+                                tableHtml += `<td style="padding: 10px 8px; border: 1px solid #e2e8f0; color: #0f172a; white-space: normal; word-break: break-word; line-height: 1.4; vertical-align: top;">${val}</td>`;
                             });
                             tableHtml += `</tr>`;
                         });
                         tableHtml += `</tbody></table></div>`;
 
+                        const container = document.createElement('div');
+                        container.innerHTML = tableHtml;
+                        container.style.position = 'absolute';
+                        container.style.left = '-9999px';
+                        container.style.top = '0';
+                        document.body.appendChild(container);
+
                         const opt = {
                             margin:       0.3,
                             filename:     `${fileNamePrefix}.pdf`,
-                            image:        { type: 'jpeg', quality: 0.98 },
-                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+                            image:        { type: 'jpeg', quality: 1 },
+                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1500 },
                             jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' }
                         };
                         
-                        html2pdf().set(opt).from(tableHtml).save();
+                        html2pdf().set(opt).from(container).save().then(() => {
+                            document.body.removeChild(container);
+                        });
                     }
                 } else {
                     alert("Xəta: " + (result.detail || "Məlumatı yaratmaq mümkün olmadı"));
@@ -3278,7 +3287,7 @@ Best regards,
             let dateStr = new Date().toLocaleDateString('az-AZ');
 
             const pdfContent = `
-                <div style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #fff; width: 100%; box-sizing: border-box;">
+                <div id="pdfWrapper" style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #fff; width: 800px; max-width: 800px; box-sizing: border-box;">
                     <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                         <div>
                             <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3329,16 +3338,23 @@ Best regards,
 
             const container = document.createElement('div');
             container.innerHTML = pdfContent;
+            
+            container.style.position = 'absolute';
+            container.style.left = '-9999px';
+            container.style.top = '0';
+            document.body.appendChild(container);
 
             const opt = {
-                margin:       0.2,
+                margin:       [0.3, 0, 0.3, 0], 
                 filename:     `Quotation_RFQ_${data.request_id}.pdf`,
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2, useCORS: true },
-                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                image:        { type: 'jpeg', quality: 1 },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
             
-            html2pdf().set(opt).from(container).save();
+            html2pdf().set(opt).from(container).save().then(() => {
+                document.body.removeChild(container);
+            });
         }
     </script>
 </body>
