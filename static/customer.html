@@ -1901,7 +1901,7 @@ Best regards,
                         
                     } else if (format === 'pdf') {
                         let tableHtml = `
-                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; width: 1600px; background-color: #ffffff; color: #000000; box-sizing: border-box;">
+                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; width: 1500px; background-color: #fff; color: #000;">
                             <h2 style="color: #4f46e5; margin-bottom: 5px; font-size: 24px;">Arachi Logistics</h2>
                             <h3 style="color: #64748b; margin-bottom: 25px; font-size: 16px;">${category === 'rfq' ? 'RFQ Detalları Hesabatı' : 'Daşıyıcı Təklifləri Hesabatı'}</h3>
                             <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
@@ -1923,25 +1923,15 @@ Best regards,
                         });
                         tableHtml += `</tbody></table></div>`;
 
-                        const container = document.createElement('div');
-                        container.innerHTML = tableHtml;
-                        container.style.position = 'absolute';
-                        container.style.top = '0';
-                        container.style.left = '0';
-                        container.style.zIndex = '-9999';
-                        document.body.appendChild(container);
-
                         const opt = {
                             margin:       0.3,
                             filename:     `${fileNamePrefix}.pdf`,
-                            image:        { type: 'jpeg', quality: 1 },
-                            html2canvas:  { scale: 2, useCORS: true },
+                            image:        { type: 'jpeg', quality: 0.98 },
+                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1500 },
                             jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' }
                         };
                         
-                        html2pdf().set(opt).from(container).save().then(() => {
-                            document.body.removeChild(container);
-                        });
+                        html2pdf().set(opt).from(tableHtml).save();
                     }
                 } else {
                     alert("Xəta: " + (result.detail || "Məlumatı yaratmaq mümkün olmadı"));
@@ -3340,17 +3330,19 @@ Best regards,
             const container = document.createElement('div');
             container.innerHTML = pdfContent;
             
-            container.style.position = 'absolute';
+            container.style.position = 'fixed';
             container.style.top = '0';
             container.style.left = '0';
-            container.style.zIndex = '-9999';
+            container.style.zIndex = '-1000';
+            container.style.opacity = '0';
+            container.style.pointerEvents = 'none';
             document.body.appendChild(container);
 
             const opt = {
-                margin:       0.2, 
+                margin:       0.2,
                 filename:     `Quotation_RFQ_${data.request_id}.pdf`,
                 image:        { type: 'jpeg', quality: 1 },
-                html2canvas:  { scale: 2, useCORS: true },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
                 jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
             
