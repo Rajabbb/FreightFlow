@@ -514,6 +514,19 @@ class ChangeEmailRequest(BaseModel):
     new_email: EmailStr
     current_password: str
 
+# YENİ ƏLAVƏ: Təklifin Müştəriyə PDF Üçün Yadda Saxlanılması
+class CustomerQuoteCreate(BaseModel):
+    customer_id: int
+    request_id: int
+    quote_id: int
+    base_price: float
+    margin_type: str
+    margin_value: float
+    final_price: float
+    currency: str
+    valid_until: Optional[str] = None
+    terms_conditions: Optional[str] = ""
+
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
     if os.path.exists("static/index.html"): return FileResponse("static/index.html")
@@ -1525,3 +1538,24 @@ def change_email(request: Request, data: ChangeEmailRequest, current_user: dict 
     supabase.table("customers").update({"email": data.new_email}).eq("id", user_id).execute()
     
     return {"status": "success", "message": "E-poçtunuz uğurla dəyişdirildi!"}
+
+@app.post("/customer-quotes/create")
+def create_customer_quote(payload: CustomerQuoteCreate, current_user: dict = Depends(verify_token)):
+    check_ownership(payload.customer_id, current_user)
+    try:
+        res = supabase.table("customer_quotes").insert({
+            "customer_id": payload.customer_id,
+            "request_id": payload.request_id,
+            "quote_id": payload.quote_id,
+            "base_price": payload.base_price,
+            "margin_type": payload.margin_type,
+            "margin_value": payload.margin_value,
+            "final_price": payload.final_price,
+            "currency": payload.currency,
+            "valid_until": payload.valid_until,
+            "terms_conditions": payload.terms_conditions
+        }).execute()
+        return {"status": "success", "message": "Müştəri təklifi bazada yadda saxlanıldı və PDF yaradıldı!"}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
