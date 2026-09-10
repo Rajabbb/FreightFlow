@@ -1931,18 +1931,9 @@ Best regards,
                             jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' }
                         };
                         
-                        html2pdf().set(opt).from(tableHtml).save();
+                        // Səhifəyə heç bir gizli element (DOM) əlavə etmədən birbaşa HTML-i string kimi ötürürük
+                        await html2pdf().set(opt).from(tableHtml).save();
                     }
-                } else {
-                    alert("Xəta: " + (result.detail || "Məlumatı yaratmaq mümkün olmadı"));
-                }
-            } catch (err) {
-                console.error(err); alert("Serverlə əlaqə qurulmadı!");
-            } finally {
-                btn.innerHTML = originalText; btn.disabled = false;
-            }
-        }
-
 
         // KATEQORİYALAR FUNKSİYALARI
         async function loadCategories() {
