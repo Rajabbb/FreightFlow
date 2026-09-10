@@ -1923,15 +1923,25 @@ Best regards,
                         });
                         tableHtml += `</tbody></table></div>`;
 
+                        const container = document.createElement('div');
+                        container.innerHTML = tableHtml;
+                        container.style.position = 'absolute';
+                        container.style.top = '0';
+                        container.style.left = '0';
+                        container.style.zIndex = '-9999';
+                        document.body.appendChild(container);
+
                         const opt = {
                             margin:       0.3,
                             filename:     `${fileNamePrefix}.pdf`,
                             image:        { type: 'jpeg', quality: 1 },
-                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1600, width: 1600 },
+                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 1600 },
                             jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' }
                         };
                         
-                        html2pdf().set(opt).from(tableHtml).save();
+                        html2pdf().set(opt).from(container).save().then(() => {
+                            document.body.removeChild(container);
+                        });
                     }
                 } else {
                     alert("Xəta: " + (result.detail || "Məlumatı yaratmaq mümkün olmadı"));
@@ -3278,7 +3288,7 @@ Best regards,
             let dateStr = new Date().toLocaleDateString('az-AZ');
 
             const pdfContent = `
-                <div id="pdfWrapper" style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #fff; width: 800px; box-sizing: border-box;">
+                <div id="pdfWrapper" style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #fff; width: 800px; max-width: 800px; box-sizing: border-box;">
                     <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                         <div>
                             <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3330,19 +3340,17 @@ Best regards,
             const container = document.createElement('div');
             container.innerHTML = pdfContent;
             
-            container.style.position = 'fixed';
+            container.style.position = 'absolute';
             container.style.top = '0';
             container.style.left = '0';
-            container.style.zIndex = '-1000';
-            container.style.opacity = '0';
-            container.style.pointerEvents = 'none';
+            container.style.zIndex = '-9999';
             document.body.appendChild(container);
 
             const opt = {
                 margin:       0.2,
                 filename:     `Quotation_RFQ_${data.request_id}.pdf`,
                 image:        { type: 'jpeg', quality: 1 },
-                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800, width: 800 },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
                 jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
             };
             
