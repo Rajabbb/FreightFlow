@@ -514,6 +514,18 @@ class ChangeEmailRequest(BaseModel):
     new_email: EmailStr
     current_password: str
 
+class CustomerQuoteCreate(BaseModel):
+    customer_id: int
+    request_id: int
+    quote_id: int
+    base_price: float
+    margin_type: str
+    margin_value: float
+    final_price: float
+    currency: str
+    valid_until: Optional[str] = None
+    terms_conditions: Optional[str] = ""
+
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
     if os.path.exists("static/index.html"): return FileResponse("static/index.html")
@@ -911,9 +923,6 @@ async def upload_request_attachment(file: UploadFile = File(...), current_user: 
         return {"status": "success", "attachment_url": f"/uploads/{unique_filename}", "filename": file.filename}
     except Exception as e: raise HTTPException(status_code=500, detail=f"Fayl yüklənərkən xəta: {str(e)}")
 
-# ==========================================
-# YENİ ƏLAVƏ: Aİ İLƏ FAYL OXUMA ENDPOINTİ (OPENAI CHATGPT)
-# ==========================================
 @app.post("/requests/parse-ai")
 @limiter.limit("5/minute")
 async def parse_document_with_ai(request: Request, file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
@@ -975,7 +984,6 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
         else:
             raise HTTPException(status_code=400, detail="Aİ analizi yalnız PDF, Şəkil, Excel, CSV və TXT dəstəkləyir.")
 
-        # OpenAI API-yə müraciət üçün mesaj strukturu
         messages = [
             {"role": "system", "content": prompt}
         ]
@@ -995,9 +1003,9 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
             })
 
         response = await aclient.chat.completions.create(
-            model="gpt-4o-mini", # Qabaqcıl oxuma bacarığı üçün
+            model="gpt-4o-mini",
             messages=messages,
-            response_format={ "type": "json_object" } # Dəqiq JSON məcburiyyəti
+            response_format={ "type": "json_object" } 
         )
 
         res_text = response.choices[0].message.content.strip()
