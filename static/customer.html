@@ -3252,83 +3252,94 @@ Best regards,
         }
 
         function createPdfAndDownload(data, tcTexts) {
-            return new Promise((resolve, reject) => {
-                const req = currentQuoteForCustomer.req || {};
-                const origin = req.origin || req.loading_location || "Məlum deyil";
-                const destination = req.destination || req.delivery_location || "Məlum deyil";
-                const cargo = req.cargo_type || req.cargo || "Logistika xidməti";
-                const weight = req.weight_kg || req.weight || "";
-                const vol = req.volume_m3 || req.volume || "";
-                
-                let weightStr = weight ? `${weight} kq` : "";
-                if (vol && vol !== "0" && vol !== 0) weightStr += ` / ${vol} CBM`;
+            const req = currentQuoteForCustomer.req || {};
+            const origin = req.origin || req.loading_location || "Məlum deyil";
+            const destination = req.destination || req.delivery_location || "Məlum deyil";
+            const cargo = req.cargo_type || req.cargo || "Logistika xidməti";
+            const weight = req.weight_kg || req.weight || "";
+            const vol = req.volume_m3 || req.volume || "";
+            
+            let weightStr = weight ? `${weight} kq` : "";
+            if (vol && vol !== "0" && vol !== 0) weightStr += ` / ${vol} CBM`;
 
-                let tcHtml = tcTexts.map(t => `<li style="margin-bottom: 8px;">${t}</li>`).join("");
-                if (!tcHtml) tcHtml = "<li>Standart daşınma şərtləri tətbiq olunur.</li>";
+            let tcHtml = tcTexts.map(t => `<li style="margin-bottom: 8px;">${t}</li>`).join("");
+            if (!tcHtml) tcHtml = "<li>Standart daşınma şərtləri tətbiq olunur.</li>";
 
-                let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
-                let dateStr = new Date().toLocaleDateString('az-AZ');
+            let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
+            let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                const pdfContent = `
-                    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #fff; width: 800px; box-sizing: border-box;">
-                        <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
-                            <div>
-                                <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
-                                <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px; font-weight: bold;">OFFICIAL FREIGHT FORWARDER QUOTATION</p>
-                            </div>
-                            <div style="text-align: right; font-size: 13px; color: #475569; line-height: 1.5;">
-                                <strong style="color: #0f172a;">QUOTATION REF:</strong> RFQ-${data.request_id}<br>
-                                <strong style="color: #0f172a;">DATE:</strong> ${dateStr}<br>
-                                ${data.valid_until ? `<strong style="color: #0f172a;">VALID UNTIL:</strong> ${escapeHTML(data.valid_until)}` : ''}
-                            </div>
-                        </div>
-                        
-                        <div style="margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                            <h3 style="margin-top: 0; margin-bottom: 15px; color: #0f172a; font-size: 15px; font-weight: 800; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px;">ROUTING & CARGO DETAILS</h3>
-                            <table style="width: 100%; font-size: 13.5px; line-height: 1.6; border-collapse: collapse;">
-                                <tr><td style="padding-bottom: 8px; width: 140px;"><strong>From (Origin):</strong></td><td style="padding-bottom: 8px;">${escapeHTML(origin)}</td></tr>
-                                <tr><td style="padding-bottom: 8px;"><strong>To (Destination):</strong></td><td style="padding-bottom: 8px;">${escapeHTML(destination)}</td></tr>
-                                <tr><td style="padding-bottom: 8px;"><strong>Cargo Type:</strong></td><td style="padding-bottom: 8px;">${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}</td></tr>
-                            </table>
-                        </div>
-                        
-                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 14px;">
-                            <tr style="background: #4f46e5; color: #fff;">
-                                <th style="padding: 12px 15px; text-align: left; border-top-left-radius: 6px;">Description of Services</th>
-                                <th style="padding: 12px 15px; text-align: right; border-top-right-radius: 6px;">Total Amount</th>
-                            </tr>
-                            <tr>
-                                <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; color: #334155;">International Freight Forwarding Charges</td>
-                                <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; text-align: right; font-weight: 800; color: #16a34a; font-size: 18px;">
-                                    ${escapeHTML(data.final_price)} ${escapeHTML(data.currency)}
-                                </td>
-                            </tr>
-                        </table>
+            const pdfContent = `
+                <div id="pdfWrapper" style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #fff; width: 800px; box-sizing: border-box;">
+                    <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
+                        <div>
+                            <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
+                            <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px; font-weight: bold;">OFFICIAL FREIGHT FORWARDER QUOTATION</p>
+                        </div>
+                        <div style="text-align: right; font-size: 13px; color: #475569; line-height: 1.5;">
+                            <strong style="color: #0f172a;">QUOTATION REF:</strong> RFQ-${data.request_id}<br>
+                            <strong style="color: #0f172a;">DATE:</strong> ${dateStr}<br>
+                            ${data.valid_until ? `<strong style="color: #0f172a;">VALID UNTIL:</strong> ${escapeHTML(data.valid_until)}` : ''}
+                        </div>
+                    </div>
+                    
+                    <div style="margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; color: #0f172a; font-size: 15px; font-weight: 800; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px;">ROUTING & CARGO DETAILS</h3>
+                        <table style="width: 100%; font-size: 13.5px; line-height: 1.6; border-collapse: collapse;">
+                            <tr><td style="padding-bottom: 8px; width: 140px;"><strong>From (Origin):</strong></td><td style="padding-bottom: 8px;">${escapeHTML(origin)}</td></tr>
+                            <tr><td style="padding-bottom: 8px;"><strong>To (Destination):</strong></td><td style="padding-bottom: 8px;">${escapeHTML(destination)}</td></tr>
+                            <tr><td style="padding-bottom: 8px;"><strong>Cargo Type:</strong></td><td style="padding-bottom: 8px;">${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}</td></tr>
+                        </table>
+                    </div>
+                    
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 14px;">
+                        <tr style="background: #4f46e5; color: #fff;">
+                            <th style="padding: 12px 15px; text-align: left; border-top-left-radius: 6px;">Description of Services</th>
+                            <th style="padding: 12px 15px; text-align: right; border-top-right-radius: 6px;">Total Amount</th>
+                        </tr>
+                        <tr>
+                            <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; color: #334155;">International Freight Forwarding Charges</td>
+                            <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; text-align: right; font-weight: 800; color: #16a34a; font-size: 18px;">
+                                ${escapeHTML(data.final_price)} ${escapeHTML(data.currency)}
+                            </td>
+                        </tr>
+                    </table>
 
-                        <div style="margin-bottom: 40px;">
-                            <h4 style="color: #0f172a; font-size: 14px; margin-bottom: 12px; font-weight: 800;">Terms and Conditions</h4>
-                            <ul style="font-size: 12.5px; color: #475569; padding-left: 20px; line-height: 1.7; margin: 0;">
-                                ${tcHtml}
-                            </ul>
-                        </div>
+                    <div style="margin-bottom: 40px;">
+                        <h4 style="color: #0f172a; font-size: 14px; margin-bottom: 12px; font-weight: 800;">Terms and Conditions</h4>
+                        <ul style="font-size: 12.5px; color: #475569; padding-left: 20px; line-height: 1.7; margin: 0;">
+                            ${tcHtml}
+                        </ul>
+                    </div>
 
-                        <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #cbd5e1; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
-                            This document is electronically generated and is strictly confidential.<br>
-                            Blind Shipment Protocol Active - All carrier operations are managed internally.
-                        </div>
-                    </div>
-                `;
+                    <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #cbd5e1; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
+                        This document is electronically generated and is strictly confidential.<br>
+                        Blind Shipment Protocol Active - All carrier operations are managed internally.
+                    </div>
+                </div>
+            `;
 
-                const opt = {
-                    margin:       0.2,
-                    filename:     `Quotation_RFQ_${data.request_id}.pdf`,
-                    image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
-                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-                };
-                
-                html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
-            });
+            const container = document.createElement('div');
+            container.innerHTML = pdfContent;
+            
+            container.style.position = 'fixed';
+            container.style.top = '0';
+            container.style.left = '0';
+            container.style.zIndex = '-1000';
+            container.style.opacity = '0';
+            container.style.pointerEvents = 'none';
+            document.body.appendChild(container);
+
+            const opt = {
+                margin:       0.2,
+                filename:     `Quotation_RFQ_${data.request_id}.pdf`,
+                image:        { type: 'jpeg', quality: 1 },
+                html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
+                jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+            
+            html2pdf().set(opt).from(container).save().then(() => {
+                document.body.removeChild(container);
+            });
         }
     </script>
 </body>
