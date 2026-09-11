@@ -3281,7 +3281,7 @@ Best regards,
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
                 const pdfContent = `
-                    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #fff; width: 800px; box-sizing: border-box;">
+                    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; width: 800px; box-sizing: border-box;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div>
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3330,15 +3330,30 @@ Best regards,
                     </div>
                 `;
 
+                // Səhifəni tam arxaya (görünməz lakin mövcud formaya) atırıq ki, kitabxana onu səhvsiz və kəsmədən çəkə bilsin.
+                const container = document.createElement('div');
+                container.innerHTML = pdfContent;
+                container.style.position = 'absolute';
+                container.style.top = '0';
+                container.style.left = '0';
+                container.style.zIndex = '-9999';
+                document.body.appendChild(container);
+
                 const opt = {
-                    margin:       0.2,
+                    margin:       0.3,
                     filename:     `Quotation_RFQ_${data.request_id}.pdf`,
                     image:        { type: 'jpeg', quality: 1 },
                     html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
                     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
                 };
                 
-                html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
+                html2pdf().set(opt).from(container).save().then(() => {
+                    document.body.removeChild(container);
+                    resolve();
+                }).catch((err) => {
+                    document.body.removeChild(container);
+                    reject(err);
+                });
             });
         }
     </script>
