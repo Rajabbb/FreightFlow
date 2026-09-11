@@ -3280,15 +3280,15 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                // DOM elementi (div) yaratmaq ləğv edildi, Hesabatdakı kimi birbaşa String olaraq verilir
+                // Mərkəzə qaçma (kəsilmə) xətasına səbəb olan margin: 0 auto; silindi
                 const pdfContent = `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; width: 800px; background-color: #ffffff; color: #000000; box-sizing: border-box; margin: 0 auto;">
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; width: 800px; box-sizing: border-box;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
-                            <div>
+                            <div style="max-width: 60%; word-wrap: break-word;">
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
                                 <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px; font-weight: bold;">OFFICIAL FREIGHT FORWARDER QUOTATION</p>
                             </div>
-                            <div style="text-align: right; font-size: 13px; color: #475569; line-height: 1.5;">
+                            <div style="text-align: right; font-size: 13px; color: #475569; line-height: 1.5; max-width: 35%;">
                                 <strong style="color: #0f172a;">QUOTATION REF:</strong> RFQ-${data.request_id}<br>
                                 <strong style="color: #0f172a;">DATE:</strong> ${dateStr}<br>
                                 ${data.valid_until ? `<strong style="color: #0f172a;">VALID UNTIL:</strong> ${escapeHTML(data.valid_until)}` : ''}
@@ -3297,21 +3297,21 @@ Best regards,
                         
                         <div style="margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
                             <h3 style="margin-top: 0; margin-bottom: 15px; color: #0f172a; font-size: 15px; font-weight: 800; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px;">ROUTING & CARGO DETAILS</h3>
-                            <table style="width: 100%; font-size: 13.5px; line-height: 1.6; border-collapse: collapse;">
-                                <tr><td style="padding-bottom: 8px; width: 140px;"><strong>From (Origin):</strong></td><td style="padding-bottom: 8px;">${escapeHTML(origin)}</td></tr>
-                                <tr><td style="padding-bottom: 8px;"><strong>To (Destination):</strong></td><td style="padding-bottom: 8px;">${escapeHTML(destination)}</td></tr>
-                                <tr><td style="padding-bottom: 8px;"><strong>Cargo Type:</strong></td><td style="padding-bottom: 8px;">${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}</td></tr>
+                            <table style="width: 100%; font-size: 13.5px; line-height: 1.6; border-collapse: collapse; table-layout: fixed;">
+                                <tr><td style="padding-bottom: 8px; width: 140px;"><strong>From (Origin):</strong></td><td style="padding-bottom: 8px; word-wrap: break-word;">${escapeHTML(origin)}</td></tr>
+                                <tr><td style="padding-bottom: 8px;"><strong>To (Destination):</strong></td><td style="padding-bottom: 8px; word-wrap: break-word;">${escapeHTML(destination)}</td></tr>
+                                <tr><td style="padding-bottom: 8px;"><strong>Cargo Type:</strong></td><td style="padding-bottom: 8px; word-wrap: break-word;">${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}</td></tr>
                             </table>
                         </div>
                         
-                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 14px;">
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 14px; table-layout: fixed;">
                             <tr style="background: #4f46e5; color: #fff;">
-                                <th style="padding: 12px 15px; text-align: left; border-top-left-radius: 6px;">Description of Services</th>
-                                <th style="padding: 12px 15px; text-align: right; border-top-right-radius: 6px;">Total Amount</th>
+                                <th style="padding: 12px 15px; text-align: left; border-top-left-radius: 6px; width: 70%;">Description of Services</th>
+                                <th style="padding: 12px 15px; text-align: right; border-top-right-radius: 6px; width: 30%;">Total Amount</th>
                             </tr>
                             <tr>
-                                <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; color: #334155;">International Freight Forwarding Charges</td>
-                                <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; text-align: right; font-weight: 800; color: #16a34a; font-size: 18px;">
+                                <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; color: #334155; word-wrap: break-word;">International Freight Forwarding Charges</td>
+                                <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; text-align: right; font-weight: 800; color: #16a34a; font-size: 18px; word-wrap: break-word;">
                                     ${escapeHTML(data.final_price)} ${escapeHTML(data.currency)}
                                 </td>
                             </tr>
@@ -3319,7 +3319,7 @@ Best regards,
 
                         <div style="margin-bottom: 40px;">
                             <h4 style="color: #0f172a; font-size: 14px; margin-bottom: 12px; font-weight: 800;">Terms and Conditions</h4>
-                            <ul style="font-size: 12.5px; color: #475569; padding-left: 20px; line-height: 1.7; margin: 0;">
+                            <ul style="font-size: 12.5px; color: #475569; padding-left: 20px; line-height: 1.7; margin: 0; word-wrap: break-word;">
                                 ${tcHtml}
                             </ul>
                         </div>
@@ -3339,7 +3339,6 @@ Best regards,
                     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
                 };
                 
-                // Mətni html2pdf-ə appendChild etmədən birbaşa ötürürük
                 html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
             });
         }
