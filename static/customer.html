@@ -1606,7 +1606,7 @@ Best regards,
                 errorMsg.classList.remove('d-none');
             } finally {
                 btn.disabled = false;
-                btn.innerText = "Şifrəni Yenilə";
+                btn.innerText = "Şifrə Yenilə";
             }
         }
 
@@ -1901,15 +1901,14 @@ Best regards,
                         
                     } else if (format === 'pdf') {
                         let tableHtml = `
-                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; width: 2400px; background-color: #ffffff; color: #000000; box-sizing: border-box;">
+                        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; width: 1600px; background-color: #ffffff; color: #000000; box-sizing: border-box;">
                             <h2 style="color: #4f46e5; margin-bottom: 5px; font-size: 24px;">Arachi Logistics</h2>
                             <h3 style="color: #64748b; margin-bottom: 25px; font-size: 16px;">${category === 'rfq' ? 'RFQ Detalları Hesabatı' : 'Daşıyıcı Təklifləri Hesabatı'}</h3>
-                            <table style="width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; word-wrap: break-word;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                                 <thead>
                                     <tr style="background-color: #f1f5f9; text-align: left; color: #334155;">`;
                         headers.forEach(h => { 
-                            let w = (h.includes('Detallar') || h.includes('Qeydlər')) ? 'min-width: 250px; max-width: 350px;' : 'width: auto;';
-                            tableHtml += `<th style="padding: 12px 10px; border: 1px solid #cbd5e1; white-space: normal; line-height: 1.4; vertical-align: middle; ${w}">${h}</th>`; 
+                            tableHtml += `<th style="padding: 10px 8px; border: 1px solid #cbd5e1; white-space: normal; line-height: 1.4; vertical-align: middle;">${h}</th>`; 
                         });
                         tableHtml += `</tr></thead><tbody>`;
                         
@@ -1918,22 +1917,31 @@ Best regards,
                             tableHtml += `<tr style="background-color: ${bg};">`;
                             headers.forEach(h => {
                                 let val = row[h] !== null && row[h] !== undefined ? String(row[h]) : "";
-                                let w = (h.includes('Detallar') || h.includes('Qeydlər')) ? 'min-width: 250px; max-width: 350px;' : 'width: auto;';
-                                tableHtml += `<td style="padding: 12px 10px; border: 1px solid #e2e8f0; color: #0f172a; white-space: normal; word-wrap: break-word; overflow-wrap: break-word; line-height: 1.5; vertical-align: top; ${w}">${val}</td>`;
+                                tableHtml += `<td style="padding: 10px 8px; border: 1px solid #e2e8f0; color: #0f172a; white-space: normal; word-break: break-word; line-height: 1.4; vertical-align: top;">${val}</td>`;
                             });
                             tableHtml += `</tr>`;
                         });
                         tableHtml += `</tbody></table></div>`;
 
+                        const container = document.createElement('div');
+                        container.innerHTML = tableHtml;
+                        container.style.position = 'absolute';
+                        container.style.top = '0';
+                        container.style.left = '0';
+                        container.style.zIndex = '-9999';
+                        document.body.appendChild(container);
+
                         const opt = {
                             margin:       0.3,
                             filename:     `${fileNamePrefix}.pdf`,
                             image:        { type: 'jpeg', quality: 1 },
-                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 2400 },
-                            jsPDF:        { unit: 'in', format: 'a1', orientation: 'landscape' }
+                            html2canvas:  { scale: 2, useCORS: true },
+                            jsPDF:        { unit: 'in', format: 'a3', orientation: 'landscape' }
                         };
                         
-                        await html2pdf().set(opt).from(tableHtml).save();
+                        html2pdf().set(opt).from(container).save().then(() => {
+                            document.body.removeChild(container);
+                        });
                     }
                 } else {
                     alert("Xəta: " + (result.detail || "Məlumatı yaratmaq mümkün olmadı"));
@@ -3281,7 +3289,7 @@ Best regards,
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
                 const pdfContent = `
-                    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #fff; width: 800px; box-sizing: border-box;">
+                    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; width: 800px; box-sizing: border-box;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div>
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3330,6 +3338,14 @@ Best regards,
                     </div>
                 `;
 
+                const container = document.createElement('div');
+                container.innerHTML = pdfContent;
+                container.style.position = 'absolute';
+                container.style.top = '0';
+                container.style.left = '0';
+                container.style.zIndex = '-9999';
+                document.body.appendChild(container);
+
                 const opt = {
                     margin:       0.2,
                     filename:     `Quotation_RFQ_${data.request_id}.pdf`,
@@ -3338,7 +3354,13 @@ Best regards,
                     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
                 };
                 
-                html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
+                html2pdf().set(opt).from(container).save().then(() => {
+                    document.body.removeChild(container);
+                    resolve();
+                }).catch((err) => {
+                    if(document.body.contains(container)) document.body.removeChild(container);
+                    reject(err);
+                });
             });
         }
     </script>
