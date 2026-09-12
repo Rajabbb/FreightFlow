@@ -3280,8 +3280,9 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
+                // Heç bir z-index, absolute yoxdur. Təmiz, sadə mərkəzlənmiş kod.
                 const pdfContent = `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; background-color: #ffffff; color: #000000; box-sizing: border-box; width: 800px; min-height: 1000px;">
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; width: 800px; box-sizing: border-box;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3330,44 +3331,34 @@ Best regards,
                     </div>
                 `;
 
-                // Elementi yaradıb səhifənin arxa fonuna (modalın arxasına) əlavə edirik
-                const container = document.createElement('div');
-                container.innerHTML = pdfContent;
-                container.style.position = 'absolute';
-                container.style.top = '0';
-                container.style.left = '0';
-                container.style.width = '800px';
-                container.style.zIndex = '-9999';
-                document.body.appendChild(container);
-
-                // ƏSAS HƏLL: Bootstrap Modalın "overflow: hidden" qadağasını müvəqqəti ləğv edirik
-                const originalOverflow = document.body.style.overflow;
-                document.body.style.overflow = 'visible';
-
                 const opt = {
                     margin:       0.3,
                     filename:     `Quotation_RFQ_${data.request_id}.pdf`,
                     image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { 
-                        scale: 2, 
-                        useCORS: true, 
-                        letterRendering: true, 
-                        windowWidth: 800, 
-                        scrollY: 0, 
-                        scrollX: 0,
-                        windowHeight: container.scrollHeight + 100 // Kitabxanaya elementin tam uzunluğunu məcburi bildiririk
-                    },
+                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
                     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
                 };
-                
-                // PDF-i endirdikdən dərhal sonra qadağanı (overflow) və köməkçi div-i əvvəlki halına qaytarırıq
-                html2pdf().set(opt).from(container).save().then(() => {
-                    document.body.style.overflow = originalOverflow;
-                    if (document.body.contains(container)) document.body.removeChild(container);
+
+                // ƏSAS HƏLL: Kitabxana PDF-i formalaşdırarkən Modalın ekranı kilidləmə (overflow: hidden) təsirini saniyəlik ləğv edirik ki, sənəd kəsilməsin.
+                const bodyWasModalOpen = document.body.classList.contains('modal-open');
+                if (bodyWasModalOpen) {
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = 'visible';
+                }
+
+                // Element yaratmadan birbaşa String(mətn) ötürülür
+                html2pdf().set(opt).from(pdfContent).save().then(() => {
+                    // PDF endikdən dərhal sonra Modal kilidini yerinə qaytarırıq
+                    if (bodyWasModalOpen) {
+                        document.body.classList.add('modal-open');
+                        document.body.style.overflow = '';
+                    }
                     resolve();
                 }).catch((err) => {
-                    document.body.style.overflow = originalOverflow;
-                    if (document.body.contains(container)) document.body.removeChild(container);
+                    if (bodyWasModalOpen) {
+                        document.body.classList.add('modal-open');
+                        document.body.style.overflow = '';
+                    }
                     reject(err);
                 });
             });
