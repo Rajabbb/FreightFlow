@@ -3280,15 +3280,15 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                // QƏTİYYƏN heç bir gizli element (DOM) yaratmırıq. Təmiz mətn (String) qoyuruq.
+                // ƏSAS HƏLL: Genişlik 800px-dən 720px-ə endirildi. Artıq A4 vərəqinə 100% sığır və əsla kəsilmir.
                 const pdfContent = `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; width: 800px; box-sizing: border-box;">
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background-color: #ffffff; color: #000000; width: 720px; box-sizing: border-box; text-align: left; margin: 0;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
-                                <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
+                                <h1 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
                                 <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px; font-weight: bold;">OFFICIAL FREIGHT FORWARDER QUOTATION</p>
                             </div>
-                            <div style="text-align: right; font-size: 13px; color: #475569; line-height: 1.5; max-width: 35%;">
+                            <div style="text-align: right; font-size: 12px; color: #475569; line-height: 1.5; max-width: 35%;">
                                 <strong style="color: #0f172a;">QUOTATION REF:</strong> RFQ-${data.request_id}<br>
                                 <strong style="color: #0f172a;">DATE:</strong> ${dateStr}<br>
                                 ${data.valid_until ? `<strong style="color: #0f172a;">VALID UNTIL:</strong> ${escapeHTML(data.valid_until)}` : ''}
@@ -3296,60 +3296,52 @@ Best regards,
                         </div>
                         
                         <div style="margin-bottom: 30px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                            <h3 style="margin-top: 0; margin-bottom: 15px; color: #0f172a; font-size: 15px; font-weight: 800; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px;">ROUTING & CARGO DETAILS</h3>
-                            <table style="width: 100%; font-size: 13.5px; line-height: 1.6; border-collapse: collapse; table-layout: fixed;">
-                                <tr><td style="padding-bottom: 8px; width: 140px;"><strong>From (Origin):</strong></td><td style="padding-bottom: 8px; word-wrap: break-word;">${escapeHTML(origin)}</td></tr>
-                                <tr><td style="padding-bottom: 8px;"><strong>To (Destination):</strong></td><td style="padding-bottom: 8px; word-wrap: break-word;">${escapeHTML(destination)}</td></tr>
-                                <tr><td style="padding-bottom: 8px;"><strong>Cargo Type:</strong></td><td style="padding-bottom: 8px; word-wrap: break-word;">${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}</td></tr>
+                            <h3 style="margin-top: 0; margin-bottom: 15px; color: #0f172a; font-size: 14px; font-weight: 800; border-bottom: 1px solid #cbd5e1; padding-bottom: 10px;">ROUTING & CARGO DETAILS</h3>
+                            <table style="width: 100%; font-size: 13px; line-height: 1.6; border-collapse: collapse; table-layout: fixed;">
+                                <tr><td style="padding-bottom: 8px; width: 140px; font-weight: 700;">From (Origin):</td><td style="padding-bottom: 8px; word-wrap: break-word;">${escapeHTML(origin)}</td></tr>
+                                <tr><td style="padding-bottom: 8px; font-weight: 700;">To (Destination):</td><td style="padding-bottom: 8px; word-wrap: break-word;">${escapeHTML(destination)}</td></tr>
+                                <tr><td style="padding-bottom: 8px; font-weight: 700;">Cargo Type:</td><td style="padding-bottom: 8px; word-wrap: break-word;">${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}</td></tr>
                             </table>
                         </div>
                         
-                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 14px; table-layout: fixed;">
+                        <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 13px; table-layout: fixed;">
                             <tr style="background: #4f46e5; color: #fff;">
-                                <th style="padding: 12px 15px; text-align: left; border-top-left-radius: 6px; width: 70%;">Description of Services</th>
-                                <th style="padding: 12px 15px; text-align: right; border-top-right-radius: 6px; width: 30%;">Total Amount</th>
+                                <th style="padding: 12px 15px; text-align: left; border-top-left-radius: 6px; width: 65%;">Description of Services</th>
+                                <th style="padding: 12px 15px; text-align: right; border-top-right-radius: 6px; width: 35%;">Total Amount</th>
                             </tr>
                             <tr>
                                 <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; color: #334155; word-wrap: break-word;">International Freight Forwarding Charges</td>
-                                <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; text-align: right; font-weight: 800; color: #16a34a; font-size: 18px; word-wrap: break-word;">
+                                <td style="padding: 15px; border: 1px solid #e2e8f0; border-top: none; text-align: right; font-weight: 800; color: #16a34a; font-size: 16px; word-wrap: break-word;">
                                     ${escapeHTML(data.final_price)} ${escapeHTML(data.currency)}
                                 </td>
                             </tr>
                         </table>
 
                         <div style="margin-bottom: 40px;">
-                            <h4 style="color: #0f172a; font-size: 14px; margin-bottom: 12px; font-weight: 800;">Terms and Conditions</h4>
-                            <ul style="font-size: 12.5px; color: #475569; padding-left: 20px; line-height: 1.7; margin: 0; word-wrap: break-word;">
+                            <h4 style="color: #0f172a; font-size: 13px; margin-bottom: 12px; font-weight: 800;">Terms and Conditions</h4>
+                            <ul style="font-size: 11.5px; color: #475569; padding-left: 20px; line-height: 1.7; margin: 0; word-wrap: break-word;">
                                 ${tcHtml}
                             </ul>
                         </div>
 
-                        <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #cbd5e1; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
+                        <div style="margin-top: 60px; padding-top: 20px; border-top: 1px solid #cbd5e1; font-size: 10px; color: #94a3b8; text-align: center; line-height: 1.5;">
                             This document is electronically generated and is strictly confidential.<br>
                             Blind Shipment Protocol Active - All carrier operations are managed internally.
                         </div>
                     </div>
                 `;
 
-                // 1. Kəsilmənin tamamilə qarşısını almaq üçün əvvəlcə Modal pəncərəni bağlayırıq
-                const modalEl = document.getElementById("customerQuoteModal");
-                if (modalEl) {
-                    const modalInst = bootstrap.Modal.getInstance(modalEl);
-                    if (modalInst) modalInst.hide();
-                }
-
-                // 2. Pəncərənin bağlanma animasiyası bitənə qədər gözləyirik (yarım saniyə) və PDF-i Mətn (String) üzərindən endiririk.
-                setTimeout(() => {
-                    const opt = {
-                        margin:       0.3,
-                        filename:     `Quotation_RFQ_${data.request_id}.pdf`,
-                        image:        { type: 'jpeg', quality: 1 },
-                        html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
-                        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-                    };
-                    
-                    html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
-                }, 500);
+                // Ən sadə, tərtəmiz konfiqurasiya (heç bir DOM və ya Modal dondurma əməliyyatı yoxdur)
+                const opt = {
+                    margin:       0.3,
+                    filename:     `Quotation_RFQ_${data.request_id}.pdf`,
+                    image:        { type: 'jpeg', quality: 1 },
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
+                
+                // Mətn birbaşa göndərilir
+                html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
             });
         }
     </script>
