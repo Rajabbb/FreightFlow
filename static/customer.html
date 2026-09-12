@@ -3274,14 +3274,15 @@ Best regards,
                 let weightStr = weight ? `${weight} kq` : "";
                 if (vol && vol !== "0" && vol !== 0) weightStr += ` / ${vol} CBM`;
 
-                let tcHtml = tcTexts.map(t => `<li style="margin-bottom: 8px;">${t}</li>`).join("");
+                let tcHtml = tcTexts.map(t => `<li style="margin-bottom: 8px;">${escapeHTML(t)}</li>`).join("");
                 if (!tcHtml) tcHtml = "<li>Standart daşınma şərtləri tətbiq olunur.</li>";
 
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
+                // min-height: 1100px əlavə olundu ki, səhifənin altı sıxışıb kəsilməsin
                 const pdfContent = `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; width: 750px; background-color: #ffffff; color: #000000; box-sizing: border-box;">
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; width: 800px; min-height: 1100px; box-sizing: border-box;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3334,23 +3335,20 @@ Best regards,
                     margin:       0.3,
                     filename:     `Quotation_RFQ_${data.request_id}.pdf`,
                     image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+                    html2canvas:  { 
+                        scale: 2, 
+                        useCORS: true, 
+                        letterRendering: true, 
+                        windowWidth: 800,
+                        windowHeight: 1200, // ƏSAS HƏLL: Səhifənin alt hissədən kəsilməsini bloklayır!
+                        scrollY: 0, 
+                        scrollX: 0 
+                    },
                     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
                 };
                 
-                // ƏSAS HƏLL: Modalı bağlayırıq ki, səhifənin kilidi (overflow) açılsın.
-                const modalEl = document.getElementById("customerQuoteModal");
-                if (modalEl) {
-                    const modalInst = bootstrap.Modal.getInstance(modalEl);
-                    if (modalInst) modalInst.hide();
-                }
-
-                // Modalın bağlanma animasiyası (fade out) bitənə qədər 400ms gözləyib təmiz səhifədə PDF çıxarırıq.
-                setTimeout(() => {
-                    html2pdf().set(opt).from(pdfContent).save()
-                        .then(resolve)
-                        .catch(reject);
-                }, 400);
+                // Mətni birbaşa veririk
+                html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
             });
         }
     </script>
