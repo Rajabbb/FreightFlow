@@ -3280,6 +3280,7 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
+                // QƏTİYYƏN heç bir gizli element (DOM) yaratmırıq. Təmiz mətn (String) qoyuruq.
                 const pdfContent = `
                     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; width: 800px; box-sizing: border-box;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
@@ -3330,42 +3331,25 @@ Best regards,
                     </div>
                 `;
 
-                // 1. Elementi tam olaraq istifadəçinin o an dayandığı yerə (window.scrollY) yapışdırırıq ki, kamera (kitabxana) onu görə bilsin.
-                const container = document.createElement('div');
-                container.innerHTML = pdfContent;
-                container.style.position = 'absolute';
-                container.style.top = window.scrollY + 'px'; // ƏSAS HƏLL: Ağ vərəq xətasını aradan qaldırır!
-                container.style.left = '0';
-                container.style.zIndex = '-9999';
-                document.body.appendChild(container);
+                // 1. Kəsilmənin tamamilə qarşısını almaq üçün əvvəlcə Modal pəncərəni bağlayırıq
+                const modalEl = document.getElementById("customerQuoteModal");
+                if (modalEl) {
+                    const modalInst = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInst) modalInst.hide();
+                }
 
-                // 2. Modalın səhifəni kəsməsini və kilidləməsini müvəqqəti aradan qaldırırıq.
-                const wasModalOpen = document.body.classList.contains('modal-open');
-                if (wasModalOpen) document.body.classList.remove('modal-open');
-                const originalOverflow = document.body.style.overflow;
-                document.body.style.overflow = 'visible';
-
-                const opt = {
-                    margin:       0.3,
-                    filename:     `Quotation_RFQ_${data.request_id}.pdf`,
-                    image:        { type: 'jpeg', quality: 1 },
-                    // 800px-lik cədvəlin sığması üçün windowWidth vacibdir
-                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
-                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-                };
-                
-                // 3. PDF yaranandan sonra hər şeyi köhnə vəziyyətinə qaytarırıq.
-                html2pdf().set(opt).from(container).save().then(() => {
-                    if (wasModalOpen) document.body.classList.add('modal-open');
-                    document.body.style.overflow = originalOverflow;
-                    if (document.body.contains(container)) document.body.removeChild(container);
-                    resolve();
-                }).catch((err) => {
-                    if (wasModalOpen) document.body.classList.add('modal-open');
-                    document.body.style.overflow = originalOverflow;
-                    if (document.body.contains(container)) document.body.removeChild(container);
-                    reject(err);
-                });
+                // 2. Pəncərənin bağlanma animasiyası bitənə qədər gözləyirik (yarım saniyə) və PDF-i Mətn (String) üzərindən endiririk.
+                setTimeout(() => {
+                    const opt = {
+                        margin:       0.3,
+                        filename:     `Quotation_RFQ_${data.request_id}.pdf`,
+                        image:        { type: 'jpeg', quality: 1 },
+                        html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
+                        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                    };
+                    
+                    html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
+                }, 500);
             });
         }
     </script>
