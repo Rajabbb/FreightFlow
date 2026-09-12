@@ -3280,11 +3280,12 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
+                // QƏTİYYƏN heç bir gizli element (DOM) yaratmırıq. Kəsilmənin qarşısını almaq üçün genişliyi 750px etdik (A4-ə tam sığır).
                 const pdfContent = `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; width: 800px; box-sizing: border-box;">
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #ffffff; width: 750px; box-sizing: border-box; margin: 0 auto;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
-                                <h1 style="color: #4f46e5; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
+                                <h1 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
                                 <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px; font-weight: bold;">OFFICIAL FREIGHT FORWARDER QUOTATION</p>
                             </div>
                             <div style="text-align: right; font-size: 13px; color: #475569; line-height: 1.5; max-width: 35%;">
@@ -3330,48 +3331,30 @@ Best regards,
                     </div>
                 `;
 
-                // 1. Modalı bağlayırıq.
+                // 1. Kəsilmənin (sürüşmənin) qarşısını almaq üçün Modalı tamamilə bağlayıb, səhifəni ən yuxarıya çəkirik.
                 const modalEl = document.getElementById("customerQuoteModal");
                 if (modalEl) {
                     const modalInst = bootstrap.Modal.getInstance(modalEl);
                     if (modalInst) modalInst.hide();
                 }
+                
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                window.scrollTo(0, 0);
 
-                // 2. Animasiyanın bitməsini gözləyirik (500ms).
+                const opt = {
+                    margin:       0.3,
+                    filename:     `Quotation_RFQ_${data.request_id}.pdf`,
+                    image:        { type: 'jpeg', quality: 1 },
+                    html2canvas:  { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
+                
+                // 2. Qısa fasilə veririk ki, brauzer səhifənin yuxarı çəkildiyini anlasın və birbaşa MƏTNİ (pdfContent) PDF-ə çevirsin.
                 setTimeout(() => {
-                    // 3. ƏSAS HƏLL: İstifadəçinin mövqeyini yadda saxlayıb səhifəni qüvvə ilə yuxarı (0,0) çəkirik.
-                    const currentScrollY = window.scrollY;
-                    const currentScrollX = window.scrollX;
-                    window.scrollTo(0, 0);
-
-                    // 4. "Hesabat Endir" düyməsindəki kimi təmiz DOM elementi yaradırıq.
-                    const container = document.createElement('div');
-                    container.innerHTML = pdfContent;
-                    container.style.position = 'absolute';
-                    container.style.top = '0';
-                    container.style.left = '0';
-                    container.style.zIndex = '-9999';
-                    document.body.appendChild(container);
-
-                    const opt = {
-                        margin:       0.3,
-                        filename:     `Quotation_RFQ_${data.request_id}.pdf`,
-                        image:        { type: 'jpeg', quality: 1 },
-                        html2canvas:  { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
-                        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-                    };
-                    
-                    html2pdf().set(opt).from(container).save().then(() => {
-                        if (document.body.contains(container)) document.body.removeChild(container);
-                        // PDF endikdən sonra istifadəçini geri (aşağıya) qaytarırıq.
-                        window.scrollTo(currentScrollX, currentScrollY);
-                        resolve();
-                    }).catch((err) => {
-                        if (document.body.contains(container)) document.body.removeChild(container);
-                        window.scrollTo(currentScrollX, currentScrollY);
-                        reject(err);
-                    });
-                }, 500); 
+                    html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
+                }, 200); 
             });
         }
     </script>
