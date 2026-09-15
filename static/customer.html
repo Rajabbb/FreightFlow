@@ -3280,9 +3280,9 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                // ƏSAS HƏLL: Genişlik 800px-dən 720px-ə endirildi. Artıq A4 vərəqinə 100% sığır və əsla kəsilmir.
+                // Vərəqin ölçüsünü sabit tutmaq üçün xarici div-ə max-width verdik.
                 const pdfContent = `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background-color: #ffffff; color: #000000; width: 720px; box-sizing: border-box; text-align: left; margin: 0;">
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background-color: #ffffff; color: #000000; width: 750px; max-width: 750px; box-sizing: border-box; text-align: left; margin: 0;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3331,16 +3331,21 @@ Best regards,
                     </div>
                 `;
 
-                // Ən sadə, tərtəmiz konfiqurasiya (heç bir DOM və ya Modal dondurma əməliyyatı yoxdur)
                 const opt = {
                     margin:       0.3,
                     filename:     `Quotation_RFQ_${data.request_id}.pdf`,
                     image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { scale: 2, useCORS: true },
+                    html2canvas:  { 
+                        scale: 2, 
+                        useCORS: true, 
+                        // ƏSAS HƏLL: Sənədin miqyasının təsadüfi dəyişib "zoom" olmasının qarşısını alır
+                        windowWidth: 800, 
+                        // İstifadəçinin səhifədəki mövqeyindən asılılığı sıfırlayır
+                        scrollY: 0 
+                    },
                     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
                 };
                 
-                // Mətn birbaşa göndərilir
                 html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
             });
         }
