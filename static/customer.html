@@ -3305,9 +3305,9 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                // ƏSAS HƏLL: "!important" tagləri ilə div-i zorla x=0, y=0 kordinatına mismarlayırıq ki, səhifədəki heç bir kod onu sağa-sola sürüşdürüb kəsə bilməsin.
+                // HƏLL 1: Bütün 'position: absolute' və '!important' zibilləri silindi. Təmiz 800px-lik mərkəzli div.
                 const pdfContent = `
-                    <div style="display: block !important; position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; padding: 40px !important; width: 800px !important; background-color: #ffffff !important; color: #000000 !important; text-align: left !important; box-sizing: border-box !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                    <div style="width: 800px; padding: 40px; background-color: #ffffff; color: #000000; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0 auto;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3363,26 +3363,27 @@ Best regards,
                     if (modalInst) modalInst.hide();
                 }
 
-                // Kitabxana və PDF parametrlərini 1:1 eyni ölçüyə sabitləyirik (tam 800px genişlik)
-                const opt = {
-                    margin:       0, 
-                    filename:     `Quotation_RFQ_${data.request_id}.pdf`,
-                    image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { 
-                        scale: 2, 
-                        useCORS: true, 
-                        x: 0, 
-                        y: 0, 
-                        scrollX: 0, 
-                        scrollY: 0,
-                        windowWidth: 800
-                    },
-                    // unit: 'px' edirik ki, PDF sənədinin ölçüsü dəqiqliklə 800px genişlikdə hesablanıb sığsın
-                    jsPDF:        { unit: 'px', format: [800, 1131], orientation: 'portrait' } 
-                };
-                
-                // Qısa fasilə (300ms) ki modal ekranı tam tərk etsin
+                // HƏLL 2: Modalın arxa planda səhifəni donduran və kəsən bütün klasslarını əllə (zorla) silib təmizləyirik
+                document.body.classList.remove("modal-open");
+                document.body.style.paddingRight = "";
+                document.body.style.overflow = "";
+
+                // Ekran təmizlənəndən 300 millisaniyə sonra şəkli çəkirik
                 setTimeout(() => {
+                    const opt = {
+                        margin:       0, 
+                        filename:     `Quotation_RFQ_${data.request_id}.pdf`,
+                        image:        { type: 'jpeg', quality: 1 },
+                        html2canvas:  { 
+                            scale: 2, 
+                            useCORS: true, 
+                            windowWidth: 800, // Ekranı tam 800px kimi görür
+                            scrollY: 0, 
+                            scrollX: 0
+                        },
+                        jsPDF: { unit: 'px', format: [800, 1131], orientation: 'portrait' } 
+                    };
+                    
                     html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
                 }, 300);
             });
