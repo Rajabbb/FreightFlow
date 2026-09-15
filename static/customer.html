@@ -3305,9 +3305,9 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                // Təmiz 750px genişlik (A4 vərəqinə tam uyğun). Heç bir absolute və ya !important zibili yoxdur.
+                // ƏSAS HƏLL: Genişlik tam olaraq A4 vərəqinə (730px) uyğunlaşdırıldı və "margin: 0" ilə mərkəzləmə ləğv edildi ki, sol tərəf kəsilməsin.
                 const pdfContent = `
-                    <div style="width: 750px; padding: 30px; background-color: #ffffff; color: #000000; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; text-align: left;">
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; width: 730px; background-color: #ffffff; color: #000000; box-sizing: border-box; margin: 0; text-align: left;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3356,28 +3356,23 @@ Best regards,
                     </div>
                 `;
 
-                // 1. Modalı bağlayırıq
+                // 1. Modalı təhlükəsiz şəkildə bağlayırıq
                 const modalEl = document.getElementById("customerQuoteModal");
                 if (modalEl) {
                     const modalInst = bootstrap.Modal.getInstance(modalEl);
                     if (modalInst) modalInst.hide();
                 }
 
-                // 2. Modalın səhifəni kilidləyən bütün xüsusiyyətlərini sıfırlayırıq
-                document.body.classList.remove('modal-open');
-                document.body.style.paddingRight = '';
-                document.body.style.overflow = '';
-                window.scrollTo(0, 0);
-
-                // 3. ƏSAS HƏLL: Piksellər yığışdırıldı! Tam olaraq A4 ('in') formatına qayıtdıq!
+                // 2. Hesabatı Endir düymənizdəki 1-ə-1 eyni və mükəmməl işləyən konfiqurasiya
                 const opt = {
-                    margin:       0.3, 
+                    margin:       0.3,
                     filename:     `Quotation_RFQ_${data.request_id}.pdf`,
                     image:        { type: 'jpeg', quality: 1 },
                     html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
-                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' } 
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
                 };
                 
+                // Modalın arxa planda tamamilə yoxa çıxması üçün 400ms gözləyib (bu vaxtda səhifə tam stabilləşir) PDF-i endiririk.
                 setTimeout(() => {
                     html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
                 }, 400);
