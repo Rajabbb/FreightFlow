@@ -3305,7 +3305,6 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                // ƏSAS HƏLL: Təmiz 800px sənəd. Heç bir margin auto və ya modal bağlama animasiyası yoxdur.
                 const pdfContent = `
                     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; width: 800px; background-color: #ffffff; color: #000000; box-sizing: border-box;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
@@ -3356,16 +3355,53 @@ Best regards,
                     </div>
                 `;
 
-                // Modal artıq burada BAĞLANMIR. Təmiz şəkildə PDF yüklənir.
+                // ƏN BÖYÜK HƏLL: Bootstrap modalın kordinatları dəyişməsindən qorunmaq üçün 
+                // fiziki bir gizli qutu yaradıb onu ekranın SOL ÜST KÜNCÜNƏ (0, 0) zorla mismarlayırıq.
+                const tempContainer = document.createElement("div");
+                tempContainer.innerHTML = pdfContent;
+                tempContainer.style.position = "fixed";
+                tempContainer.style.top = "0";
+                tempContainer.style.left = "0";
+                tempContainer.style.width = "800px";
+                tempContainer.style.zIndex = "-9999"; // Ekranın arxasında gizlədirik ki, görünməsin
+                tempContainer.style.backgroundColor = "#ffffff";
+                
+                // Qutunu səhifəyə əlavə edirik
+                document.body.appendChild(tempContainer);
+
+                // İndi kameraya deyirik ki, yalnız bu 0,0-a mismarlanmış elementi çək.
                 const opt = {
                     margin:       0.3,
                     filename:     `Quotation_RFQ_${data.request_id}.pdf`,
                     image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
+                    html2canvas:  { 
+                        scale: 2, 
+                        useCORS: true, 
+                        letterRendering: true, 
+                        windowWidth: 800,
+                        scrollX: 0,
+                        scrollY: 0,
+                        x: 0,
+                        y: 0
+                    },
                     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
                 };
                 
-                html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
+                html2pdf().set(opt).from(tempContainer).save().then(() => {
+                    // PDF endikdən sonra yaratdığımız gizli qutunu silirik
+                    document.body.removeChild(tempContainer);
+                    
+                    // Modalı da ən son addım olaraq təhlükəsizcə BAĞLAYIRIQ
+                    const modalEl = document.getElementById("customerQuoteModal");
+                    if (modalEl) {
+                        const modalInst = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInst) modalInst.hide();
+                    }
+                    resolve();
+                }).catch((err) => {
+                    document.body.removeChild(tempContainer);
+                    reject(err);
+                });
             });
         }
     </script>
