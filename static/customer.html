@@ -3280,15 +3280,15 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                // Vərəqin ölçüsünü sabit tutmaq üçün xarici div-ə max-width verdik.
+                // ƏSAS HƏLL: "!important" tagləri ilə div-i zorla x=0, y=0 kordinatına mismarlayırıq ki, səhifədəki heç bir kod onu sağa-sola sürüşdürüb kəsə bilməsin.
                 const pdfContent = `
-                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 30px; background-color: #ffffff; color: #000000; width: 750px; max-width: 750px; box-sizing: border-box; text-align: left; margin: 0;">
+                    <div style="display: block !important; position: absolute !important; top: 0 !important; left: 0 !important; margin: 0 !important; padding: 40px !important; width: 800px !important; background-color: #ffffff !important; color: #000000 !important; text-align: left !important; box-sizing: border-box !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
                                 <p style="margin: 5px 0 0 0; color: #64748b; font-size: 13px; font-weight: bold;">OFFICIAL FREIGHT FORWARDER QUOTATION</p>
                             </div>
-                            <div style="text-align: right; font-size: 12px; color: #475569; line-height: 1.5; max-width: 35%;">
+                            <div style="text-align: right; font-size: 13px; color: #475569; line-height: 1.5; max-width: 35%;">
                                 <strong style="color: #0f172a;">QUOTATION REF:</strong> RFQ-${data.request_id}<br>
                                 <strong style="color: #0f172a;">DATE:</strong> ${dateStr}<br>
                                 ${data.valid_until ? `<strong style="color: #0f172a;">VALID UNTIL:</strong> ${escapeHTML(data.valid_until)}` : ''}
@@ -3331,22 +3331,35 @@ Best regards,
                     </div>
                 `;
 
+                // Modalı bağlayırıq
+                const modalEl = document.getElementById("customerQuoteModal");
+                if (modalEl) {
+                    const modalInst = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInst) modalInst.hide();
+                }
+
+                // Kitabxana və PDF parametrlərini 1:1 eyni ölçüyə sabitləyirik (tam 800px genişlik)
                 const opt = {
-                    margin:       0.3,
+                    margin:       0, 
                     filename:     `Quotation_RFQ_${data.request_id}.pdf`,
                     image:        { type: 'jpeg', quality: 1 },
                     html2canvas:  { 
                         scale: 2, 
                         useCORS: true, 
-                        // ƏSAS HƏLL: Sənədin miqyasının təsadüfi dəyişib "zoom" olmasının qarşısını alır
-                        windowWidth: 800, 
-                        // İstifadəçinin səhifədəki mövqeyindən asılılığı sıfırlayır
-                        scrollY: 0 
+                        x: 0, 
+                        y: 0, 
+                        scrollX: 0, 
+                        scrollY: 0,
+                        windowWidth: 800
                     },
-                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                    // unit: 'px' edirik ki, PDF sənədinin ölçüsü dəqiqliklə 800px genişlikdə hesablanıb sığsın
+                    jsPDF:        { unit: 'px', format: [800, 1131], orientation: 'portrait' } 
                 };
                 
-                html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
+                // Qısa fasilə (300ms) ki modal ekranı tam tərk etsin
+                setTimeout(() => {
+                    html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
+                }, 300);
             });
         }
     </script>
