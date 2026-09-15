@@ -1190,7 +1190,7 @@ Best regards,
                 <!-- RFQ PAYLAŞIM MƏLUMATI -->
                 <div class="card mb-3">
                     <div class="section-title mb-1">
-                        <i class="bi bi-envelope-fill"></i> RFQ paylaşım məlumatı
+                        <i class="bi bi-envelope-fill"></i> RFQ paylaşım məlumat
                     </div>
                     <div class="row g-3 align-items-center">
                         <div class="col-12 col-md-7">
@@ -2550,6 +2550,7 @@ Best regards,
             }
 
             const useCustomTemplate = document.getElementById("customTemplateRadio").checked;
+            const customEmailSubjectVal = useCustomTemplate ? (document.getElementById("custom_email_subject")?.value.trim() || "") : "";
             const customEmailBodyVal = useCustomTemplate ? (document.getElementById("custom_email_body")?.value.trim() || "") : "";
 
             const payload = {
@@ -2563,7 +2564,10 @@ Best regards,
                 stackable: document.getElementById("chk_stackable")?.checked ? (document.getElementById("inp_stackable")?.value || "") : "",
                 shipment_type: document.getElementById("chk_shipment_type")?.checked ? (document.getElementById("inp_shipment_type")?.value || "") : "",
                 required_fields: requiredFieldsList, attachment_url: uploadedAttachmentUrl, additional_notes: additionalNotesCombined, note: additionalNotesCombined,
-                email_template_type: useCustomTemplate ? "custom" : "standard", custom_email_body: customEmailBodyVal, transportation_mode: transportModeVal,
+                email_template_type: useCustomTemplate ? "custom" : "standard", 
+                custom_email_subject: customEmailSubjectVal,
+                custom_email_body: customEmailBodyVal, 
+                transportation_mode: transportModeVal,
                 send_to_all: (sendOpt === 'all'), send_option: sendOpt, carrier_ids: selectedCarriers, category_ids: selectedCategories
             };
 
