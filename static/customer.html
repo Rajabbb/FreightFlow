@@ -3305,9 +3305,9 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                // QƏTİ HƏLL: Genişlik tam A4-ə uyğun 730px. Margin 0. Şriftlər sadə.
+                // ƏSAS HƏLL: Təmiz 800px sənəd. Heç bir margin auto və ya modal bağlama animasiyası yoxdur.
                 const pdfContent = `
-                    <div style="width: 730px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #ffffff; color: #1e293b; padding: 20px; box-sizing: border-box; text-align: left; margin: 0;">
+                    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; width: 800px; background-color: #ffffff; color: #000000; box-sizing: border-box;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3356,38 +3356,16 @@ Best regards,
                     </div>
                 `;
 
-                // 1. Modalı bağlayırıq
-                const modalEl = document.getElementById("customerQuoteModal");
-                if (modalEl) {
-                    const modalInst = bootstrap.Modal.getInstance(modalEl);
-                    if (modalInst) modalInst.hide();
-                }
-
-                // 2. ƏN VACİB ADDIM: Alt hissənin kəsilməsinə səbəb olan Bootstrap "modal-open" kilidini ZORLA qırırıq və hündürlüyü bərpa edirik!
-                document.body.classList.remove('modal-open');
-                document.body.style.overflow = 'auto';
-                document.body.style.height = 'auto';
-                document.body.style.paddingRight = '0px';
-
-                // 3. Yarım saniyə (500ms) gözləyirik ki, brauzer kilidin açıldığını anlasın, sonra mükəmməl ölçülərlə endiririk.
-                setTimeout(() => {
-                    const opt = {
-                        margin:       0.3,
-                        filename:     `Quotation_RFQ_${data.request_id}.pdf`,
-                        image:        { type: 'jpeg', quality: 1 },
-                        html2canvas:  { 
-                            scale: 2, 
-                            useCORS: true, 
-                            letterRendering: true,
-                            windowWidth: 800, // Sənəd 730px-dir, kamera onu rahatlıqla içinə alır. Sağ tərəf qətiyyən kəsilməyəcək!
-                            scrollY: 0,
-                            scrollX: 0
-                        },
-                        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-                    };
-
-                    html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
-                }, 500);
+                // Modal artıq burada BAĞLANMIR. Təmiz şəkildə PDF yüklənir.
+                const opt = {
+                    margin:       0.3,
+                    filename:     `Quotation_RFQ_${data.request_id}.pdf`,
+                    image:        { type: 'jpeg', quality: 1 },
+                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
+                
+                html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
             });
         }
     </script>
