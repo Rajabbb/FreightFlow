@@ -386,18 +386,26 @@ def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int):
         raw_list.append({"name": company, "email": clean_email})
     return filter_and_insert_carriers(customer_id, raw_list)
 
-async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin: str, destination: str, token: str, custom_body: Optional[str] = None, sender_company: str = "Arachi", is_reminder: bool = False, reply_to_email: Optional[str] = None):
+async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin: str, destination: str, token: str, custom_body: Optional[str] = None, custom_subject: Optional[str] = None, sender_company: str = "Arachi", is_reminder: bool = False, reply_to_email: Optional[str] = None):
     quote_link = f"{BASE_URL}/carrier_quote/quote?token={token}"
     tracking_pixel_url = f"{BASE_URL}/quotes/track/{token}"
+    
+    # === HƏLL BURADADIR: Fərdi başlıq gəlibsə onu istifadə edirik, əks halda standartı ===
     if is_reminder:
+        subject_line = f"⏰ Reminder: Submit a Proposal: {origin} - {destination}"
         text_content = f"""Dear {carrier_name},\n\nThis is a gentle reminder regarding the shipment request from {origin} to {destination}. Please kindly submit your quotation using the link below if you haven't already.\n\nThank you.\n\nBest regards,\n{sender_company}"""
-        subject_prefix = "⏰ Reminder: Submit a Proposal"
-    elif not custom_body or not custom_body.strip():
-        text_content = f"""Dear {carrier_name},\n\nPlease review the shipment details below and kindly complete the quotation form using the link provided.\n\nThank you.\n\nBest regards,\n{sender_company}"""
-        subject_prefix = "📦 Submit a Proposal"
     else:
-        text_content = custom_body.replace("{{company_name}}", carrier_name).replace("{{sender_company}}", sender_company).replace("{{origin}}", origin).replace("{{destination}}", destination)
-        subject_prefix = "📦 Submit a Proposal"
+        if custom_subject and custom_subject.strip():
+            # Əgər müştəri custom subject göndəribsə, içindəki {{origin}} və {{destination}} taglərini dəyişdirib istifadə edirik
+            subject_line = custom_subject.replace("{{origin}}", origin).replace("{{destination}}", destination)
+        else:
+            # Standart başlıq
+            subject_line = f"📦 Submit a Proposal: {origin} - {destination}"
+            
+        if custom_body and custom_body.strip():
+            text_content = custom_body.replace("{{company_name}}", carrier_name).replace("{{sender_company}}", sender_company).replace("{{origin}}", origin).replace("{{destination}}", destination)
+        else:
+            text_content = f"""Dear {carrier_name},\n\nPlease review the shipment details below and kindly complete the quotation form using the link provided.\n\nThank you.\n\nBest regards,\n{sender_company}"""
 
     formatted_text = text_content.replace("\n", "<br>")
     html_content = f"""
@@ -414,7 +422,7 @@ async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin:
         <img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" />
     </div>
     """
-    message_kwargs = dict(subject=f"{subject_prefix}: {origin} - {destination}", recipients=[carrier_email], body=html_content, subtype=MessageType.html, from_name=(sender_company or "Arachi").strip() or "Arachi")
+    message_kwargs = dict(subject=subject_line, recipients=[carrier_email], body=html_content, subtype=MessageType.html, from_name=(sender_company or "Arachi").strip() or "Arachi")
     if reply_to_email: message_kwargs["reply_to"] = [reply_to_email]
     message = MessageSchema(**message_kwargs)
     try:
@@ -447,6 +455,7 @@ class ShipmentRequestCreate(BaseModel):
     email_template_type: Optional[str] = "standard"
     email_body: Optional[str] = None
     custom_email_body: Optional[str] = None
+    custom_email_subject: Optional[str] = None
 
 class DynamicQuoteSubmit(BaseModel):
     request_id: Optional[int] = None
@@ -1074,6 +1083,7 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
             raise HTTPException(status_code=400, detail="Seçilmiş kriteriyalara uyğun daşıyıcı tapılmadı.")
 
         active_custom_body = payload.custom_email_body or payload.email_body
+        active_custom_subject = payload.custom_email_subject
 
         for carrier in target_carriers:
             unique_token = str(uuid.uuid4())
@@ -1086,7 +1096,8 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
                 background_tasks.add_task(
                     send_carrier_email_link, carrier_email=carrier_email, carrier_name=carrier_name,
                     origin=payload.origin, destination=payload.destination, token=unique_token,
-                    custom_body=active_custom_body, sender_company=sender_company, reply_to_email=customer_email
+                    custom_body=active_custom_body, custom_subject=active_custom_subject, 
+                    sender_company=sender_company, reply_to_email=customer_email
                 )
 
         return {"status": "success", "message": f"Sorğu #{request_id} yaradıldı. {len(target_carriers)} daşıyıcıya təklif linki göndərildi!", "request_details": shipment_data}
