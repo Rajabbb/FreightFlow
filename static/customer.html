@@ -3305,9 +3305,10 @@ Best regards,
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
-                // ƏSAS HƏLL: "width: 100%" və "box-sizing: border-box". Bu, sənədin hər hansı tərəfə qaçmasını sıfırlayır və onu tam simmetrik doldurur.
+                // ƏSAS HƏLL: Sənəd "width: 100%" edildi və mərkəzləmə (margin auto) ləğv edildi. 
+                // Beləliklə, kamera sənədi ekranda axtarmayacaq, sənəd tam kadrın içinə sığacaq.
                 const pdfContent = `
-                    <div style="width: 100%; max-width: 800px; padding: 40px; background-color: #ffffff; color: #000000; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0 auto; text-align: left;">
+                    <div style="width: 100%; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; box-sizing: border-box; margin: 0; padding: 0;">
                         <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 20px; margin-bottom: 30px;">
                             <div style="max-width: 60%; word-wrap: break-word;">
                                 <h1 style="color: #4f46e5; margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -1px; text-transform: uppercase;">${escapeHTML(compName)}</h1>
@@ -3356,25 +3357,35 @@ Best regards,
                     </div>
                 `;
 
-                // Modalı bağlayırıq
+                // 1. Modalı bağlayırıq (Bu ekranın dondurulmasını ləğv edir)
                 const modalEl = document.getElementById("customerQuoteModal");
                 if (modalEl) {
                     const modalInst = bootstrap.Modal.getInstance(modalEl);
                     if (modalInst) modalInst.hide();
                 }
 
-                // jsPDF daxili margin-ini sildik (0 etdik) ki, şəkli sıxıb kəsməsin. Boşluğu yuxarıdakı "padding: 40px" təmin edəcək.
-                const opt = {
-                    margin:       0,
-                    filename:     `Quotation_RFQ_${data.request_id}.pdf`,
-                    image:        { type: 'jpeg', quality: 1 },
-                    html2canvas:  { scale: 2, useCORS: true, windowWidth: 800 },
-                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
-                };
-                
+                // 2. Yarım saniyə gözləyirik ki, səhifə sakitləşsin və PDF-i sadə konfiqurasiya ilə çıxarırıq
                 setTimeout(() => {
-                    html2pdf().set(opt).from(pdfContent).save().then(resolve).catch(reject);
-                }, 300);
+                    // Səhifəni ən yuxarı çəkirik ki kamera səhv yeri çəkməsin
+                    const prevScrollY = window.scrollY;
+                    window.scrollTo(0, 0);
+
+                    const opt = {
+                        margin:       0.4, // PDF-in kənarlarındakı ağ çərçivə
+                        filename:     `Quotation_RFQ_${data.request_id}.pdf`,
+                        image:        { type: 'jpeg', quality: 1 },
+                        html2canvas:  { scale: 2, useCORS: true },
+                        jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                    };
+                    
+                    html2pdf().set(opt).from(pdfContent).save().then(() => {
+                        window.scrollTo(0, prevScrollY); // Səhifəni əvvəlki yerinə qaytarırıq
+                        resolve();
+                    }).catch((err) => {
+                        window.scrollTo(0, prevScrollY);
+                        reject(err);
+                    });
+                }, 500); 
             });
         }
     </script>
