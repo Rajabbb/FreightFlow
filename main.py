@@ -1028,6 +1028,72 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Aİ analizi xətası: {str(e)}")
+
+
+class TextParseRequest(BaseModel):
+    raw_text: str
+
+@app.post("/requests/parse-ai-text")
+@limiter.limit("5/minute")
+async def parse_text_with_ai(request: Request, payload: TextParseRequest, current_user: dict = Depends(verify_token)):
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="Server xətası: OpenAI API açarı təyin olunmayıb.")
+
+    if not payload.raw_text or not payload.raw_text.strip():
+        raise HTTPException(status_code=400, detail="Analiz üçün mətn daxil edilməyib.")
+
+    prompt = """Sən peşəkar logistika assistentisən. Sənə verilən mətni diqqətlə oxu və aşağıdakı qaydalara əməl edərək YALNIZ təmiz JSON formatında cavab qaytar. 
+    Heç bir əlavə markdown (məsələn ```json) və ya izahat yazma!
+    
+    Qaydalar:
+    - Origin və destination hissələrində şəhər və ölkəni dəqiq təyin et (məsələn: "Bakı, Azərbaycan").
+    - weight_kg yalnız ədəd olmalıdır (əgər ton ilədirsə kq-a çevir, məsələn 1.5 ton = 1500). Yoxdursa null qoy.
+    - volume_m3 yalnız rəqəm olmalıdır.
+    
+    JSON Formatı:
+    {
+        "origin": "Yükləmə yeri",
+        "destination": "Boşaltma yeri",
+        "cargo_type": "Yükün növü",
+        "weight_kg": 0.0,
+        "volume_m3": 0.0,
+        "transportation_mode": "Quru (Road) / Hava (Air) / Su/Dəniz (Sea) / Dəmiryolu (Rail)",
+        "truck_type": "Maşın növü",
+        "hs_code": "HS Kod",
+        "stackable": "Stackable / Non-stackable",
+        "shipment_type": "FTL / LTL / FCL / LCL",
+        "incoterm": "Incoterm",
+        "adr": "ADR sinfi",
+        "temperature": "Temperatur",
+        "deadline": "YYYY-MM-DDTHH:MM",
+        "additional_notes": "Digər qeydlər"
+    }"""
+
+    try:
+        messages = [
+            {"role": "system", "content": prompt},
+            {"role": "user", "content": f"Aşağıdakı logistika sorğu mətnini təhlil et:\n\n{payload.raw_text}"}
+        ]
+
+        response = await aclient.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            temperature=0.0, 
+            response_format={ "type": "json_object" } 
+        )
+
+        res_text = response.choices[0].message.content.strip()
+        parsed_json = json.loads(res_text)
+
+        return {"status": "success", "data": parsed_json}
+
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Aİ düzgün formatda cavab qaytarmadı.")
+    except HTTPException as he:
+        raise he
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Aİ analizi xətası: {str(e)}")
         
 @app.post("/requests/create")
 async def create_shipment_request(payload: ShipmentRequestCreate, background_tasks: BackgroundTasks = BackgroundTasks(), current_user: dict = Depends(verify_token)):
