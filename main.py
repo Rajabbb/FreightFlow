@@ -936,31 +936,38 @@ async def upload_request_attachment(file: UploadFile = File(...), current_user: 
 @limiter.limit("5/minute")
 async def parse_document_with_ai(request: Request, file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
     if not OPENAI_API_KEY:
-        raise HTTPException(status_code=500, detail="Server xətası: OpenAI API açarı təyin olunmayıb (.env faylında OPENAI_API_KEY yoxdur).")
+        raise HTTPException(status_code=500, detail="Server xətası: OpenAI API açarı təyin olunmayıb.")
 
     await validate_file(file)
     ext = os.path.splitext(file.filename)[1].lower()
 
-    prompt = """Sən logistika və forwarding üzrə ekspertsən. Sənə verilən sənədi/mətni analiz et və YALNIZ aşağıdakı formatda JSON qaytar.
-    Heç bir əlavə mətn və ya markdown istifadə etmə! Yalnız təmiz JSON obyekti olsun.
+    # TƏKMİLLƏŞDİRİLMİŞ VƏ SƏRT PROMPT:
+    prompt = """Sən peşəkar logistika assistentisən. Sənə verilən sənədi/mətni böyük diqqətlə oxu və aşağıdakı qaydalara əməl edərək YALNIZ təmiz JSON formatında cavab qaytar. 
+    Heç bir əlavə markdown (məsələn ```json) və ya izahat yazma!
+    
+    Qaydalar:
+    - Origin və destination hissələrində şəhər və ölkəni dəqiq təyin et (məsələn: "Bakı, Azərbaycan").
+    - weight_kg yalnız ədəd olmalıdır (əgər ton ilədirsə kq-a çevir, məsələn 1.5 ton = 1500). Yoxdursa null qoy.
+    - volume_m3 yalnız rəqəm olmalıdır.
+    
+    JSON Formatı:
     {
-        "origin": "Yükləmə yeri (məs: Bakı, AZ)",
-        "destination": "Boşaltma yeri (məs: Berlin, DE)",
-        "cargo_type": "Yükün növü və qısa təsviri",
-        "weight_kg": ədəd (kq ilə, məs: 1500.5, yoxdursa null),
-        "volume_m3": ədəd (m3 ilə, məs: 20.0, yoxdursa null),
+        "origin": "Yükləmə yeri",
+        "destination": "Boşaltma yeri",
+        "cargo_type": "Yükün növü",
+        "weight_kg": 0.0,
+        "volume_m3": 0.0,
         "transportation_mode": "Quru (Road) / Hava (Air) / Su/Dəniz (Sea) / Dəmiryolu (Rail)",
         "truck_type": "Maşın növü",
         "hs_code": "HS Kod",
-        "stackable": "Stackable və ya Non-stackable",
-        "shipment_type": "FTL, LTL, FCL, LCL",
-        "incoterm": "Incoterm (EXW, FOB və s.)",
-        "adr": "Təhlükəli yük sinfi (ADR)",
-        "temperature": "Temperatur tələbi",
+        "stackable": "Stackable / Non-stackable",
+        "shipment_type": "FTL / LTL / FCL / LCL",
+        "incoterm": "Incoterm",
+        "adr": "ADR sinfi",
+        "temperature": "Temperatur",
         "deadline": "YYYY-MM-DDTHH:MM",
-        "additional_notes": "Sənəddəki digər vacib tələblər və qeydlər"
-    }
-    Əgər bir məlumat sənəddə yoxdursa stringlər üçün "" (boş), ədədlər üçün null qaytar."""
+        "additional_notes": "Digər qeydlər"
+    }"""
 
     try:
         text_content = ""
@@ -968,52 +975,44 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
 
         if ext in [".xls", ".xlsx", ".csv"]:
             contents_bytes = await file.read()
-            if ext == ".csv":
-                df = pd.read_csv(io.BytesIO(contents_bytes))
-            else:
-                df = pd.read_excel(io.BytesIO(contents_bytes))
+            df = pd.read_csv(io.BytesIO(contents_bytes)) if ext == ".csv" else pd.read_excel(io.BytesIO(contents_bytes))
             text_content = df.to_string()
-
         elif ext == ".txt":
             text_content = (await file.read()).decode("utf-8", errors="ignore")
-
         elif ext == ".pdf":
-            # PDF faylından mətni oxuyuruq
             pdf_reader = PyPDF2.PdfReader(io.BytesIO(await file.read()))
             text_content = "\n".join([page.extract_text() for page in pdf_reader.pages if page.extract_text()])
             if not text_content.strip():
-                raise HTTPException(status_code=400, detail="PDF faylından mətn oxunmadı. Zəhmət olmasa təmiz mətnli (skan olunmamış) PDF yükləyin və ya şəkil kimi yükləyin.")
-
+                raise HTTPException(status_code=400, detail="PDF faylından mətn oxunmadı.")
         elif ext in [".png", ".jpg", ".jpeg"]:
             contents_bytes = await file.read()
             base64_encoded = base64.b64encode(contents_bytes).decode('utf-8')
             mime = "image/jpeg" if ext == ".jpg" else file.content_type
             image_content = f"data:{mime};base64,{base64_encoded}"
-
         else:
-            raise HTTPException(status_code=400, detail="Aİ analizi yalnız PDF, Şəkil, Excel, CSV və TXT dəstəkləyir.")
+            raise HTTPException(status_code=400, detail="Dəstəklənməyən fayl formatı.")
 
-        messages = [
-            {"role": "system", "content": prompt}
-        ]
+        messages = [{"role": "system", "content": prompt}]
 
         if image_content:
             messages.append({
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": "Aşağıdakı şəkildə olan sənədi analiz et və göstərilən JSON formatında çıxar:"},
+                    {"type": "text", "text": "Bu sənədi təhlil et və tələb olunan JSON formatını doldur:"},
                     {"type": "image_url", "image_url": {"url": image_content}}
                 ]
             })
         else:
             messages.append({
                 "role": "user",
-                "content": f"Aşağıdakı sənəd məzmununu analiz et və göstərilən JSON formatında çıxar:\n\n{text_content}"
+                "content": f"Aşağıdakı sənəd məzmununu təhlil et:\n\n{text_content}"
             })
 
+        # === BURADA TEMPERATURE: 0.0 ƏLAVƏ OLUNDU ===
         response = await aclient.chat.completions.create(
             model="gpt-4o-mini",
             messages=messages,
+            temperature=0.0, 
             response_format={ "type": "json_object" } 
         )
 
@@ -1029,7 +1028,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Aİ analizi xətası: {str(e)}")
-
+        
 @app.post("/requests/create")
 async def create_shipment_request(payload: ShipmentRequestCreate, background_tasks: BackgroundTasks = BackgroundTasks(), current_user: dict = Depends(verify_token)):
     check_ownership(payload.customer_id, current_user)
