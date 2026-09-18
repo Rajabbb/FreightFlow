@@ -607,9 +607,9 @@
 
                     <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm d-flex justify-content-between">
                         <div class="form-check">
-                            <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportFormat" id="fmtExcel" value="csv" checked>
-                            <label class="form-check-label text-success fw-bold" style="font-size: 13px; cursor: pointer;" for="fmtExcel"><i class="bi bi-file-earmark-excel"></i> Excel</label>
-                        </div>
+                           <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportFormat" id="fmtExcel" value="xlsx" checked>
+                           <label class="form-check-label text-success fw-bold" style="font-size: 13px; cursor: pointer;" for="fmtExcel"><i class="bi bi-file-earmark-excel"></i> Excel</label>
+                   </div>
                         <div class="form-check pe-2">
                             <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportFormat" id="fmtPdf" value="pdf">
                             <label class="form-check-label text-danger fw-bold" style="font-size: 13px; cursor: pointer;" for="fmtPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</label>
@@ -1450,7 +1450,7 @@ Best regards,
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         let activeUser = null;
         try { activeUser = JSON.parse(localStorage.getItem("user")); } catch (e) {}
@@ -2050,23 +2050,14 @@ function resetFormForAI() {
                     const dateStr = new Date().toISOString().split('T')[0];
                     const fileNamePrefix = `Arachi_${category === 'rfq' ? 'RFQ' : 'Teklif'}_Hesabati_${dateStr}`;
 
-                    if (format === 'csv') {
-                        let csvContent = "\uFEFF" + headers.join(",") + "\n";
-                        data.forEach(row => {
-                            let rowArr = headers.map(h => {
-                                let val = row[h] !== null && row[h] !== undefined ? String(row[h]) : "";
-                                return `"${val.replace(/"/g, '""')}"`;
-                            });
-                            csvContent += rowArr.join(",") + "\n";
-                        });
+                    if (format === 'xlsx' || format === 'csv') {
+                        // SheetJS ilə əsl Excel (XLSX) faylı yaradırıq
+                        const worksheet = XLSX.utils.json_to_sheet(data);
+                        const workbook = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(workbook, worksheet, "Hesabat");
                         
-                        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                        const link = document.createElement("a");
-                        link.href = URL.createObjectURL(blob);
-                        link.download = `${fileNamePrefix}.csv`;
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
+                        // Faylı brauzer üzərindən birbaşa endiririk
+                        XLSX.writeFile(workbook, `${fileNamePrefix}.xlsx`);
                         
                     } else if (format === 'pdf') {
                         let tableHtml = `
