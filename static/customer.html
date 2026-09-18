@@ -1737,6 +1737,7 @@ async function parseTextWithAI() {
                 
                 if (res.ok && result.status === "success") {
                     const d = result.data;
+                    resetFormForAI(); // <--- Yeni məlumatları yazmazdan əvvəl bütün formu təmizlə!
                     
                     // Standart xanaları doldururuq
                     if(d.origin) document.getElementById("origin").value = d.origin;
@@ -1822,6 +1823,7 @@ async function parseTextWithAI() {
                 
                 if (res.ok && result.status === "success") {
                     const d = result.data;
+                    resetFormForAI(); // <--- Yeni məlumatları yazmazdan əvvəl bütün formu təmizlə!
                     
                     // Standart xanaları doldururuq
                     if(d.origin) document.getElementById("origin").value = d.origin;
@@ -1879,6 +1881,41 @@ async function parseTextWithAI() {
             }
         }
 
+
+function resetFormForAI() {
+            // 1. Əsas xanaları təmizləyirik
+            const mainFields = ["origin", "destination", "cargo_type", "weight_kg", "volume_cbm"];
+            mainFields.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = "";
+            });
+
+            // 2. Nəqliyyat növünü sıfırlayırıq (ilk seçimə qaytarırıq)
+            const transportSelect = document.getElementById("transportation_mode");
+            if (transportSelect) transportSelect.selectedIndex = 0;
+
+            // 3. İxtiyari (Optional) xanaları təmizləyib gizlədirik
+            const optFields = ['truck_type', 'hs_code', 'stackable', 'shipment_type', 'incoterm', 'adr', 'temp', 'loading_date'];
+            optFields.forEach(key => {
+                const chk = document.getElementById(`chk_${key}`);
+                const inp = document.getElementById(`inp_${key}`);
+                const div = document.getElementById(`div_${key}`); 
+                
+                if (chk) chk.checked = false;
+                if (inp) inp.value = "";
+                if (div) div.classList.add("d-none"); // Qutunu bağlayırıq
+            });
+
+            // 4. "Əlavə Qeydlər" xanasını təmizləyirik
+            const chkInfo = document.getElementById("chk_info");
+            const inpInfo = document.getElementById("inp_info_text");
+            const divInfo = document.getElementById("div_info");
+            if (chkInfo) chkInfo.checked = false;
+            if (inpInfo) inpInfo.value = "";
+            if (divInfo) divInfo.classList.add("d-none");
+        }
+
+        
         async function loadRecentQuotes() {
             const container = document.getElementById("recentQuotesContainer");
             try {
