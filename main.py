@@ -949,12 +949,13 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
     - Origin və destination hissələrində şəhər və ölkəni dəqiq təyin et (məsələn: "Bakı, Azərbaycan").
     - weight_kg yalnız ədəd olmalıdır (əgər ton ilədirsə kq-a çevir, məsələn 1.5 ton = 1500). Yoxdursa null qoy.
     - volume_m3 yalnız rəqəm olmalıdır.
+    - DİQQƏT: "cargo_type" və "additional_notes" xanalarının məzmununu MÜTLƏQ İNGİLİS DİLİNDƏ (English) yaz! Sənəddəki dil nə olursa olsun (Azərbaycanca, Rusca və s.), yalnız bu iki xananı ingiliscəyə tərcümə edib çıxar.
     
     JSON Formatı:
     {
         "origin": "Yükləmə yeri",
         "destination": "Boşaltma yeri",
-        "cargo_type": "Yükün növü",
+        "cargo_type": "Cargo type MUST be in English",
         "weight_kg": 0.0,
         "volume_m3": 0.0,
         "transportation_mode": "Quru (Road) / Hava (Air) / Su/Dəniz (Sea) / Dəmiryolu (Rail)",
@@ -966,7 +967,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
         "adr": "ADR sinfi",
         "temperature": "Temperatur",
         "deadline": "YYYY-MM-DDTHH:MM",
-        "additional_notes": "Digər qeydlər"
+        "additional_notes": "Additional notes MUST be in English"
     }"""
 
     try:
@@ -1042,19 +1043,20 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
     if not payload.raw_text or not payload.raw_text.strip():
         raise HTTPException(status_code=400, detail="Analiz üçün mətn daxil edilməyib.")
 
-    prompt = """Sən peşəkar logistika assistentisən. Sənə verilən mətni diqqətlə oxu və aşağıdakı qaydalara əməl edərək YALNIZ təmiz JSON formatında cavab qaytar. 
+    prompt = """Sən peşəkar logistika assistentisən. Sənə verilən sənədi/mətni böyük diqqətlə oxu və aşağıdakı qaydalara əməl edərək YALNIZ təmiz JSON formatında cavab qaytar. 
     Heç bir əlavə markdown (məsələn ```json) və ya izahat yazma!
     
     Qaydalar:
     - Origin və destination hissələrində şəhər və ölkəni dəqiq təyin et (məsələn: "Bakı, Azərbaycan").
     - weight_kg yalnız ədəd olmalıdır (əgər ton ilədirsə kq-a çevir, məsələn 1.5 ton = 1500). Yoxdursa null qoy.
     - volume_m3 yalnız rəqəm olmalıdır.
+    - DİQQƏT: "cargo_type" və "additional_notes" xanalarının məzmununu MÜTLƏQ İNGİLİS DİLİNDƏ (English) yaz! Sənəddəki dil nə olursa olsun (Azərbaycanca, Rusca və s.), yalnız bu iki xananı ingiliscəyə tərcümə edib çıxar.
     
     JSON Formatı:
     {
         "origin": "Yükləmə yeri",
         "destination": "Boşaltma yeri",
-        "cargo_type": "Yükün növü",
+        "cargo_type": "Cargo type MUST be in English",
         "weight_kg": 0.0,
         "volume_m3": 0.0,
         "transportation_mode": "Quru (Road) / Hava (Air) / Su/Dəniz (Sea) / Dəmiryolu (Rail)",
@@ -1066,9 +1068,9 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
         "adr": "ADR sinfi",
         "temperature": "Temperatur",
         "deadline": "YYYY-MM-DDTHH:MM",
-        "additional_notes": "Digər qeydlər"
+        "additional_notes": "Additional notes MUST be in English"
     }"""
-
+    
     try:
         messages = [
             {"role": "system", "content": prompt},
