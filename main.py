@@ -1010,7 +1010,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
 
         # === BURADA TEMPERATURE: 0.0 ƏLAVƏ OLUNDU ===
         response = await aclient.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=messages,
             temperature=0.0, 
             response_format={ "type": "json_object" } 
@@ -1076,7 +1076,7 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
         ]
 
         response = await aclient.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4o",
             messages=messages,
             temperature=0.0, 
             response_format={ "type": "json_object" } 
