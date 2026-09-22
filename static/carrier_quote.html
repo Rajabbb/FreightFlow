@@ -222,76 +222,85 @@
                 if (response.ok) {
                     const req = data.request;
 
-                    // 1. PUBLIC LİNKİN TƏYİN EDİLMƏSİ
-                    const isPublicParam = new URLSearchParams(window.location.search).get('public') === '1' || window.location.href.includes('public=1');
-                    const isPublicToken = data.quote && (String(data.quote.token).includes("public_link") || (data.quote.carriers && String(data.quote.carriers.email).includes("public_link")));
-                    const isPublic = isPublicParam || isPublicToken || data.is_public === true;
+                    // 1. ƏN SƏRT PUBLIC LİNK AŞKARLAMASI (4 Fərqli Yoxlama)
+                    let isPublic = false;
+                    if (window.location.href.includes('public=1')) isPublic = true;
+                    if (data.is_public === true) isPublic = true;
+                    if (data.quote && data.quote.carriers && data.quote.carriers.email && String(data.quote.carriers.email).includes("public_link")) isPublic = true;
+                    if (data.quote && data.quote.token && String(data.quote.token).includes("public_link")) isPublic = true;
 
-                    // ===================================================================
-                    // 2. INTERSEPTOR: ƏGƏR PUBLIC LİNKDİRSƏ, HƏR ŞEYİ ZORLA SIFIRLAYIRIQ
-                    // ===================================================================
                     if (isPublic) {
-                        data.all_quotes = []; // Köhnə tabların (Option 1) yaranmasının qarşısını kəsir
-                        if (data.quote) {
-                            data.quote.price = null; // 555 kimi köhnə qiymətləri zorla silir
-                            data.quote.transit_time_days = null;
-                            data.quote.extra_details = {};
+                        // DAŞIYICI ŞİRKƏT ADI XANASINI GÖSTƏRİRİK
+                        const field = document.getElementById('carrierCompanyField');
+                        const input = document.getElementById('carrierCompanyInput');
+                        if (field && input) {
+                            field.style.display = 'block';
+                            input.required = true;
                         }
-                    }
-
-                    // 3. DAŞIYICI ŞİRKƏT ADI XANASININ GÖSTƏRİLMƏSİ (Public üçün)
-                    if (isPublic) {
-                        setTimeout(() => {
-                            const field = document.getElementById('carrierCompanyField');
-                            const input = document.getElementById('carrierCompanyInput');
-                            if (field && input) {
-                                field.style.display = 'block';
-                                input.required = true;
-                            }
-                            // Yeniləmə / Alternativ düymələrini zorla gizlədirik
-                            const altBtn = document.getElementById("submit_alt_btn");
-                            if (altBtn) altBtn.classList.add("hidden");
-                            const updateNotice = document.getElementById("update_notice");
-                            if (updateNotice) updateNotice.classList.add("hidden");
-                        }, 50);
-                    }
-
-                    // 4. NORMAL LİNKLƏR ÜÇÜN KÖHNƏ TƏKLİFLƏRİN (OPTION TABLARININ) YARADILMASI
-                    if (data.all_quotes && data.all_quotes.length > 0) {
-                        allCarrierQuotes = data.all_quotes;
-                        const submittedQuotes = allCarrierQuotes.filter(q => q.price !== null || (q.extra_details && q.extra_details.submitted_at));
                         
-                        if (submittedQuotes.length > 0) {
-                            const updateNotice = document.getElementById("update_notice");
-                            if (updateNotice) updateNotice.classList.remove("hidden");
-                            
-                            const altBtn = document.getElementById("submit_alt_btn");
-                            if (altBtn) altBtn.classList.remove("hidden");
-                            
-                            renderOptionsTabs();
-                            
-                            const defaultQuote = allCarrierQuotes.find(q => q.token === token) || allCarrierQuotes[0];
-                            selectQuoteOption(defaultQuote.token);
-                        } else {
-                            document.getElementById("price").value = data.quote.price || "";
-                            document.getElementById("currency").value = data.quote.currency || "AZN";
-                            document.getElementById("transit_time_days").value = data.quote.transit_time_days || "";
-                            if (data.quote.extra_details && data.quote.extra_details["Carrier Note"]) {
-                                document.getElementById("carrier_note").value = data.quote.extra_details["Carrier Note"];
-                            }
-                        }
-                    } else {
-                        // Əgər heç bir köhnə təklif yoxdursa (və ya public link tərəfindən zorla silinibdirsə)
+                        // PUBLIC LİNK ÜÇÜN HƏMİŞƏ BOŞ FORMA YARADIRIQ
                         document.getElementById("price").value = "";
                         document.getElementById("currency").value = "AZN";
                         document.getElementById("transit_time_days").value = "";
                         document.getElementById("carrier_note").value = "";
                         
-                        document.getElementById("submit_btn").innerHTML = "🚀 Submit Quote";
+                        // -----------------------------------------------------------
+                        // ZORLA GİZLƏTMƏ (CSS CLASS-LARINI QƏTİ ŞƏKİLDƏ ƏZİRİK)
+                        // -----------------------------------------------------------
+                        const altBtn = document.getElementById("submit_alt_btn");
+                        if (altBtn) altBtn.style.display = "none";
+                        
+                        const updateNotice = document.getElementById("update_notice");
+                        if (updateNotice) updateNotice.style.display = "none";
+                        
+                        const optionsTabs = document.getElementById("options_tabs");
+                        if (optionsTabs) optionsTabs.style.display = "none";
+                        
+                        const submitBtn = document.getElementById("submit_btn");
+                        if (submitBtn) submitBtn.innerHTML = "🚀 Submit Quote";
+                        
                         currentEditingToken = token;
+
+                    } else {
+                        // YALNIZ VƏ YALNIZ NORMAL LİNKLƏR ÜÇÜN KÖHNƏ TƏKLİFLƏRİ GÖSTƏRİRİK
+                        if (data.all_quotes && data.all_quotes.length > 0) {
+                            allCarrierQuotes = data.all_quotes;
+                            const submittedQuotes = allCarrierQuotes.filter(q => q.price !== null || (q.extra_details && q.extra_details.submitted_at));
+                            
+                            if (submittedQuotes.length > 0) {
+                                const updateNotice = document.getElementById("update_notice");
+                                if (updateNotice) {
+                                    updateNotice.classList.remove("hidden");
+                                    updateNotice.style.display = "block";
+                                }
+                                
+                                const altBtn = document.getElementById("submit_alt_btn");
+                                if (altBtn) {
+                                    altBtn.classList.remove("hidden");
+                                    altBtn.style.display = "block";
+                                }
+                                
+                                const optionsTabs = document.getElementById("options_tabs");
+                                if (optionsTabs) {
+                                    optionsTabs.style.display = "flex";
+                                }
+                                
+                                renderOptionsTabs();
+                                
+                                const defaultQuote = allCarrierQuotes.find(q => q.token === token) || allCarrierQuotes[0];
+                                selectQuoteOption(defaultQuote.token);
+                            } else {
+                                document.getElementById("price").value = data.quote.price || "";
+                                document.getElementById("currency").value = data.quote.currency || "AZN";
+                                document.getElementById("transit_time_days").value = data.quote.transit_time_days || "";
+                                if (data.quote.extra_details && data.quote.extra_details["Carrier Note"]) {
+                                    document.getElementById("carrier_note").value = data.quote.extra_details["Carrier Note"];
+                                }
+                            }
+                        }
                     }
 
-                    // 5. ÜMUMİ MƏLUMATLARIN (ROUTE, CARGO TYPE VƏ S.) DOLDURULMASI
+                    // --- BUNDAN AŞAĞISI STANDART MƏLUMATLARIN DOLDURULMASIDIR ---
                     const routeEl = document.getElementById("route_text");
                     if (routeEl) routeEl.innerText = `${escapeHTML(req.origin)} ➔ ${escapeHTML(req.destination)}`;
                     
