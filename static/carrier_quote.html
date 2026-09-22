@@ -450,8 +450,14 @@
                 try { result = await response.json(); } catch (e) {}
 
                 if (response.ok) {
-                    // QLOBAL DƏYİŞƏNDƏN İSTİFADƏ EDİRİK! Əgər bu public linkdirsə düyməni SİLİRİK!
-                    const backButtonStr = window.isPublicLink 
+                    // ==============================================================
+                    // 3 QAT YOXLAMA: Düymənin yaranmaması üçün 3 şərtdən 1-i bəsdir!
+                    // ==============================================================
+                    const isPublicSubmit = (window.isPublicLink === true) || 
+                                           (window.location.href.includes('public=1')) || 
+                                           (document.getElementById('carrierCompanyField') && document.getElementById('carrierCompanyField').style.display !== 'none');
+
+                    const backButtonStr = isPublicSubmit 
                         ? "" 
                         : `<button onclick="window.location.reload()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium mt-6 transition duration-200">⬅ Go Back / Submit Another Option</button>`;
 
