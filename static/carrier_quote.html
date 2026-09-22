@@ -221,6 +221,17 @@
 
                 if (response.ok) {
                     const req = data.request;
+
+                    // PUBLIC LİNK AVTOMATİK AŞKARLAMA
+                    const quoteData = data.quote;
+                    if (quoteData && (String(quoteData.token).includes("public_link") || (quoteData.carriers && String(quoteData.carriers.email).includes("public_link")))) {
+                        const field = document.getElementById('carrierCompanyField');
+                        const input = document.getElementById('carrierCompanyInput');
+                        if (field && input) {
+                            field.style.display = 'block';
+                            input.required = true;
+                        }
+                    }
                     
                     if (data.all_quotes && data.all_quotes.length > 0) {
                         allCarrierQuotes = data.all_quotes;
