@@ -61,6 +61,13 @@
 
         <!-- Quote Form -->
         <form id="quote_form" class="space-y-4">
+           
+            <!-- DAŞIYICI ŞİRKƏT ADI (Yalnız Public Link rejimində məcburi görünəcək) -->
+           <div class="mb-3" id="carrierCompanyField" style="display: none;">
+               <label class="form-label fw-bold text-dark">Daşıyıcı Şirkət Adı <span class="text-danger">*</span></label>
+                   <input type="text" class="form-control" name="carrier_company" id="carrierCompanyInput" placeholder="Şirkətinizin adını daxil edin...">
+           </div>
+            
             <div>
                 <label class="block text-sm font-medium text-slate-300 mb-1">Offered Price</label>
                 <div class="flex gap-2">
