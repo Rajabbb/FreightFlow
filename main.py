@@ -1137,6 +1137,41 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
         all_carriers = supabase.table("carriers").select("*").eq("customer_id", payload.customer_id).range(0, 9999).execute().data or []
         
         send_opt = getattr(payload, "send_option", "all")
+
+        # --- YENİ: LİNK YARATMA REJİMİ ---
+        if send_opt == "public_link":
+            generic_email = f"public_link_{payload.customer_id}@arachi.local"
+            pub_carrier = next((c for c in all_carriers if c.get("email") == generic_email), None)
+            
+            if not pub_carrier:
+                ins_res = supabase.table("carriers").insert({
+                    "customer_id": payload.customer_id,
+                    "company_name": "🌐 İctimai Link (Public)",
+                    "email": generic_email
+                }).execute()
+                pub_carrier_id = ins_res.data[0]["id"]
+            else:
+                pub_carrier_id = pub_carrier["id"]
+                
+            unique_token = str(uuid.uuid4())
+            supabase.table("quotes").insert({
+                "request_id": request_id, 
+                "carrier_id": pub_carrier_id, 
+                "token": unique_token, 
+                "mail_status": "delivered", 
+                "is_viewed": False
+            }).execute()
+            
+            public_url = f"{BASE_URL}/carrier_quote/quote?token={unique_token}&public=1"
+            
+            return {
+                "status": "success", 
+                "message": f"Sorğu #{request_id} yaradıldı!", 
+                "public_link": public_url,
+                "request_details": shipment_data
+            }
+
+        # --- KÖHNƏ: STANDART EMAİL GÖNDƏRMƏ REJİMİ ---
         if send_opt == "category":
             cat_ids = set(payload.category_ids or [])
             target_carriers = [c for c in all_carriers if c.get("category_id") in cat_ids]
@@ -1147,7 +1182,7 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
             target_carriers = all_carriers
 
         if not target_carriers:
-            raise HTTPException(status_code=400, detail="Seçilmiş kriteriyalara uyğun daşıyıcı tapılmadı.")
+            raise HTTPException(status_code=400, detail="Seçilmiş kriteriyalara uyğun daşıyıcı tapılmadı. Zəhmət olmasa ən azı 1 daşıyıcı seçin.")
 
         active_custom_body = payload.custom_email_body or payload.email_body
         active_custom_subject = payload.custom_email_subject
