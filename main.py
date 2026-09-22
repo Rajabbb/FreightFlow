@@ -1414,6 +1414,24 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
         parsed_extra["submitted"] = True
         parsed_extra["submitted_at"] = datetime.utcnow().isoformat()
 
+        # --- YENİ: ƏGƏR FORM-DAN DAŞIYICI ŞİRKƏT ADI GƏLİBSƏ ---
+        form_carrier_name = request.query_params.get("carrier_company") or parsed_extra.get("carrier_company")
+        if not form_carrier_name:
+            # Form-dan (multipart/form-data) gələn dəyəri yoxlayırıq
+            form_data_dict = await request.form()
+            form_carrier_name = form_data_dict.get("carrier_company")
+
+        if form_carrier_name:
+            parsed_extra["carrier_company"] = form_carrier_name.strip()
+            # Əgər bu public link-dirsə, daşıyıcı adını real şirkət adı ilə yeniləyirik
+            if "public_link_" in quote.get("token", "") or quote.get("carrier_id"):
+                try:
+                    # Əgər ümumi public daşıyıcısıdırsa, adını dəyişirik ki, paneldə görünsün
+                    supabase.table("carriers").update({"company_name": form_carrier_name.strip()}).eq("id", quote["carrier_id"]).execute()
+                except Exception:
+                    pass
+        ---------------------------------------------------------
+
         if carrier_file and carrier_file.filename:
             await validate_file(carrier_file)
             file_ext = os.path.splitext(carrier_file.filename)[1]
@@ -1485,7 +1503,7 @@ def get_request_quotes(request_id: int, current_user: dict = Depends(verify_toke
             filtered_extra = {k: v for k, v in raw_extra.items() if normalize_text(k) not in ['company', 'sirket', 'firma', 'email', 'mail', 'name', 'ad', 'dasiyici']}
             quotes_list.append({
                 "id": item.get("id"), "request_id": item.get("request_id"), "carrier_id": item.get("carrier_id"),
-                "carrier_company": item.get("carriers", {}).get("company_name", f"Daşıyıcı #{item.get('carrier_id')}"), "carrier_email": item.get("carriers", {}).get("email", ""),
+                "carrier_company": (item.get("extra_details") or {}).get("carrier_company") or item.get("carriers", {}).get("company_name", f"Daşıyıcı #{item.get('carrier_id')}"), "carrier_email": item.get("carriers", {}).get("email", ""),
                 "price": item.get("price"), "currency": item.get("currency", "AZN"), "transit_time_days": item.get("transit_time_days"),
                 "is_winner": item.get("is_winner", False), "extra_details": filtered_extra, "extra_responses": filtered_extra,
                 "quote_history": item.get("quote_history", [])
