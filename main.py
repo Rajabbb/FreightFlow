@@ -624,7 +624,10 @@ def get_customer_stats(customer_id: int, current_user: dict = Depends(verify_tok
         if req_ids:
             quotes_res = supabase.table("quotes").select("price, extra_details").in_("request_id", req_ids).execute()
             incoming_quotes_count = sum(1 for q in (quotes_res.data or []) if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True))
-        carriers_res = supabase.table("carriers").select("id").eq("customer_id", customer_id).execute()
+        
+        # YENİ: Public linkləri saydan çıxarırıq
+        carriers_res = supabase.table("carriers").select("id").eq("customer_id", customer_id).not_ilike("email", "public_link_%").execute()
+        
         return {"status": "success", "active_rfqs": active_rfqs, "incoming_quotes": incoming_quotes_count, "completed_shipments": completed_shipments, "carriers_count": len(carriers_res.data or [])}
     except Exception as e:
         traceback.print_exc()
@@ -917,9 +920,11 @@ def bulk_delete_customer_carriers(payload: BulkDeleteCarrierRequest, current_use
 def get_customer_carriers(customer_id: int, current_user: dict = Depends(verify_token)):
     check_ownership(customer_id, current_user)
     try:
-        res = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute()
+        # YENİ: Public linkləri siyahıdan gizlədirik
+        res = supabase.table("carriers").select("*").eq("customer_id", customer_id).not_ilike("email", "public_link_%").range(0, 9999).execute()
         return res.data if res.data is not None else []
-    except Exception as e: raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e: 
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/requests/upload-attachment")
 async def upload_request_attachment(file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
