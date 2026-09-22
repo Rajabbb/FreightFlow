@@ -1242,6 +1242,15 @@ def get_request_details(target_id: str):
     quote_res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", target_id).execute()
     if quote_res.data:
         quote = quote_res.data[0]
+        
+        # --- YENİ: LİNK AÇILANDA BAXILDI (VIEWED) OLARAQ İŞARƏLƏ ---
+        if not quote.get("is_viewed"):
+            try:
+                supabase.table("quotes").update({"is_viewed": True}).eq("id", quote["id"]).execute()
+            except Exception:
+                pass
+        # -----------------------------------------------------------
+        
         shipment = quote.get("shipment_requests") or {}
         if isinstance(shipment, dict):
             note_val = shipment.get("additional_notes") or shipment.get("note") or shipment.get("customer_note") or ""
@@ -1288,6 +1297,7 @@ def get_request_details(target_id: str):
                 deadline = shipment.get("deadline")
                 if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()): shipment["deadline"] = None
             return {"request": shipment, "already_submitted": False}
+            
     raise HTTPException(status_code=404, detail="Sorğu və ya keçərli Token tapılmadı.")
 
 @app.get("/quotes/form/{token}")
