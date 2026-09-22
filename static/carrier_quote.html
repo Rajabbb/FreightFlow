@@ -552,5 +552,31 @@
         }
         loadRequestDetails();
     </script>
+    <!-- PUBLIC LİNK MÜHAFİZƏSİ (Zorla Təmizləyici) -->
+<script>
+    if (window.location.search.includes('public=1')) {
+        // 1. CSS vasitəsilə Option tablarını və əlavə düymələri qətiyyən görünməz edirik
+        const style = document.createElement('style');
+        style.innerHTML = '#options_tabs, #update_notice, #submit_alt_btn { display: none !important; pointer-events: none !important; }';
+        document.head.appendChild(style);
+
+        // 2. Köhnə API cavabı gəlib xanaları doldursa belə, ilk 1.5 saniyə ərzində onu dərhal silirik
+        let clearAttempts = 0;
+        const forceClear = setInterval(() => {
+            const priceEl = document.getElementById("price");
+            if (priceEl && priceEl.value) priceEl.value = "";
+            
+            const transitEl = document.getElementById("transit_time_days");
+            if (transitEl && transitEl.value) transitEl.value = "";
+            
+            const btn = document.getElementById("submit_btn");
+            if (btn && btn.innerText.includes("Update")) btn.innerText = "🚀 Submit Quote";
+            
+            clearAttempts++;
+            // 15 dəfə (1.5 saniyə) yoxladıqdan sonra dayanır ki, daşıyıcı öz rəqəmini yaza bilsin
+            if (clearAttempts > 15) clearInterval(forceClear);
+        }, 100);
+    }
+</script>
 </body>
 </html>
