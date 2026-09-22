@@ -1414,19 +1414,29 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
         parsed_extra["submitted"] = True
         parsed_extra["submitted_at"] = datetime.utcnow().isoformat()
 
-        # --- YENİ: ƏGƏR FORM-DAN DAŞIYICI ŞİRKƏT ADI GƏLİBSƏ ---
+        # Public link yoxlaması
+        carrier_email = ""
+        try:
+            car_res = supabase.table("carriers").select("email").eq("id", quote.get("carrier_id")).execute()
+            if car_res.data:
+                carrier_email = car_res.data[0].get("email", "")
+        except Exception:
+            pass
+
+        is_public_link = "public_link_" in quote.get("token", "") or "public_link_" in carrier_email
+        
         form_carrier_name = request.query_params.get("carrier_company") or parsed_extra.get("carrier_company")
         if not form_carrier_name:
-            # Form-dan (multipart/form-data) gələn dəyəri yoxlayırıq
             form_data_dict = await request.form()
             form_carrier_name = form_data_dict.get("carrier_company")
 
+        if is_public_link and not form_carrier_name:
+            raise HTTPException(status_code=400, detail="Zəhmət olmasa daşıyıcı şirkət adını daxil edin.")
+
         if form_carrier_name:
             parsed_extra["carrier_company"] = form_carrier_name.strip()
-            # Əgər bu public link-dirsə, daşıyıcı adını real şirkət adı ilə yeniləyirik
-            if "public_link_" in quote.get("token", "") or quote.get("carrier_id"):
+            if is_public_link:
                 try:
-                    # Əgər ümumi public daşıyıcısıdırsa, adını dəyişirik ki, paneldə görünsün
                     supabase.table("carriers").update({"company_name": form_carrier_name.strip()}).eq("id", quote["carrier_id"]).execute()
                 except Exception:
                     pass
