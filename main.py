@@ -1440,8 +1440,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
                     supabase.table("carriers").update({"company_name": form_carrier_name.strip()}).eq("id", quote["carrier_id"]).execute()
                 except Exception:
                     pass
-        ---------------------------------------------------------
-
+                    
         if carrier_file and carrier_file.filename:
             await validate_file(carrier_file)
             file_ext = os.path.splitext(carrier_file.filename)[1]
