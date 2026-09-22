@@ -3353,7 +3353,9 @@ function resetFormForAI() {
 
             let html = "";
             filtered.forEach((c, idx) => {
-                const color = AVATAR_PALETTE[idx % AVATAR_PALETTE.length]; const initials = getInitials(c.company_name);
+                const isPublicLinkCarrier = c.email && c.email.includes("public_link_");
+                const color = isPublicLinkCarrier ? "#4f46e5" : AVATAR_PALETTE[idx % AVATAR_PALETTE.length]; 
+                const avatarContent = isPublicLinkCarrier ? '<i class="bi bi-link-45deg fs-4"></i>' : getInitials(c.company_name);
                 let deliveryBadge;
                 if (c.mail_status === 'delivered') { deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`; } 
                 else if (c.mail_status === 'failed') { deliveryBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Çatdırılmadı</span>`; } 
@@ -3373,7 +3375,7 @@ function resetFormForAI() {
                 html += `
                     <div class="carrier-panel-row d-flex align-items-start gap-2">
                         ${checkbox}
-                        <div class="avatar-circle" style="background:${color};">${initials}</div>
+                        <div class="avatar-circle" style="background:${color};">${avatarContent}</div>
                         <div class="flex-grow-1" style="min-width:0;">
                             <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
                                 <div style="min-width:0;">
