@@ -1248,13 +1248,11 @@ def get_request_details(target_id: str):
     if quote_res.data:
         quote = quote_res.data[0]
         
-        # --- YENİ: LİNK AÇILANDA BAXILDI (VIEWED) OLARAQ İŞARƏLƏ ---
         if not quote.get("is_viewed"):
             try:
                 supabase.table("quotes").update({"is_viewed": True}).eq("id", quote["id"]).execute()
             except Exception:
                 pass
-        # -----------------------------------------------------------
         
         shipment = quote.get("shipment_requests") or {}
         if isinstance(shipment, dict):
@@ -1268,7 +1266,19 @@ def get_request_details(target_id: str):
         all_quotes_data = []
         req_id = quote.get("request_id")
         car_id = quote.get("carrier_id")
-        if req_id and car_id:
+        
+        # --- YENİ: PUBLIC LINK YOXLAMASI ---
+        carrier_email = ""
+        if car_id:
+            car_res = supabase.table("carriers").select("email").eq("id", car_id).execute()
+            if car_res.data:
+                carrier_email = car_res.data[0].get("email", "")
+        
+        is_public_link = "public_link_" in quote.get("token", "") or "public_link_" in carrier_email
+        
+        # DİQQƏT: Əgər public linkdirsə, digər daşıyıcıların məlumatlarını (all_quotes) GƏTİRMİRİK!
+        # Beləliklə hər daşıyıcı linki açanda bomboş forma görür.
+        if req_id and car_id and not is_public_link:
             all_q_res = supabase.table("quotes").select("*").eq("request_id", req_id).eq("carrier_id", car_id).order("id").execute()
             for q in (all_q_res.data or []):
                 ex = q.get("extra_details") or {}
@@ -1440,11 +1450,11 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
 
         if form_carrier_name:
             parsed_extra["carrier_company"] = form_carrier_name.strip()
-            if is_public_link:
-                try:
-                    supabase.table("carriers").update({"company_name": form_carrier_name.strip()}).eq("id", quote["carrier_id"]).execute()
-                except Exception:
-                    pass
+            # DİQQƏT: Orjinal "İctimai Link" profilinin adını ARTIQ DƏYİŞMİRİK. 
+
+        # --- ƏSAS HƏLL: Public Linkdirsə əsas linki boş saxlamaq üçün həmişə YENİ təklif yaradırıq ---
+        if is_public_link:
+            is_alternative = "true"
                     
         if carrier_file and carrier_file.filename:
             await validate_file(carrier_file)
@@ -1473,6 +1483,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
             insert_res = supabase.table("quotes").insert(new_quote_data).execute()
             return {"status": "success", "message": "Alternativ təklif qəbul edildi!", "data": insert_res.data}
 
+        # Bura yalnız public OLMAYAN (xüsusi) linklər üçün işləyəcək
         history = quote.get("quote_history") or []
         existing_price = quote.get("price")
         existing_extra = quote.get("extra_details") or {}
@@ -1501,10 +1512,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
         raise he
     except Exception as e:
         traceback.print_exc()
-        err_str = str(e)
-        if "duplicate key value" in err_str.lower() or "unique constraint" in err_str.lower():
-            raise HTTPException(status_code=400, detail="Məhdudiyyət: Bazada eyni daşıyıcının çoxsaylı təklif göndərməsinə icazə verilməyib. Zəhmət olmasa Supabase-də quotes cədvəlindən UNIQUE indeksini silin.")
-        raise HTTPException(status_code=400, detail=f"Sistem xətası: {err_str}")
+        raise HTTPException(status_code=400, detail=f"Sistem xətası: {str(e)}")
 
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int, current_user: dict = Depends(verify_token)):
