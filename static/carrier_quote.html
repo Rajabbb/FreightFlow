@@ -222,9 +222,13 @@
                 if (response.ok) {
                     const req = data.request;
 
-                    // PUBLIC LİNK AVTOMATİK AŞKARLAMA
+                    // Həm URL-də public, həm də token/carrier içində public_link varsa göstər
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const isPublicParam = urlParams.get('public') === '1' || window.location.href.includes('public=1');
                     const quoteData = data.quote;
-                    if (quoteData && (String(quoteData.token).includes("public_link") || (quoteData.carriers && String(quoteData.carriers.email).includes("public_link")))) {
+                    const isPublicToken = quoteData && (String(quoteData.token).includes("public_link") || (quoteData.carriers && String(quoteData.carriers.email).includes("public_link")));
+
+                    if (isPublicParam || isPublicToken) {
                         const field = document.getElementById('carrierCompanyField');
                         const input = document.getElementById('carrierCompanyInput');
                         if (field && input) {
