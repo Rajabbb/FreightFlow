@@ -1267,7 +1267,6 @@ def get_request_details(target_id: str):
         req_id = quote.get("request_id")
         car_id = quote.get("carrier_id")
         
-        # --- YENİ: PUBLIC LINK YOXLAMASI ---
         carrier_email = ""
         if car_id:
             car_res = supabase.table("carriers").select("email").eq("id", car_id).execute()
@@ -1276,8 +1275,15 @@ def get_request_details(target_id: str):
         
         is_public_link = "public_link_" in quote.get("token", "") or "public_link_" in carrier_email
         
-        # DİQQƏT: Əgər public linkdirsə, digər daşıyıcıların məlumatlarını (all_quotes) GƏTİRMİRİK!
-        # Beləliklə hər daşıyıcı linki açanda bomboş forma görür.
+        # -------------------------------------------------------------------------
+        # ƏN VACİB HİSSƏ: Public Linkdirsə, bazada nə olur olsun hər şeyi sıfırlayırıq!
+        # -------------------------------------------------------------------------
+        if is_public_link:
+            quote["price"] = None
+            quote["transit_time_days"] = None
+            quote["extra_details"] = {}
+        
+        # Digər təklifləri (Option tabs) yalnız ənənəvi linklərdə göstəririk
         if req_id and car_id and not is_public_link:
             all_q_res = supabase.table("quotes").select("*").eq("request_id", req_id).eq("carrier_id", car_id).order("id").execute()
             for q in (all_q_res.data or []):
@@ -1297,7 +1303,8 @@ def get_request_details(target_id: str):
             "already_submitted": is_already_submitted, 
             "request": shipment, 
             "quote": quote,
-            "all_quotes": all_quotes_data
+            "all_quotes": all_quotes_data,
+            "is_public": is_public_link  # Frontendə bunun public olduğunu açıq deyirik
         }
     
     if target_id.isdigit():
@@ -1313,7 +1320,7 @@ def get_request_details(target_id: str):
                 if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()): shipment["deadline"] = None
             return {"request": shipment, "already_submitted": False}
             
-    raise HTTPException(status_code=404, detail="Sorğu və ya keçərli Token tapılmadı.")
+    raise HTTPException(status_code=404, detail="Sorğu tapılmadı.")
 
 @app.get("/quotes/form/{token}")
 def get_quote_form_details(token: str):
