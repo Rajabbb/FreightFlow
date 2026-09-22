@@ -1295,6 +1295,15 @@ def get_quote_form_details(token: str):
     res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", token).execute()
     if not res.data: raise HTTPException(status_code=404, detail="Keçərsiz link!")
     quote = res.data[0]
+    
+    # --- YENİ EKLENEN KISIM: LİNK AÇILDIĞINDA BAXILDI (VIEWED) OLARAK İŞARETLE ---
+    if not quote.get("is_viewed"):
+        try:
+            supabase.table("quotes").update({"is_viewed": True}).eq("token", token).execute()
+        except Exception:
+            pass
+    # ----------------------------------------------------------------------------
+    
     shipment = quote.get("shipment_requests")
     if isinstance(shipment, dict):
         note_val = shipment.get("additional_notes") or shipment.get("note") or ""
@@ -1302,8 +1311,9 @@ def get_quote_form_details(token: str):
         if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]: shipment["volume_m3"] = "Qeyd edilməyib"
         deadline = shipment.get("deadline")
         if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()): shipment["deadline"] = None
+        
     return {"already_submitted": quote.get("price") is not None, "quote": quote}
-
+    
 @app.post("/quotes/check-bounces")
 async def check_bounces_endpoint():
     if not ENABLE_BOUNCE_CHECK: return {"status": "disabled", "message": "Bounce yoxlaması hazırda deaktivdir."}
