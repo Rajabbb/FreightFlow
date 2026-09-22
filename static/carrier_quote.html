@@ -214,6 +214,9 @@
             }
         }
 
+       // 1. QLOBAL DƏYİŞƏN: Səhifədəki bütün funksiyalar bunun Public Link olduğunu mütləq biləcək
+        window.isPublicLink = false; 
+
         async function loadRequestDetails() {
             try {
                 const response = await fetch(`/requests/details/${token}`);
@@ -222,15 +225,17 @@
                 if (response.ok) {
                     const req = data.request;
 
-                    // 1. ƏN SƏRT PUBLIC LİNK AŞKARLAMASI (4 Fərqli Yoxlama)
-                    let isPublic = false;
-                    if (window.location.href.includes('public=1')) isPublic = true;
-                    if (data.is_public === true) isPublic = true;
-                    if (data.quote && data.quote.carriers && data.quote.carriers.email && String(data.quote.carriers.email).includes("public_link")) isPublic = true;
-                    if (data.quote && data.quote.token && String(data.quote.token).includes("public_link")) isPublic = true;
+                    // PUBLIC LİNKİN DƏQİQ AŞKARLANMASI VƏ QLOBAL YADDAŞA YAZILMASI
+                    if (window.location.href.includes('public=1')) window.isPublicLink = true;
+                    if (data.is_public === true) window.isPublicLink = true;
+                    if (data.quote && data.quote.carriers && data.quote.carriers.email && String(data.quote.carriers.email).includes("public_link")) window.isPublicLink = true;
 
-                    if (isPublic) {
-                        // DAŞIYICI ŞİRKƏT ADI XANASINI GÖSTƏRİRİK
+                    if (window.isPublicLink) {
+                        // ==============================================================
+                        // PUBLIC LİNK ÜÇÜN HƏR ŞEYİ ZORLA SIFIRLAYIRIQ VƏ GİZLƏDİRİK
+                        // ==============================================================
+                        
+                        // Şirkət adını göstəririk
                         const field = document.getElementById('carrierCompanyField');
                         const input = document.getElementById('carrierCompanyInput');
                         if (field && input) {
@@ -238,23 +243,21 @@
                             input.required = true;
                         }
                         
-                        // PUBLIC LİNK ÜÇÜN HƏMİŞƏ BOŞ FORMA YARADIRIQ
+                        // Formu bomboş edirik (backend nə göndərir göndərsin silirik)
                         document.getElementById("price").value = "";
                         document.getElementById("currency").value = "AZN";
                         document.getElementById("transit_time_days").value = "";
                         document.getElementById("carrier_note").value = "";
                         
-                        // -----------------------------------------------------------
-                        // ZORLA GİZLƏTMƏ (CSS CLASS-LARINI QƏTİ ŞƏKİLDƏ ƏZİRİK)
-                        // -----------------------------------------------------------
-                        const altBtn = document.getElementById("submit_alt_btn");
-                        if (altBtn) altBtn.style.display = "none";
+                        // Tabları, xəbərdarlıqları və alternativ düyməsini kökündən gizlədirik
+                        const optionsTabs = document.getElementById("options_tabs");
+                        if (optionsTabs) optionsTabs.style.display = "none";
                         
                         const updateNotice = document.getElementById("update_notice");
                         if (updateNotice) updateNotice.style.display = "none";
                         
-                        const optionsTabs = document.getElementById("options_tabs");
-                        if (optionsTabs) optionsTabs.style.display = "none";
+                        const altBtn = document.getElementById("submit_alt_btn");
+                        if (altBtn) altBtn.style.display = "none";
                         
                         const submitBtn = document.getElementById("submit_btn");
                         if (submitBtn) submitBtn.innerHTML = "🚀 Submit Quote";
@@ -262,28 +265,19 @@
                         currentEditingToken = token;
 
                     } else {
-                        // YALNIZ VƏ YALNIZ NORMAL LİNKLƏR ÜÇÜN KÖHNƏ TƏKLİFLƏRİ GÖSTƏRİRİK
+                        // ==============================================================
+                        // NORMAL LİNKLƏR ÜÇÜN (Əvvəlki təklifləri və Option tablarını göstərir)
+                        // ==============================================================
                         if (data.all_quotes && data.all_quotes.length > 0) {
                             allCarrierQuotes = data.all_quotes;
                             const submittedQuotes = allCarrierQuotes.filter(q => q.price !== null || (q.extra_details && q.extra_details.submitted_at));
                             
                             if (submittedQuotes.length > 0) {
                                 const updateNotice = document.getElementById("update_notice");
-                                if (updateNotice) {
-                                    updateNotice.classList.remove("hidden");
-                                    updateNotice.style.display = "block";
-                                }
+                                if (updateNotice) updateNotice.classList.remove("hidden");
                                 
                                 const altBtn = document.getElementById("submit_alt_btn");
-                                if (altBtn) {
-                                    altBtn.classList.remove("hidden");
-                                    altBtn.style.display = "block";
-                                }
-                                
-                                const optionsTabs = document.getElementById("options_tabs");
-                                if (optionsTabs) {
-                                    optionsTabs.style.display = "flex";
-                                }
+                                if (altBtn) altBtn.classList.remove("hidden");
                                 
                                 renderOptionsTabs();
                                 
@@ -300,7 +294,7 @@
                         }
                     }
 
-                    // --- BUNDAN AŞAĞISI STANDART MƏLUMATLARIN DOLDURULMASIDIR ---
+                    // --- Ümumi form məlumatlarının (Route, Tarix və s.) yazdırılması ---
                     const routeEl = document.getElementById("route_text");
                     if (routeEl) routeEl.innerText = `${escapeHTML(req.origin)} ➔ ${escapeHTML(req.destination)}`;
                     
@@ -409,6 +403,70 @@
             } catch (err) { console.error("Error:", err); }
         }
 
+        async function setSubmitTypeAndSend(isAlternative) {
+            const formData = new FormData();
+            const priceEl = document.getElementById("price");
+            const currencyEl = document.getElementById("currency");
+            const transitEl = document.getElementById("transit_time_days");
+            
+            if (priceEl && priceEl.value.trim() !== "") {
+                formData.append("price", priceEl.value);
+                formData.append("currency", currencyEl ? currencyEl.value : "AZN");
+            }
+            if (transitEl && transitEl.value.trim() !== "") {
+                formData.append("transit_time_days", transitEl.value);
+            }
+
+            const fileInput = document.getElementById("carrier_file");
+            if (fileInput && fileInput.files && fileInput.files[0]) { formData.append("carrier_file", fileInput.files[0]); }
+
+            const extraDetails = {};
+            const carrierNoteEl = document.getElementById("carrier_note");
+            if (carrierNoteEl && carrierNoteEl.value.trim()) { extraDetails["Carrier Note"] = carrierNoteEl.value.trim(); }
+
+            document.querySelectorAll("#fields_list input[type='text']").forEach(input => {
+                const key = input.previousElementSibling ? input.previousElementSibling.innerText : "field";
+                extraDetails[key] = input.value;
+            });
+            
+            // Daşıyıcı Şirkət Adı
+            const carrierCompanyInput = document.getElementById("carrierCompanyInput");
+            if (carrierCompanyInput && carrierCompanyInput.value.trim() !== "") {
+                formData.append("carrier_company", carrierCompanyInput.value.trim());
+            }
+            
+            formData.append("extra_details", JSON.stringify(extraDetails));
+            formData.append("is_alternative", isAlternative ? "true" : "false");
+
+            try {
+                const response = await fetch(`/quotes/submit/${currentEditingToken}`, { method: "POST", body: formData });
+                let result = {};
+                try { result = await response.json(); } catch (e) {}
+
+                if (response.ok) {
+                    // QLOBAL DƏYİŞƏNDƏN İSTİFADƏ EDİRİK! Əgər bu public linkdirsə düyməni SİLİRİK!
+                    const backButtonStr = window.isPublicLink 
+                        ? "" 
+                        : `<button onclick="window.location.reload()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium mt-6 transition duration-200">⬅ Go Back / Submit Another Option</button>`;
+
+                    document.body.innerHTML = `
+                    <div class="min-h-screen bg-slate-950 flex items-center justify-center p-4 w-full h-full absolute top-0 left-0 z-50">
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md text-center shadow-2xl mx-auto">
+                            <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
+                            <h2 class="text-xl font-bold text-white mb-2">Your quote has been successfully submitted!</h2>
+                            <p class="text-slate-400 text-sm">Your details have been recorded in the system. Thank you!</p>
+                            ${backButtonStr}
+                        </div>
+                    </div>
+                    `;
+                } else {
+                    alert("Error: " + (result.detail || "An unknown error occurred."));
+                }
+            } catch (err) {
+                console.error("Submission error:", err);
+                alert("Could not connect to the server. Please check your internet connection.");
+            }
+        }
         async function setSubmitTypeAndSend(isAlternative) {
             const formData = new FormData();
             const priceEl = document.getElementById("price");
