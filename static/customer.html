@@ -3285,6 +3285,27 @@ function resetFormForAI() {
                 document.getElementById("mobileCarriersCount").textContent = total;
                 document.getElementById("statBtnCarriersCount").textContent = total;
                 document.getElementById("panelCarriersCount").textContent = total;
+                // GENEL LİNK (PUBLIC LINK) KONTROLÜ VE ARAYÜZ GÜNCELLEMESİ
+                const isPublicLink = detailCarriersCache.some(c => c.email && c.email.includes("public_link_"));
+                const noticeEl = document.getElementById("publicLinkNotice");
+                
+                const boxSent = document.getElementById("statSent").parentElement;
+                const boxDelivered = document.getElementById("statDelivered").parentElement;
+                const boxFailed = document.getElementById("statFailed").parentElement;
+
+                if (isPublicLink) {
+                    // Link ile oluşturulmuşsa uyarıyı göster ve gereksiz kutuları gizle
+                    if (noticeEl) noticeEl.classList.remove("d-none");
+                    boxSent.style.display = "none";
+                    boxDelivered.style.display = "none";
+                    boxFailed.style.display = "none";
+                } else {
+                    // Normal e-posta gönderimiyse uyarıyı gizle ve tüm kutuları görünür yap
+                    if (noticeEl) noticeEl.classList.add("d-none");
+                    boxSent.style.display = "";
+                    boxDelivered.style.display = "";
+                    boxFailed.style.display = "";
+                }
                 
                 const pendingBanner = document.getElementById("detailNonResponders");
                 document.getElementById("detailPendingCount").textContent = pending;
