@@ -222,13 +222,15 @@
                 if (response.ok) {
                     const req = data.request;
 
-                    // Həm URL-də public, həm də token/carrier içində public_link varsa göstər
+                    // PUBLIC LİNK AVTOMATİK AŞKARLAMA
                     const urlParams = new URLSearchParams(window.location.search);
                     const isPublicParam = urlParams.get('public') === '1' || window.location.href.includes('public=1');
                     const quoteData = data.quote;
                     const isPublicToken = quoteData && (String(quoteData.token).includes("public_link") || (quoteData.carriers && String(quoteData.carriers.email).includes("public_link")));
+                    
+                    const isPublic = isPublicParam || isPublicToken;
 
-                    if (isPublicParam || isPublicToken) {
+                    if (isPublic) {
                         const field = document.getElementById('carrierCompanyField');
                         const input = document.getElementById('carrierCompanyInput');
                         if (field && input) {
@@ -236,8 +238,9 @@
                             input.required = true;
                         }
                     }
-                    
-                    if (data.all_quotes && data.all_quotes.length > 0) {
+
+                    // --- YENİ MƏNTİQ: Əgər public deyilsə ənənəvi işləyir, publicdirsə həmişə boş forma açır ---
+                    if (!isPublic && data.all_quotes && data.all_quotes.length > 0) {
                         allCarrierQuotes = data.all_quotes;
                         const submittedQuotes = allCarrierQuotes.filter(q => q.price !== null || (q.extra_details && q.extra_details.submitted_at));
                         
@@ -261,6 +264,22 @@
                                 document.getElementById("carrier_note").value = data.quote.extra_details["Carrier Note"];
                             }
                         }
+                    } else {
+                        // PUBLIC LİNK ÜÇÜN HƏR ŞEYİ SIFIRLAYIRIQ (Tam yeni forma)
+                        document.getElementById("price").value = "";
+                        document.getElementById("currency").value = "AZN";
+                        document.getElementById("transit_time_days").value = "";
+                        document.getElementById("carrier_note").value = "";
+                        
+                        // Alternativ göndərmə düyməsini və tabları ləğv edirik
+                        const altBtn = document.getElementById("submit_alt_btn");
+                        if (altBtn) altBtn.classList.add("hidden");
+                        
+                        const updateNotice = document.getElementById("update_notice");
+                        if (updateNotice) updateNotice.classList.add("hidden");
+                        
+                        document.getElementById("submit_btn").innerHTML = "🚀 Submit Quote";
+                        currentEditingToken = token;
                     }
 
                     const routeEl = document.getElementById("route_text");
