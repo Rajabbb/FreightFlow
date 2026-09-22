@@ -396,6 +396,11 @@
                 const key = input.previousElementSibling ? input.previousElementSibling.innerText : "field";
                 extraDetails[key] = input.value;
             });
+            // DAŞIYICI ŞİRKƏT ADINI FORMDATA-YA ƏLAVƏ EDİRİK
+            const carrierCompanyInput = document.getElementById("carrierCompanyInput");
+            if (carrierCompanyInput && carrierCompanyInput.value.trim() !== "") {
+                formData.append("carrier_company", carrierCompanyInput.value.trim());
+            }
             formData.append("extra_details", JSON.stringify(extraDetails));
             formData.append("is_alternative", isAlternative ? "true" : "false");
 
