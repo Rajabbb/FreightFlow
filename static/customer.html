@@ -1452,6 +1452,27 @@ Best regards,
         </div>
     </div>
 
+<!-- İCTİMAİ LİNK VƏ ŞABLON MODALI -->
+    <div class="modal fade" id="publicLinkModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header border-bottom bg-light">
+                    <h5 class="modal-title fw-bold text-dark"><i class="bi bi-link-45deg text-primary me-2 fs-4" style="vertical-align: middle;"></i> Link və Şablon Hazırdır!</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="text-muted small mb-3">Aşağıdakı mətni kopyalayaraq daşıyıcılarınıza WhatsApp, Telegram və ya e-poçt vasitəsilə birbaşa göndərə bilərsiniz:</p>
+                    
+                    <textarea id="publicLinkTextarea" class="form-control mb-3 p-3 bg-light border-secondary shadow-sm" rows="10" style="font-family: monospace; font-size: 13px;" readonly></textarea>
+                    
+                    <button class="btn btn-primary btn-lg w-100 fw-bold shadow-sm" onclick="copyPublicLinkText()">
+                        <i class="bi bi-clipboard me-2"></i> Mətni və Linki Kopyala
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- FOOTER -->
     <div class="text-center py-4 mt-4 border-top">
         <p class="text-muted small mb-0">
@@ -2713,8 +2734,23 @@ function resetFormForAI() {
                 if (res.status === 401 || res.status === 403) { logout(); return; }
                 const data = await res.json();
                 if (res.ok) {
-                    let msg = typeof data.message === 'object' ? JSON.stringify(data.message) : (data.message || "Sorğu uğurla yaradıldı!");
-                    alert(msg);
+                    if (data.public_link) {
+                        // Şirkət adını təyin edirik
+                        let senderName = "Arachi";
+                        if (activeUser && activeUser.company_name) senderName = activeUser.company_name;
+                        else if (activeUser && activeUser.name) senderName = activeUser.name;
+                        
+                        // Şablonun mətni
+                        let templateText = `Dear Carrier,\n\nPlease review the shipment details below and kindly complete the quotation form using the link provided.\n\nQuotation Link:\n${data.public_link}\n\nThank you.\n\nBest regards,\n${senderName}`;
+                        
+                        // Mətni modaldakı xanaya yazırıq ve modalı açırıq
+                        document.getElementById("publicLinkTextarea").value = templateText;
+                        new bootstrap.Modal(document.getElementById("publicLinkModal")).show();
+                    } else {
+                        // Normal email göndərilibsə köhnə qaydada bildiriş verir
+                        let msg = typeof data.message === 'object' ? JSON.stringify(data.message) : (data.message || "Sorğu uğurla yaradıldı!");
+                        alert(msg);
+                    }
                     
                     document.getElementById("rfqForm").reset();
                     document.querySelectorAll('.opt-input').forEach(el => el.classList.add('d-none'));
@@ -3550,6 +3586,19 @@ function resetFormForAI() {
                 }, 500);
             });
         }
+
+function copyPublicLinkText() {
+            const copyText = document.getElementById("publicLinkTextarea");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999); // Mobil cihazlar üçün
+            
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                alert("✅ Şablon və link uğurla kopyalandı! İndi istədiyiniz yerə yapışdıra bilərsiniz.");
+            }).catch(err => {
+                alert("Kopyalama zamanı xəta baş verdi, zəhmət olmasa mətni əllə kopyalayın.");
+            });
+        }
+        
     </script>
 </body>
 </html>
