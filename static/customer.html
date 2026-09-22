@@ -999,7 +999,12 @@ Best regards,
         </div>
     </div>
 </div>
-                    
+
+<!-- YENİ ƏLAVƏ EDİLƏN QEYD -->
+                    <div class="alert alert-light border rounded-3 p-2 small mb-3 text-muted shadow-sm">
+                        <i class="bi bi-info-circle me-1 text-primary"></i> <b>Qeyd:</b> "Link yarat və göndər" düyməsindən istifadə etdikdə aşağıdakı daşıyıcı seçimləri əhəmiyyət daşımır.
+                    </div>
+
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="radio" name="carrierOption" id="sendToAllRadio" value="all" checked onchange="toggleCarrierSelection()">
                         <label class="form-check-label fw-bold text-dark" for="sendToAllRadio">
@@ -1042,9 +1047,12 @@ Best regards,
                     </div>
                 </div>
 
-                <div class="mt-3">
-                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3" id="submitRfqBtn">
-                        <i class="bi bi-rocket-takeoff-fill me-2"></i> RFQ Sorğusunu Yarat və Göndər
+                <div class="mt-4 d-flex flex-column flex-sm-row gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold" onclick="window.isPublicLinkMode = false;" id="submitRfqBtn">
+                        <i class="bi bi-rocket-takeoff-fill me-2"></i> Birbaşa Daşıyıcılara Göndər
+                    </button>
+                    <button type="submit" class="btn btn-outline-primary btn-lg w-100 py-3 fw-bold bg-white" onclick="window.isPublicLinkMode = true;" id="generateLinkBtn">
+                        <i class="bi bi-link-45deg me-2 fs-4" style="vertical-align: middle;"></i> Link Yarat və Kopyala
                     </button>
                 </div>
             </form>
@@ -1170,6 +1178,10 @@ Best regards,
                     </div>
                     <div class="section-desc mb-2">Sorğunun daşıyıcılara çatdırılma və reaksiya statistikası.</div>
 
+                    <!-- YENİ ƏLAVƏ EDİLƏN XƏBƏRDARLIQ (Gizli olaraq gözləyir) -->
+                    <div id="publicLinkNotice" class="alert alert-primary bg-opacity-10 border-primary border-opacity-25 small d-none mb-3">
+                        <i class="bi bi-info-circle-fill text-primary me-1"></i> Bu RFQ sorğusu <b>"Link Yarat"</b> funksiyası ilə kənarda paylaşıldığı üçün "Göndərildi", "Çatdırıldı" və "Çatdırılmadı" statusları izlənilmir. Yalnız təklif verənləri görə bilərsiniz.
+                    </div>
                     <div class="mini-stat-grid mb-3">
                         <div class="mini-stat-box">
                             <span class="mini-stat-icon" style="background:#eef2ff; color:#4f46e5;"><i class="bi bi-send-fill"></i></span>
@@ -2572,18 +2584,22 @@ function resetFormForAI() {
         async function createRfq(e) {
             e.preventDefault();
 
-            const sendOptElement = document.querySelector('input[name="carrierOption"]:checked');
-            const sendOpt = sendOptElement ? sendOptElement.value : 'all';
+            let sendOpt = 'all';
+            if (window.isPublicLinkMode) {
+                sendOpt = 'public_link'; // Əgər link düyməsinə basıbsa rejimi dəyişirik
+            } else {
+                const sendOptElement = document.querySelector('input[name="carrierOption"]:checked');
+                sendOpt = sendOptElement ? sendOptElement.value : 'all';
+            }
             
             let selectedCarriers = [];
             let selectedCategories = [];
             
-            if (sendOpt === 'selected') {
+            if (sendOpt === 'selected' && !window.isPublicLinkMode) {
                 const checkboxes = document.querySelectorAll(".carrier-item-check:checked");
                 checkboxes.forEach(cb => selectedCarriers.push(parseInt(cb.value)));
                 if (selectedCarriers.length === 0) { alert("Zəhmət olmasa siyahıdan ən azı bir daşıyıcı seçin!"); return; }
-            } else if (sendOpt === 'category') {
-                const checkboxes = document.querySelectorAll(".cat-item-check:checked");
+            } else if (sendOpt === 'category' && !window.isPublicLinkMode) {                const checkboxes = document.querySelectorAll(".cat-item-check:checked");
                 checkboxes.forEach(cb => selectedCategories.push(parseInt(cb.value)));
                 if (selectedCategories.length === 0) { alert("Zəhmət olmasa siyahıdan ən azı bir kateqoriya seçin!"); return; }
             }
