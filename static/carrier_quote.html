@@ -8,6 +8,26 @@
     <link rel="apple-touch-icon" href="/static/arachi-logo.png">
     <link rel="shortcut icon" href="/static/arachi-logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
+
+<!-- QƏTİ HƏLL: GÖZƏTÇİ SKRİPT (Kəşə qarşı) -->
+    <script>
+        if (window.location.search.includes('public=1') || window.location.search.includes('public_link')) {
+            const observer = new MutationObserver(() => {
+                const backBtn = document.querySelector('button[onclick="window.location.reload()"]');
+                const altBtn = document.getElementById("submit_alt_btn");
+                const optionsTabs = document.getElementById("options_tabs_container");
+                const updateNotice = document.getElementById("update_notice");
+                
+                // O düymə və ya tablar yarandığı millisaniyədə silinir!
+                if (backBtn) backBtn.remove(); 
+                if (altBtn) altBtn.remove();
+                if (optionsTabs) optionsTabs.remove();
+                if (updateNotice) updateNotice.remove();
+            });
+            observer.observe(document, { childList: true, subtree: true });
+        }
+    </script>
+    
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
 
