@@ -457,19 +457,27 @@
                 try { result = await response.json(); } catch (e) {}
 
                 if (response.ok) {
-    const isPublic = window.location.href.includes('public=1');
-
-    document.body.innerHTML = `
-    <div class="min-h-screen bg-slate-950 flex items-center justify-center p-4 w-full h-full absolute top-0 left-0 z-50">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md text-center shadow-2xl mx-auto">
-            <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
-            <h2 class="text-xl font-bold text-white mb-2">Your quote has been successfully submitted!</h2>
-            <p class="text-slate-400 text-sm">Your details have been recorded in the system. Thank you!</p>
-            ${isPublic ? '' : '<button onclick="window.location.reload()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium mt-6 transition duration-200">⬅ Go Back / Submit Another Option</button>'}
-        </div>
-    </div>
-    `;
-}
+                    // Kesin Public Link kontrolü
+                    const isPublicLink = window.location.href.includes('public=1') || 
+                                         window.location.href.includes('public_link') || 
+                                         String(currentEditingToken).includes('public_link');
+                    
+                    // Eğer public ise, butona doğrudan "display: none !important" ekleyerek HTML seviyesinde yok ediyoruz
+                    const btnStyle = isPublicLink ? "display: none !important; visibility: hidden !important; opacity: 0; width: 0; height: 0; padding: 0; margin: 0; overflow: hidden;" : "";
+                    
+                    document.body.innerHTML = `
+                    <div class="min-h-screen bg-slate-950 flex items-center justify-center p-4 w-full h-full absolute top-0 left-0 z-50">
+                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md text-center shadow-2xl mx-auto">
+                            <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
+                            <!-- DİKKAT: Buraya (YENİ KOD) yazısı ekledik, sunucunun güncellenip güncellenmediğini buradan anlayacağız -->
+                            <h2 class="text-xl font-bold text-white mb-2">Your quote has been successfully submitted (YENİ KOD)!</h2>
+                            <p class="text-slate-400 text-sm mb-6">Your details have been recorded in the system. Thank you!</p>
+                            
+                            <button onclick="window.location.reload()" style="${btnStyle}" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium mt-6 transition duration-200">⬅ Go Back / Submit Another Option</button>
+                        </div>
+                    </div>
+                    `;
+                }
                 } else {
                     alert("Error: " + (result.detail || "An unknown error occurred."));
                 }
