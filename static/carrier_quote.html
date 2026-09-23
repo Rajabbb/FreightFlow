@@ -464,9 +464,25 @@
     
     <!-- PUBLIC LİNK MÜHAFİZƏSİ (Zorla Təmizləyici Kəş üçün) -->
     <script>
-        if (window.location.search.includes('public=1')) {
+        if (window.location.href.includes('public=1') || window.location.href.includes('public_link')) {
             const style = document.createElement('style');
-            style.innerHTML = '#options_tabs_container, #update_notice, #submit_alt_btn { display: none !important; pointer-events: none !important; }';
+            
+            // ƏN GÜCLÜ HƏLL: O inadkar "Go Back" düyməsini (onclick parametrindən) tapıb kökündən yox edirik!
+            style.innerHTML = `
+                #options_tabs_container, 
+                #options_tabs,
+                #update_notice, 
+                #submit_alt_btn,
+                button[onclick="window.location.reload()"] { 
+                    display: none !important; 
+                    pointer-events: none !important; 
+                    visibility: hidden !important;
+                    height: 0 !important;
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    opacity: 0 !important;
+                }
+            `;
             document.head.appendChild(style);
 
             let clearAttempts = 0;
