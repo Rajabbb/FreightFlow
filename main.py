@@ -660,10 +660,19 @@ def get_recent_quotes(customer_id: int, current_user: dict = Depends(verify_toke
         
         recent_quotes = []
         for q in quotes:
-            is_submitted = q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True)
+            extra = q.get("extra_details") or {}
+            is_submitted = q.get("price") is not None or extra.get("submitted") == True
+            
             if is_submitted:
                 carrier = q.get("carriers") or {}
-                carrier_name = carrier.get("company_name") or carrier.get("name") or "Daşıyıcı"
+                
+                # ƏSAS HƏLL: Sürücünün formda yazdığı (məsələn, "lulu") adı birinci yoxlayırıq!
+                custom_name = extra.get("carrier_company")
+                if custom_name:
+                    carrier_name = custom_name
+                else:
+                    carrier_name = carrier.get("company_name") or carrier.get("name") or "Daşıyıcı"
+                    
                 recent_quotes.append({
                     "request_id": q["request_id"],
                     "quote_id": q["id"],
@@ -679,7 +688,7 @@ def get_recent_quotes(customer_id: int, current_user: dict = Depends(verify_toke
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
+        
 def format_excel_date(date_str: Any, is_utc: bool = False, use_ampm: bool = False) -> str:
     if not date_str or str(date_str).strip() in ("-", "None", ""):
         return "-"
