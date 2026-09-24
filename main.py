@@ -1239,7 +1239,7 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
             
             custom_name = extra.get("carrier_company")
             
-            # ÇÖZÜT: Eger bu "public_link" bolsa we entek teklif iberilmedik bolsa, adyny mejbury üýtget!
+            # ƏSAS HƏLL BURADADIR:
             if "public_link" in carrier.get("email", "") and not has_submitted:
                 display_name = "🌐 İctimai Link (Əsas)"
             else:
