@@ -1236,8 +1236,14 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
             carrier = item.get("carriers") or {}
             extra = item.get("extra_details") or {}
             has_submitted = item.get("price") is not None or extra.get("submitted") == True
+            
+            # HƏLL: Sağ paneldəki adları əvvəlcə formadan (extra_details), yoxdursa bazadan oxuyuruq
+            custom_name = extra.get("carrier_company")
+            display_name = custom_name if custom_name else carrier.get("company_name", "Daşıyıcı")
+            
             result_carriers.append({
-                "quote_id": item.get("id"), "carrier_id": item.get("carrier_id"), "company_name": carrier.get("company_name", "Daşıyıcı"),
+                "quote_id": item.get("id"), "carrier_id": item.get("carrier_id"), 
+                "company_name": display_name,
                 "email": carrier.get("email", ""), "mail_status": item.get("mail_status", "pending"), "is_viewed": item.get("is_viewed", False),
                 "has_submitted": has_submitted, "token": item.get("token")
             })
@@ -1245,7 +1251,7 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
+        
 @app.get("/requests/details/{target_id}")
 def get_request_details(target_id: str):
     quote_res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", target_id).execute()
