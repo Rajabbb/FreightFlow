@@ -623,16 +623,25 @@ def get_customer_stats(customer_id: int, current_user: dict = Depends(verify_tok
         requests = reqs_res.data or []
         active_rfqs = sum(1 for r in requests if r.get("status") == "open")
         completed_shipments = sum(1 for r in requests if r.get("status") == "closed")
+        
         req_ids = [r["id"] for r in requests]
         incoming_quotes_count = 0
         if req_ids:
             quotes_res = supabase.table("quotes").select("price, extra_details").in_("request_id", req_ids).execute()
             incoming_quotes_count = sum(1 for q in (quotes_res.data or []) if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True))
         
-        # YENİ: Public linkləri saydan çıxarırıq
-        carriers_res = supabase.table("carriers").select("id").eq("customer_id", customer_id).not_ilike("email", "public_link_%").execute()
+        # HƏLL: Supabase-in xəta verdiyi "not_ilike" əmrini ləğv edib, Python ilə filtrləyirik
+        carriers_res = supabase.table("carriers").select("id, email").eq("customer_id", customer_id).execute()
+        all_carriers = carriers_res.data or []
+        filtered_carriers = [c for c in all_carriers if not c.get("email", "").startswith("public_link_")]
         
-        return {"status": "success", "active_rfqs": active_rfqs, "incoming_quotes": incoming_quotes_count, "completed_shipments": completed_shipments, "carriers_count": len(carriers_res.data or [])}
+        return {
+            "status": "success", 
+            "active_rfqs": active_rfqs, 
+            "incoming_quotes": incoming_quotes_count, 
+            "completed_shipments": completed_shipments, 
+            "carriers_count": len(filtered_carriers)
+        }
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
