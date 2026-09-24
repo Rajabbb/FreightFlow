@@ -1233,35 +1233,27 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
         result_carriers = []
         
-        # UX HƏLLİ: Sistemdə real təkliflərin olub-olmadığını yoxlayırıq
-        all_quotes = quotes_res.data or []
-        has_actual_submissions = any((q.get("price") is not None or (q.get("extra_details") or {}).get("submitted") == True) for q in all_quotes)
-
-        for item in all_quotes:
+        for item in (quotes_res.data or []):
             carrier = item.get("carriers") or {}
             extra = item.get("extra_details") or {}
             has_submitted = item.get("price") is not None or extra.get("submitted") == True
             
-            custom_name = extra.get("carrier_company")
+            # İctimai (Public) əsas linki tapırıq
             is_public_base = "public_link" in carrier.get("email", "") and not has_submitted
             
+            # ƏSAS HƏLL: Əgər bu əsas public linkdirsə, onu siyahıya ÜMUMİYYƏTLƏ ƏLAVƏ ETMƏ (Gizlət)
             if is_public_base:
-                display_name = "🌐 İctimai Link (Əsas)"
-            else:
-                display_name = custom_name if custom_name else carrier.get("company_name", "Daşıyıcı")
+                continue
             
-            # Sayğacı düzəltmək üçün əsas məntiq: 
-            # Əgər real təklif varsa, Ana linkin "baxıldı" statusunu yalandan False edirik ki, ekranda 2 dəfə cəmlənməsin.
-            view_status = item.get("is_viewed", False)
-            if is_public_base and has_actual_submissions:
-                view_status = False
-                
+            custom_name = extra.get("carrier_company")
+            display_name = custom_name if custom_name else carrier.get("company_name", "Daşıyıcı")
+            
             result_carriers.append({
                 "quote_id": item.get("id"), "carrier_id": item.get("carrier_id"), 
                 "company_name": display_name,
                 "email": carrier.get("email", ""), 
                 "mail_status": item.get("mail_status", "pending"), 
-                "is_viewed": view_status,
+                "is_viewed": item.get("is_viewed", False),
                 "has_submitted": has_submitted, "token": item.get("token")
             })
         return {"status": "success", "carriers": result_carriers}
