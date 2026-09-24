@@ -1237,9 +1237,13 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
             extra = item.get("extra_details") or {}
             has_submitted = item.get("price") is not None or extra.get("submitted") == True
             
-            # HƏLL: Sağ paneldəki adları əvvəlcə formadan (extra_details), yoxdursa bazadan oxuyuruq
             custom_name = extra.get("carrier_company")
-            display_name = custom_name if custom_name else carrier.get("company_name", "Daşıyıcı")
+            
+            # ÇÖZÜT: Eger bu "public_link" bolsa we entek teklif iberilmedik bolsa, adyny mejbury üýtget!
+            if "public_link" in carrier.get("email", "") and not has_submitted:
+                display_name = "🌐 İctimai Link (Əsas)"
+            else:
+                display_name = custom_name if custom_name else carrier.get("company_name", "Daşıyıcı")
             
             result_carriers.append({
                 "quote_id": item.get("id"), "carrier_id": item.get("carrier_id"), 
