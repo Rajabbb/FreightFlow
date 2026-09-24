@@ -924,10 +924,16 @@ def bulk_delete_customer_carriers(payload: BulkDeleteCarrierRequest, current_use
 def get_customer_carriers(customer_id: int, current_user: dict = Depends(verify_token)):
     check_ownership(customer_id, current_user)
     try:
-        # YENİ: Public linkləri siyahıdan gizlədirik
-        res = supabase.table("carriers").select("*").eq("customer_id", customer_id).not_ilike("email", "public_link_%").range(0, 9999).execute()
-        return res.data if res.data is not None else []
-    except Exception as e: 
+        # Bütün daşıyıcıları bazadan çəkirik
+        res = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute()
+        all_carriers = res.data or []
+        
+        # Python vasitəsilə yalnız "public_link" OLMAYANLARI saxlayırıq (Qüsursuz üsul)
+        filtered_carriers = [c for c in all_carriers if not c.get("email", "").startswith("public_link_")]
+        
+        return filtered_carriers
+    except Exception as e:
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/requests/upload-attachment")
