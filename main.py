@@ -559,7 +559,11 @@ def get_customer_dashboard():
 @app.get("/carrier_quote/quote")
 def get_carrier_quote_page(token: str):
     file_path = BASE_DIR / "static" / "carrier_quote.html"
-    return FileResponse(file_path)
+    response = FileResponse(file_path)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.get("/categories/customer/{customer_id}")
 def get_customer_categories(customer_id: int, current_user: dict = Depends(verify_token)):
