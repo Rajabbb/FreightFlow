@@ -9,7 +9,19 @@
     <link rel="shortcut icon" href="/static/arachi-logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
 <!-- QƏTİ HƏLL: GÖZƏTÇİ SKRİPT (Kəşə qarşı) -->
-    <script>
+
+<script>
+    // Əgər səhifə ilk dəfə açılırsa və dizayn yüklənməyibsə, Apple cihazları üçün avtomatik bir dəfə yeniləyirik
+    window.addEventListener('DOMContentLoaded', () => {
+        if (!window.tailwind && !sessionStorage.getItem('reloaded')) {
+            sessionStorage.setItem('reloaded', 'true');
+            window.location.reload();
+        }
+    });
+</script>
+    
+    <script
+        
         if (window.location.search.includes('public=1') || window.location.search.includes('public_link')) {
             const observer = new MutationObserver(() => {
                 const backBtn = document.querySelector('button[onclick="window.location.reload()"]');
@@ -26,16 +38,6 @@
             observer.observe(document, { childList: true, subtree: true });
         }
     </script
-
-            <script>
-    // Əgər səhifə ilk dəfə açılırsa və dizayn yüklənməyibsə, Apple cihazları üçün avtomatik bir dəfə yeniləyirik
-    window.addEventListener('DOMContentLoaded', () => {
-        if (!window.tailwind && !sessionStorage.getItem('reloaded')) {
-            sessionStorage.setItem('reloaded', 'true');
-            window.location.reload();
-        }
-    });
-         </script>
     
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
