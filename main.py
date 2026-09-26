@@ -810,13 +810,21 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                         continue
 
                     carrier = q.get("carriers") or {}
+                    
+                    # 1. YENİ ƏLAVƏ: Əvvəlcə formdakı xüsusi adı yoxlayırıq
+                    custom_name = extra.get("carrier_company")
+                    if custom_name:
+                        carrier_name = custom_name
+                    else:
+                        carrier_name = carrier.get("company_name", "Daşıyıcı")
+                    
                     extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k not in ("submitted", "submitted_at") and v])
                     date_val = extra.get("submitted_at") or q.get("updated_at") or q.get("created_at")
 
                     report_data.append({
                         "Sorğu ID": f"RFQ #{disp_id}",
                         "Marşrut": route,
-                        "Daşıyıcı Şirkət": carrier.get("company_name", "Daşıyıcı"),
+                        "Daşıyıcı Şirkət": carrier_name, # 2. YENİLƏNDİ: Artıq düzgün adı bura yazdırırıq
                         "Daşıyıcı Email": carrier.get("email", ""),
                         "Qiymət": q.get("price", "Yoxdur") if q.get("price") is not None else "Yoxdur",
                         "Valyuta": q.get("currency", "AZN"),
@@ -825,7 +833,6 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                         "Əlavə Detallar": extra_str if extra_str else "Yoxdur",
                         "Təklif Tarixi": format_excel_date(date_val, is_utc=True, use_ampm=False)
                     })
-
         return {"status": "success", "data": report_data, "category": payload.report_category}
     except Exception as e:
         traceback.print_exc()
