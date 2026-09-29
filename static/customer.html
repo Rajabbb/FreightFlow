@@ -2276,41 +2276,44 @@ function resetFormForAI() {
         }
 
     async function createSubCategory() {
-     const parentCatId = document.getElementById("parentCategoryForSub").value;
-     const subNameInput = document.getElementById("newSubCategoryName");
-     const subName = subNameInput.value.trim();
+    const parentId = document.getElementById("parentCategoryForSub").value;
+    const subNameInput = document.getElementById("newSubCategoryName");
+    const subName = subNameInput.value.trim();
 
-     if (!parentCatId) {
-         alert("Zəhmət olmasa əvvəlcə alt kateqoriyanın aid olacağı əsas kateqoriyanı seçin!");
-         return;
-     }
-     if (!subName) {
-         alert("Zəhmət olmasa alt kateqoriyanın adını yazın!");
-         return;
-     }
+    if (!parentId) {
+        alert("Lütfən əsas kateqoriyanı seçin.");
+        return;
+    }
+    if (!subName) {
+        alert("Alt kateqoriya adını daxil edin.");
+        return;
+    }
 
-     try {
-         const res = await fetch("/carrier-sub-categories", {
-             method: "POST",
-             headers: getAuthHeaders(),
-             body: JSON.stringify({
-                 category_id: parseInt(parentCatId),
-                 name: subName
-             })
-         });
+    try {
+        // Backend API rotanıza göre fetch işlemi
+        const res = await fetch("/carrier-sub-categories", {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ category_id: parentId, name: subName })
+        });
 
-         if (res.status === 401 || res.status === 403) { logout(); return; }
-         if (res.ok) {
-             alert("Alt kateqoriya uğurla yaradıldı!");
-            subNameInput.value = ""; // Xananı təmizlə
-         } else {
-             alert("Alt kateqoriya yaradıla bilmədi.");
-         }
-     } catch (err) {
-         console.error(err);
-         alert("Xəta baş verdi.");
-     }
- }
+        if (res.status === 401 || res.status === 403) { logout(); return; }
+
+        if (res.ok) {
+            // 1. Input kutusunu temizle
+            subNameInput.value = "";
+            
+            // 2. YENİ EKLENEN SATIR: Listeyi sayfa yenilenmeden anında güncelle
+            loadSubCategoriesList(parentId);
+            
+            alert("Alt kateqoriya uğurla yaradıldı!");
+        } else {
+            alert("Alt kateqoriya yaradılarkən xəta baş verdi.");
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
         
         async function deleteCategory(id) {
             if(!confirm("Bu kateqoriyanı silmək istədiyinizə əminsiniz?")) return;
