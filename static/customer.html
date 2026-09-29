@@ -2582,55 +2582,65 @@ function resetFormForAI() {
         }
 
         function renderManageCarriers(carriers) {
-            const box = document.getElementById("manageCarriersContainer");
-            if (!carriers || carriers.length === 0) {
-                box.innerHTML = `<span class="text-muted small p-3 d-block text-center">Uyğun daşıyıcı tapılmadı.</span>`;
-                return;
-            }
+    const box = document.getElementById("manageCarriersContainer");
+    if (!carriers || carriers.length === 0) {
+        box.innerHTML = `<span class="text-muted small p-3 d-block text-center">Uyğun daşıyıcı tapılmadı.</span>`;
+        return;
+    }
 
-            let html = "";
-            for (let c of carriers) {
-                let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
-                
-                let catOptions = `<option value="">-- Kateqoriyasız --</option>`;
-                for(let cat of globalCategoriesCache) {
-                    let selected = (c.category_id == cat.id) ? "selected" : "";
-                    catOptions += `<option value="${cat.id}" ${selected}>${escapeHTML(cat.name)}</option>`;
-                }
-
-                html += `
-                    <div class="carrier-item-row d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 p-2 border-bottom">
-                        <div class="d-flex align-items-start gap-2 text-break w-100">
-                            <input type="checkbox" class="form-check-input manage-carrier-cb mt-1 border-secondary shadow-sm" style="width: 1.15em; height: 1.15em; cursor: pointer; flex-shrink: 0;" value="${carrierId}" onchange="updateBulkDeleteBtn()">
-                            <div>
-                                <strong class="text-dark d-block mb-1" style="line-height: 1.1;">${escapeHTML(c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur')}</strong> 
-                                <span class="text-muted small">(${escapeHTML(c.email || 'Email yoxdur')})</span>
-                            </div>
-                        </div>
-                        <div class="d-flex align-items-center gap-2 w-100 justify-content-sm-end mt-2 mt-sm-0">
-                            
-                            <!-- 1. ƏSAS KATEQORİYA -->
-                            <select id="cat_${carrierId}" class="form-select form-select-sm shadow-sm" style="max-width: 140px; font-size: 11.5px;" onchange="loadSubCategoriesForSelect(this.value, 'sub_cat_${carrierId}'); setCarrierCategory(${carrierId}, this.value);">
-                                ${catOptions}
-                            </select>
-                            
-                            <!-- 2. ALT KATEQORİYA (YENİ ƏLAVƏ) -->
-                            <select id="sub_cat_${carrierId}" class="form-select form-select-sm shadow-sm" style="max-width: 140px; font-size: 11.5px;" onchange="setCarrierCategory(${carrierId}, document.getElementById('cat_${carrierId}').value)" ${c.sub_category_id ? "" : "disabled"}>
-                                <option value="">-- Alt Kat. --</option>
-                            </select>
-
-                            <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 shadow-sm" onclick="deleteCarrier(${carrierId})" title="Sil">
-                                <i class="bi bi-trash3-fill"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-            box.innerHTML = html;
-            document.getElementById("selectAllManageCarriers").checked = false; 
-            updateBulkDeleteBtn();
+    let html = "";
+    for (let c of carriers) {
+        let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
+        
+        let catOptions = `<option value="">-- Kateqoriyasız --</option>`;
+        for(let cat of globalCategoriesCache) {
+            let selected = (c.category_id == cat.id) ? "selected" : "";
+            catOptions += `<option value="${cat.id}" ${selected}>${escapeHTML(cat.name)}</option>`;
         }
 
+        html += `
+            <div class="carrier-item-row d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 p-2 border-bottom">
+                <div class="d-flex align-items-start gap-2 text-break w-100">
+                    <input type="checkbox" class="form-check-input manage-carrier-cb mt-1 border-secondary shadow-sm" style="width: 1.15em; height: 1.15em; cursor: pointer; flex-shrink: 0;" value="${carrierId}" onchange="updateBulkDeleteBtn()">
+                    <div>
+                        <strong class="text-dark d-block mb-1" style="line-height: 1.1;">${escapeHTML(c.company_name || c.name || c.carrier_name || 'Şirkət adı yoxdur')}</strong> 
+                        <span class="text-muted small">(${escapeHTML(c.email || 'Email yoxdur')})</span>
+                    </div>
+                </div>
+                <div class="d-flex align-items-center gap-2 w-100 justify-content-sm-end mt-2 mt-sm-0">
+                    
+                    <!-- 1. ƏSAS KATEQORİYA -->
+                    <select id="cat_${carrierId}" class="form-select form-select-sm shadow-sm" style="max-width: 140px; font-size: 11.5px;" onchange="loadSubCategoriesForSelect(this.value, 'sub_cat_${carrierId}'); setCarrierCategory(${carrierId}, this.value);">
+                        ${catOptions}
+                    </select>
+                    
+                    <!-- 2. ALT KATEQORİYA -->
+                    <select id="sub_cat_${carrierId}" class="form-select form-select-sm shadow-sm" style="max-width: 140px; font-size: 11.5px;" onchange="setCarrierCategory(${carrierId}, document.getElementById('cat_${carrierId}').value)" disabled>
+                        <option value="">-- Alt Kat. --</option>
+                    </select>
+
+                    <button type="button" class="btn btn-sm btn-outline-danger py-1 px-2 shadow-sm" onclick="deleteCarrier(${carrierId})" title="Sil">
+                        <i class="bi bi-trash3-fill"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    // HTML-i ekrana basırıq
+    box.innerHTML = html;
+    document.getElementById("selectAllManageCarriers").checked = false; 
+    updateBulkDeleteBtn();
+
+    // YENİ ƏLAVƏ: Cədvəl yükləndikdən sonra, əsas kateqoriyası olan sətirlərin alt kateqoriyalarını avtomatik çək
+    for (let c of carriers) {
+        if (c.category_id) {
+            let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
+            // Səhifə açılarkən alt kateqoriyanı yükləyir və əgər əvvəlcədən seçilibsə onu seçili edir
+            loadSubCategoriesForSelect(c.category_id, `sub_cat_${carrierId}`, c.sub_category_id);
+        }
+    }
+}
         function filterManageCarriers() {
             const query = document.getElementById("carrierSearchInput").value.toLowerCase();
             const filtered = globalCarriersCache.filter(c => {
