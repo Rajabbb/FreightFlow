@@ -499,16 +499,23 @@ class CategoryDelete(BaseModel):
     customer_id: int
     category_id: int
 
+# YENİ: Alt Kateqoriya Yaratmaq üçün
+class SubCategoryCreate(BaseModel):
+    category_id: int
+    name: str
+
 class CarrierSetCategory(BaseModel):
     customer_id: int
     carrier_id: int
     category_id: Optional[int] = None
+    sub_category_id: Optional[int] = None # YENİ ƏLAVƏ
 
 class CarrierBulkSetCategory(BaseModel):
     customer_id: int
     carrier_ids: List[int]
     category_id: Optional[int] = None
-
+    sub_category_id: Optional[int] = None # YENİ ƏLAVƏ
+    
 class RegisterRequest(BaseModel):
     token: str
     email: EmailStr
@@ -596,8 +603,13 @@ def delete_category(payload: CategoryDelete, current_user: dict = Depends(verify
 def set_carrier_category(payload: CarrierSetCategory, current_user: dict = Depends(verify_token)):
     check_ownership(payload.customer_id, current_user)
     try:
-        val = payload.category_id if payload.category_id and payload.category_id > 0 else None
-        supabase.table("carriers").update({"category_id": val}).eq("id", payload.carrier_id).eq("customer_id", payload.customer_id).execute()
+        val_cat = payload.category_id if payload.category_id and payload.category_id > 0 else None
+        val_sub = payload.sub_category_id if payload.sub_category_id and payload.sub_category_id > 0 else None
+        
+        supabase.table("carriers").update({
+            "category_id": val_cat,
+            "sub_category_id": val_sub
+        }).eq("id", payload.carrier_id).eq("customer_id", payload.customer_id).execute()
         return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -606,13 +618,48 @@ def set_carrier_category(payload: CarrierSetCategory, current_user: dict = Depen
 def bulk_set_carrier_category(payload: CarrierBulkSetCategory, current_user: dict = Depends(verify_token)):
     check_ownership(payload.customer_id, current_user)
     try:
-        val = payload.category_id if payload.category_id and payload.category_id > 0 else None
+        val_cat = payload.category_id if payload.category_id and payload.category_id > 0 else None
+        val_sub = payload.sub_category_id if payload.sub_category_id and payload.sub_category_id > 0 else None
+        
         if not payload.carrier_ids:
             return {"status": "success"}
-        supabase.table("carriers").update({"category_id": val}).in_("id", payload.carrier_ids).eq("customer_id", payload.customer_id).execute()
+            
+        supabase.table("carriers").update({
+            "category_id": val_cat,
+            "sub_category_id": val_sub
+        }).in_("id", payload.carrier_ids).eq("customer_id", payload.customer_id).execute()
         return {"status": "success"}
     except Exception as e:
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+        @app.post("/carrier-sub-categories")
+def create_sub_category(payload: SubCategoryCreate, current_user: dict = Depends(verify_token)):
+    try:
+        # Təhlükəsizlik: Əsas kateqoriyanın mövcudluğunu və icazələri yoxlamaq olar
+        res = supabase.table("carrier_sub_categories").insert({
+            "category_id": payload.category_id,
+            "name": payload.name
+        }).execute()
+        return {"status": "success", "data": res.data[0]}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/carrier-sub-categories/{category_id}")
+def get_sub_categories(category_id: int, current_user: dict = Depends(verify_token)):
+    try:
+        res = supabase.table("carrier_sub_categories").select("*").eq("category_id", category_id).execute()
+        return {"status": "success", "data": res.data or []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/carrier-sub-categories/{sub_id}")
+def delete_sub_category(sub_id: int, current_user: dict = Depends(verify_token)):
+    try:
+        supabase.table("carrier_sub_categories").delete().eq("id", sub_id).execute()
+        return {"status": "success"}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/customer/stats/{customer_id}")
