@@ -7,7 +7,7 @@
     
     <meta name="robots" content="noindex, nofollow, nosnippet">
     <meta name="googlebot" content="noindex, nofollow, nosnippet">
-    <meta name="description" content="Arachi Logistics - Şəxsi Müştəri Paneli. Yalnız qeydiyyatdan keçmiş və təsdiqlənmiş istifadəçilər üçün nəzərdə tutulub.">
+    <meta name="description" content="Arachi - Personal Client Dashboard. Intended only for registered and verified users.">
 
     <link rel="icon" type="image/png" href="/static/arachi-logo.png">
     
@@ -483,19 +483,19 @@
         <div class="container-fluid px-3 px-md-4">
             <a class="navbar-brand fw-bold text-truncate d-flex align-items-center" href="#">
                 <img src="/static/arachi-logo.png" alt="Arachi" style="height: 26px; width: auto;" class="me-1">
-                <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">| Müştəri Paneli</span>
+                <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">Müştəri paneli/Customer Panel</span>
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
-                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
+                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət/Company</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-envelope me-1"></i> E-poçtu Dəyiş
+                    <i class="bi bi-envelope me-1"></i> E-poçtu Dəyiş/Change Email
                 </button>
                 <button onclick="openChangePasswordModal()" class="btn btn-outline-primary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-key me-1"></i> Şifrəni Dəyiş
+                    <i class="bi bi-key me-1"></i> Şifrəni Dəyiş/Change Password
                 </button>
                 <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-box-arrow-right me-1"></i> Çıxış
+                    <i class="bi bi-box-arrow-right me-1"></i> Çıxış/Exit
                 </button>
             </div>
         </div>
@@ -507,22 +507,22 @@
         <ul class="nav nav-tabs main-app-tabs mb-4 flex-nowrap overflow-auto" id="mainAppTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tab-dashboard-btn" data-bs-toggle="tab" data-bs-target="#tab-dashboard" type="button" role="tab" aria-controls="tab-dashboard" aria-selected="true">
-                    <i class="bi bi-speedometer2 me-1"></i> Analitika və Panel
+                    <i class="bi bi-speedometer2 me-1"></i> Analitika və Panel/Analytics and Dashboard
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-vendors-btn" data-bs-toggle="tab" data-bs-target="#tab-vendors" type="button" role="tab" aria-controls="tab-vendors" aria-selected="false">
-                    <i class="bi bi-people-fill me-1"></i> Daşıyıcı Bazası
+                    <i class="bi bi-people-fill me-1"></i> Daşıyıcı Bazası/Carrier Base
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-builder-btn" data-bs-toggle="tab" data-bs-target="#tab-builder" type="button" role="tab" aria-controls="tab-builder" aria-selected="false">
-                    <i class="bi bi-box-seam-fill me-1"></i> Yeni RFQ Yarat
+                    <i class="bi bi-box-seam-fill me-1"></i> Yeni RFQ Yarat/Create New RFQ
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-tracking-btn" data-bs-toggle="tab" data-bs-target="#tab-tracking" type="button" role="tab" aria-controls="tab-tracking" aria-selected="false">
-                    <i class="bi bi-ui-checks-grid me-1"></i> Sorğular və Müqayisə
+                    <i class="bi bi-ui-checks-grid me-1"></i> Sorğular və Müqayisə/Inquiries and Comparison
                 </button>
             </li>
         </ul>
@@ -536,19 +536,19 @@
         <div class="row g-2 g-md-3 mb-4">
             <div class="col-12 col-sm-4">
                 <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Aktiv RFQ Sorğuları</span>
+                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Aktiv RFQ Sorğuları/Active RFQ Requests</span>
                     <h3 id="statActiveRfqs">0</h3>
                 </div>
             </div>
             <div class="col-12 col-sm-4">
                 <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Tamamlanmış Daşımalar</span>
+                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Tamamlanmış Daşımalar/Completed Shipments</span>
                     <h3 id="statCompleted">0</h3>
                 </div>
             </div>
             <div class="col-12 col-sm-4">
                 <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Daşıyıcı Bazası</span>
+                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Daşıyıcı Bazası/Carrier Base</span>
                     <h3 id="statCarriersCount">0</h3>
                 </div>
             </div>
