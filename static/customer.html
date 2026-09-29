@@ -2960,24 +2960,42 @@ function loadBulkSubCategories(categoryId) {
                 checkboxes.forEach(cb => selectedCarriers.push(parseInt(cb.value)));
                 if (selectedCarriers.length === 0) { alert("Zəhmət olmasa siyahıdan ən azı bir daşıyıcı seçin!"); return; }
             } else if (sendOpt === 'category' && !window.isPublicLinkMode) {
-                // Həm əsas, həm də alt kateqoriyaları yığırıq
-                const checkboxes = document.querySelectorAll(".cat-item-check:checked");
-                checkboxes.forEach(cb => selectedCategories.push(parseInt(cb.value)));
+                // Əsas və alt kateqoriyaları yığırıq
+                document.querySelectorAll(".cat-item-check:checked").forEach(cb => selectedCategories.push(parseInt(cb.value)));
                 
-                // YENİ: Seçilmiş alt kateqoriya ID-lərini yığmaq üçün
                 let selectedSubCategories = [];
-                const subCheckboxes = document.querySelectorAll(".sub-cat-item-check:checked");
-                subCheckboxes.forEach(cb => selectedSubCategories.push(parseInt(cb.value)));
+                document.querySelectorAll(".sub-cat-item-check:checked").forEach(cb => selectedSubCategories.push(parseInt(cb.value)));
 
                 if (selectedCategories.length === 0 && selectedSubCategories.length === 0) { 
                     alert("Zəhmət olmasa siyahıdan ən azı bir kateqoriya və ya alt kateqoriya seçin!"); 
                     return; 
                 }
-                
-                // QEYD: Backend-ə göndərilən payload-da 'sub_category_ids' adlı yeni bir field əlavə etmək lazımdır.
-                // Bir az aşağıda, payload obyektinin içərisindəki:
-                // category_ids: selectedCategories
-                // hissəsinin yanına bunu əlavə edin: sub_category_ids: selectedSubCategories
+
+                // Backend-in qarışdırmaması üçün daşıyıcıları birbaşa burada (frontend-də) dəqiq filtrləyirik
+                selectedCarriers = [];
+                globalCarriersCache.forEach(c => {
+                    let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
+                    
+                    if (c.sub_category_id && selectedSubCategories.includes(c.sub_category_id)) {
+                        // Əgər daşıyıcının alt kateqoriyası varsa və o alt kateqoriya seçilibsə əlavə et
+                        selectedCarriers.push(carrierId);
+                    } else if (c.category_id && selectedCategories.includes(c.category_id) && !c.sub_category_id) {
+                        // Əgər daşıyıcının heç bir alt kateqoriyası yoxdursa, amma aid olduğu əsas kateqoriya seçilibsə əlavə et
+                        selectedCarriers.push(carrierId);
+                    }
+                });
+
+                // Ehtimala qarşı təkrar ID-ləri silirik
+                selectedCarriers = [...new Set(selectedCarriers)];
+
+                if (selectedCarriers.length === 0) {
+                    alert("Seçdiyiniz kateqoriya və ya alt kateqoriyalarda heç bir daşıyıcı tapılmadı!");
+                    return;
+                }
+
+                // Arxa planın (backend) bütün "A" kateqoriyasına göndərməsinin qarşısını almaq üçün 
+                // əməliyyat rejimini məcburi şəkildə "Seçilmiş daşıyıcılar (selected)" olaraq dəyişirik.
+                sendOpt = 'selected';
             }
 
             let uploadedAttachmentUrl = null;
