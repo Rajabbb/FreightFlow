@@ -408,8 +408,8 @@
                         req.required_fields.forEach(field => {
                             if (typeof field === 'string') {
                             const lowField = field.toLowerCase();
-                            // "həcm / palet" BİLGİSİNİN ALT NOTLARDA ÇIKMASINI ENGELLİYORUZ
-                            if (lowField.includes("loading") || lowField.includes("deadline") || lowField.includes("deadl") || lowField.includes("fayl") || lowField.includes("attachment") || field.includes("http") || field.includes("Fayl:") || lowField.includes("həcm / palet")) return;
+                            // Hacim ve tekrarlanan ek bilgi notlarını gizliyoruz
+                            if (lowField.includes("loading") || lowField.includes("deadline") || lowField.includes("deadl") || lowField.includes("fayl") || lowField.includes("attachment") || field.includes("http") || field.includes("Fayl:") || lowField.includes("həcm / palet") || lowField.includes("additional information") || lowField.includes("əlavə məlumat")) return;
                         }
                             hasItems = true;
                             const noteDiv = document.createElement("div");
