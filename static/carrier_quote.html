@@ -323,7 +323,7 @@
                 let volumeText = req.volume_m3;
                 if (!volumeText || volumeText === 0 || volumeText === "0" || volumeText === 0.0 || volumeText === "Qeyd edilməyib" || volumeText === "Not specified") {
                     volumeText = "Not specified";
-                } else { volumeText = `${volumeText} m³`; }
+                } else { volumeText = `${volumeText}`; }
                 
                 const weightVolEl = document.getElementById("weight_volume_text");
                 if (weightVolEl) weightVolEl.innerText = `${escapeHTML(req.weight_kg || 0)} kg / ${escapeHTML(volumeText)}`;
