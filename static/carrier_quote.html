@@ -367,24 +367,28 @@
 
                 const loadingDateBox = document.getElementById("loading_date_box");
                 const loadingDateText = document.getElementById("loading_date_text");
+                let finalLoadingStr = "";
                 if (loadingDateVal && String(loadingDateVal).trim() !== "") {
-                    if (loadingDateText) loadingDateText.innerText = formatDateTime(loadingDateVal);
+                    finalLoadingStr = formatDateTime(loadingDateVal);
+                    if (loadingDateText) loadingDateText.innerText = finalLoadingStr;
                     if (loadingDateBox) loadingDateBox.classList.remove("hidden");
                 } else { if (loadingDateBox) loadingDateBox.classList.add("hidden"); }
 
                 const deadlineBox = document.getElementById("deadline_box");
                 const deadlineText = document.getElementById("deadline_text");
-                
-                // LOADING DATE İLE DEADLINE BİREBİR AYNIYSA DEADLINE'I GİZLE
-                if (deadlineVal === loadingDateVal) {
-                    deadlineVal = null;
-                }
-
+                let finalDeadlineStr = "";
                 if (deadlineVal && String(deadlineVal).trim() !== "") {
-                    if (deadlineText) deadlineText.innerText = formatDateTime(deadlineVal);
+                    finalDeadlineStr = formatDateTime(deadlineVal);
+                }
+                
+                // Eğer ekranda görünecek Loading Date ve Deadline yazıları birebir aynıysa Deadline kutusunu gizle
+                if (finalDeadlineStr && finalDeadlineStr !== finalLoadingStr) {
+                    if (deadlineText) deadlineText.innerText = finalDeadlineStr;
                     if (deadlineBox) deadlineBox.classList.remove("hidden");
-                } else { if (deadlineBox) deadlineBox.classList.add("hidden"); }
-
+                } else { 
+                    if (deadlineBox) deadlineBox.classList.add("hidden"); 
+                }
+                 
                 const fieldsList = document.getElementById("fields_list");
                 if (fieldsList) {
                     fieldsList.innerHTML = "";
