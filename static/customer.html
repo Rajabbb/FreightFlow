@@ -3108,14 +3108,21 @@ function loadBulkSubCategories(categoryId) {
             const useCustomTemplate = document.getElementById("customTemplateRadio").checked;
             const customEmailSubjectVal = useCustomTemplate ? (document.getElementById("custom_email_subject")?.value.trim() || "") : "";
             const customEmailBodyVal = useCustomTemplate ? (document.getElementById("custom_email_body")?.value.trim() || "") : "";
-           // CBM və ya Palet növünü alıb rəqəmlə birləşdiririk (Məs: "15 Palet")
+            // CBM veya Palet növünü alırıq
             const volTypeSelected = document.getElementById("volume_type")?.value || "CBM";
-            const finalVolumeStr = volumeVal ? `${volumeVal} ${volTypeSelected}` : "";
+           // Arka plan hata vermesin diye sadece rakamı alıyoruz
+            const parsedVolume = parseFloat(volumeVal) || 0;
 
-            const payload = {
+          // Tür bilgisinin kaybolmaması için zorunlu alanlara (notlara) ekliyoruz
+          if(parsedVolume > 0) {
+          requiredFieldsList.push(`Həcm / Palet: ${parsedVolume} ${volTypeSelected}`);
+          }
+ 
+           const payload = {
                 customer_id: getCustomerId(), origin: originVal, loading_location: originVal, destination: destinationVal, delivery_location: destinationVal,
                 cargo_type: cargoTypeVal, cargo: cargoTypeVal, weight_kg: parseFloat(weightVal) || 0, weight: parseFloat(weightVal) || 0,
-                volume_m3: finalVolumeStr, volume: finalVolumeStr,
+                volume_m3: parsedVolume, volume: parsedVolume, // Artık API'ye sadece rakam gidiyor
+                // ... alt kısımlar eskisi gibi kalacak
                 deadline: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
                 loading_date: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
                 truck_type: document.getElementById("chk_truck_type")?.checked ? (document.getElementById("inp_truck_type")?.value || "") : "",
