@@ -633,8 +633,7 @@ def bulk_set_carrier_category(payload: CarrierBulkSetCategory, current_user: dic
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-
-        @app.post("/carrier-sub-categories")
+@app.post("/carrier-sub-categories")
 def create_sub_category(payload: SubCategoryCreate, current_user: dict = Depends(verify_token)):
     try:
         # Təhlükəsizlik: Əsas kateqoriyanın mövcudluğunu və icazələri yoxlamaq olar
