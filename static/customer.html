@@ -2723,31 +2723,48 @@ function resetFormForAI() {
    // Alt kateqoriyaları API-dən çəkib hədəf select elementinə doldurur
    async function loadSubCategoriesForSelect(categoryId, targetSelectId, selectedSubId = null) {
     const targetSelect = document.getElementById(targetSelectId);
-    targetSelect.innerHTML = '<option value="">-- Alt Kateqoriya --</option>';
-    
-    if (!categoryId) {
+    if (!targetSelect) return;
+
+    // İçeriği temizle ve varsayılan seçeneği ekle
+    targetSelect.innerHTML = '<option value="">-- Alt Kat. --</option>';
+
+    // Eğer kategori seçilmemişse veya "remove" seçilmişse alt kategoriyi kapat
+    if (!categoryId || categoryId === "remove") {
         targetSelect.disabled = true;
         return;
     }
 
     try {
-        const token = localStorage.getItem("arachi_token"); // Tokeni necə saxlayırsınızsa ona uyğun yazın
-        const res = await fetch(`${BASE_URL}/carrier-sub-categories/${categoryId}`, {
-            headers: { "Authorization": `Bearer ${token}` }
+        // Sizin sisteminize uygun fetch isteği (BASE_URL kullanmadan, getAuthHeaders ile)
+        const res = await fetch(`/carrier-sub-categories/${categoryId}`, {
+            headers: getAuthHeaders()
         });
+
+        if (res.status === 401 || res.status === 403) { logout(); return; }
+
         const data = await res.json();
         
-        if (data.status === "success" && data.data.length > 0) {
-            targetSelect.disabled = false;
-            data.data.forEach(sub => {
-                const isSelected = selectedSubId == sub.id ? "selected" : "";
-                targetSelect.innerHTML += `<option value="${sub.id}" ${isSelected}>${sub.name}</option>`;
+        let subCategories = [];
+        // API'den gelen verinin yapısına göre listeyi alıyoruz
+        if (data && data.status === "success" && data.data) {
+            subCategories = data.data;
+        } else if (Array.isArray(data)) {
+            subCategories = data;
+        }
+
+        if (subCategories.length > 0) {
+            targetSelect.disabled = false; // Kutuyu aktif hale getir
+            subCategories.forEach(sub => {
+                const isSelected = (selectedSubId == sub.id) ? "selected" : "";
+                targetSelect.innerHTML += `<option value="${sub.id}" ${isSelected}>${escapeHTML(sub.name)}</option>`;
             });
         } else {
-            targetSelect.disabled = true; // Əgər bu kateqoriyanın alt kateqoriyası yoxdursa bağlı qalsın
+            // Eğer bu kategorinin hiç alt kategorisi yoksa kutu kapalı kalsın
+            targetSelect.disabled = true;
         }
     } catch (error) {
-        console.error("Alt kateqoriyalar yüklənə bilmədi:", error);
+        console.error("Alt kategoriler yüklenemedi:", error);
+        targetSelect.disabled = true;
     }
 }
 
