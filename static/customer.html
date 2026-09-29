@@ -561,12 +561,12 @@
                     <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
                         <div>
                             <div class="section-title mb-1">
-                                <i class="bi bi-clock-history text-primary me-2"></i> Son Gələn Təkliflər
+                                <i class="bi bi-clock-history text-primary me-2"></i> Son Gələn Təkliflər/Latest Offers
                             </div>
-                            <div class="section-desc" style="font-size: 13px;">Daşıyıcılardan gələn son 10 qiymət təklifi.</div>
+                            <div class="section-desc" style="font-size: 13px;">Daşıyıcılardan gələn son 10 qiymət təklifi/The last 10 offers from carriers.</div>
                         </div>
                         <button onclick="loadRecentQuotes()" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm d-flex align-items-center text-nowrap flex-shrink-0" style="font-size: 12px; font-weight: 500; transition: all 0.2s;">
-                            <i class="bi bi-arrow-clockwise me-1" style="font-size: 14px;"></i> Yenilə
+                            <i class="bi bi-arrow-clockwise me-1" style="font-size: 14px;"></i> Yenilə/Refresh
                         </button>
                     </div>
                     
@@ -574,14 +574,14 @@
                         <table class="table table-hover align-middle mb-0 text-sm">
                             <thead class="bg-light text-muted text-nowrap" style="font-size: 12.5px;">
                                 <tr>
-                                    <th class="py-3 px-3">Sorğu (RFQ)</th>
-                                    <th class="py-3 px-3">Daşıyıcı</th>
-                                    <th class="py-3 px-3 text-success">Qiymət</th>
-                                    <th class="py-3 px-3 text-end">Əməliyyat</th>
+                                    <th class="py-3 px-3">Sorğu/Inquiries (RFQ)</th>
+                                    <th class="py-3 px-3">Daşıyıcı/Carrier</th>
+                                    <th class="py-3 px-3 text-success">Qiymət/Price</th>
+                                    <th class="py-3 px-3 text-end">Əməliyyat/Operation</th>
                                 </tr>
                             </thead>
                             <tbody id="recentQuotesContainer">
-                                <tr><td colspan="4" class="text-center text-muted py-4 small">Təkliflər yüklənir...</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-4 small">Təkliflər yüklənir.../Loading offers...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -592,47 +592,47 @@
             <div class="col-12 col-lg-4">
                 <div class="card h-100 mb-0 shadow-sm border-0 bg-light">
                     <div class="section-title mb-1">
-                        <i class="bi bi-file-earmark-bar-graph text-success"></i> Hesabat Mərkəzi
+                        <i class="bi bi-file-earmark-bar-graph text-success"></i> Hesabat Mərkəzi/Reporting Center
                     </div>
-                    <div class="section-desc mb-3">Sistemdən RFQ və ya Təklif məlumatlarını endirin.</div>
+                    <div class="section-desc mb-3">Sistemdən RFQ və ya Təklif məlumatlarını endirin/Download RFQ or proposal data from the system.</div>
                     
                     <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm">
-                        <label class="form-label text-muted small fw-bold mb-2 d-block">Hesabatın Məzmunu</label>
+                        <label class="form-label text-muted small fw-bold mb-2 d-block">Hesabatın Məzmunu/Report Contents</label>
                         <div class="form-check mb-2">
                             <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catRfq" value="rfq" checked>
-                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catRfq">📦 Bütün RFQ Detalları</label>
+                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catRfq">📦 Bütün RFQ Detalları/All RFQ Details</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catQuote" value="quote">
-                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catQuote">💬 Gələn Təkliflər (Quotes)</label>
+                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catQuote">💬 Gələn Təkliflər/Quotes</label>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">Sorğu aralığı</label>
+                        <label class="form-label text-muted small fw-bold">Sorğu aralığı/Query interval</label>
                         <select class="form-select shadow-sm" id="reportTypeSelect" onchange="toggleReportOptions()" style="font-size: 13px;">
-                            <option value="all">Bütün Sorğular (Ümumi)</option>
-                            <option value="today">Bugünün sorğuları</option>
-                            <option value="date_range">İstənilən tarix aralığı</option>
-                            <option value="selected">Seçilmiş RFQ-lər</option>
+                            <option value="all">Bütün Sorğular (Ümumi)/All Inquiries (General)</option>
+                            <option value="today">Bugünün sorğuları/Today's inquiries</option>
+                            <option value="date_range">İstənilən tarix aralığı/Any date range</option>
+                            <option value="selected">Seçilmiş RFQ-lər/Selected RFQs</option>
                         </select>
                     </div>
 
                     <div id="reportDateRangeOptions" class="d-none mb-3 p-3 bg-white border rounded-3 shadow-sm">
                         <div class="mb-2">
-                            <label class="form-label text-muted" style="font-size: 11px;">Başlanğıc Tarixi</label>
+                            <label class="form-label text-muted" style="font-size: 11px;">Başlanğıc Tarixi/Start Date</label>
                             <input type="date" class="form-control form-control-sm" id="reportStartDate">
                         </div>
                         <div>
-                            <label class="form-label text-muted" style="font-size: 11px;">Bitiş Tarixi</label>
+                            <label class="form-label text-muted" style="font-size: 11px;">Bitiş Tarixi/End Date</label>
                             <input type="date" class="form-control form-control-sm" id="reportEndDate">
                         </div>
                     </div>
 
                     <div id="reportSelectedOptions" class="d-none mb-3 p-2 bg-white border rounded-3 shadow-sm" style="max-height: 150px; overflow-y: auto;">
-                        <small class="text-muted fw-bold d-block mb-2 ps-1" style="font-size: 11px;">Aşağıdan sorğuları seçin:</small>
+                        <small class="text-muted fw-bold d-block mb-2 ps-1" style="font-size: 11px;">Aşağıdan sorğuları seçin/Select queries from below:</small>
                         <div id="reportRfqCheckboxes">
-                            <span class="text-muted small">Yüklənir...</span>
+                            <span class="text-muted small">Yüklənir.../Loading...</span>
                         </div>
                     </div>
 
@@ -648,7 +648,7 @@
                     </div>
 
                     <button class="btn btn-success w-100 fw-bold shadow-sm" onclick="downloadReport()">
-                        <i class="bi bi-cloud-arrow-down-fill me-1"></i> Hesabatı Endir
+                        <i class="bi bi-cloud-arrow-down-fill me-1"></i> Hesabatı Endir/Download the Report
                     </button>
                 </div>
             </div>
