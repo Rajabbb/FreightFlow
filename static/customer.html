@@ -2417,24 +2417,89 @@ async function loadSubCategoriesList(categoryId) {
       } catch(err) { console.error(err); }
    }
 
-        function renderCategoryCheckboxList() {
-            const box = document.getElementById("categoryCheckboxList");
-            if(globalCategoriesCache.length === 0) {
-                box.innerHTML = `<span class="text-danger small p-2 d-block">Bazada kateqoriya tapılmadı. Zəhmət olmasa "Daşıyıcı Bazası" bölümündən yaradın.</span>`;
+        // Kateqoriya və alt kateqoriya ağacını ekrana çəkən funksiya
+async function renderCategoryCheckboxList() {
+    const box = document.getElementById("categoryCheckboxList");
+    if(globalCategoriesCache.length === 0) {
+        box.innerHTML = `<span class="text-danger small p-2 d-block">Bazada kateqoriya tapılmadı. Zəhmət olmasa "Daşıyıcı Bazası" bölümündən yaradın.</span>`;
+        return;
+    }
+    
+    let html = "";
+    for (let cat of globalCategoriesCache) {
+        // Hər əsas kateqoriya üçün HTML strukturu
+        html += `
+            <div class="carrier-item-row mb-1 p-2 border-bottom" style="background-color: #ffffff;">
+                <div class="form-check mb-0 w-100 d-flex align-items-center justify-content-between">
+                    <div>
+                        <input class="form-check-input cat-item-check me-2 shadow-sm border-secondary" type="checkbox" value="${cat.id}" id="cat_${cat.id}" onchange="toggleSubCategoriesDisplay(${cat.id}, this.checked)" style="cursor: pointer; width:1.15em; height:1.15em;">
+                        <label class="form-check-label fw-bold text-dark" for="cat_${cat.id}" style="cursor: pointer;">${escapeHTML(cat.name)}</label>
+                    </div>
+                    <i class="bi bi-chevron-down text-muted" style="cursor:pointer; font-size:12px;" onclick="document.getElementById('cat_${cat.id}').click()"></i>
+                </div>
+                
+                <!-- Alt kateqoriyaların açılacağı gizli konteyner -->
+                <div id="sub_cat_container_${cat.id}" class="ms-4 mt-2 d-none flex-column gap-1 border-start ps-3 border-primary border-opacity-25">
+                    <span class="text-muted small" style="font-size:11px;">Yüklənir...</span>
+                </div>
+            </div>`;
+    }
+    box.innerHTML = html;
+}
+
+// Əsas kateqoriya işarələndikdə (checked) alt kateqoriyaları API-dən çəkib göstərən və ya gizlədən funksiya
+async function toggleSubCategoriesDisplay(parentId, isChecked) {
+    const container = document.getElementById(`sub_cat_container_${parentId}`);
+    if (!container) return;
+    
+    if (isChecked) {
+        container.classList.remove('d-none');
+        container.classList.add('d-flex');
+        
+        // Əgər artıq yüklənibsə, yenidən APİ-yə sorğu atmağa ehtiyac yoxdur
+        if (!container.innerHTML.includes("Yüklənir")) {
+            // Seçildiyi üçün bütün alt kateqoriyaları da avtomatik seçili et
+            const subChecks = container.querySelectorAll('.sub-cat-item-check');
+            subChecks.forEach(cb => cb.checked = true);
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/carrier-sub-categories/${parentId}`, { headers: getAuthHeaders() });
+            if (res.status === 401 || res.status === 403) { logout(); return; }
+            const data = await res.json();
+            
+            let subCats = [];
+            if (data && data.status === "success" && data.data) subCats = data.data;
+            else if (Array.isArray(data)) subCats = data;
+            
+            if (subCats.length === 0) {
+                container.innerHTML = `<span class="text-muted" style="font-size: 11px;">Alt kateqoriya yoxdur.</span>`;
                 return;
             }
-            let html = "";
-            for (let cat of globalCategoriesCache) {
-                html += `
-                    <div class="carrier-item-row mb-1 p-2" onclick="document.getElementById('cat_${cat.id}').click(); event.stopPropagation();">
-                        <div class="form-check mb-0 w-100">
-                            <input class="form-check-input cat-item-check me-2 shadow-sm border-secondary" type="checkbox" value="${cat.id}" id="cat_${cat.id}" onclick="event.stopPropagation();" style="cursor: pointer; width:1.15em; height:1.15em;">
-                            <label class="form-check-label fw-bold text-dark" for="cat_${cat.id}" style="cursor: pointer;">${escapeHTML(cat.name)}</label>
-                        </div>
+            
+            let subHtml = "";
+            subCats.forEach(sub => {
+                // Əsas kateqoriya seçildiyi üçün alt kateqoriyaları da (checked) edirik
+                subHtml += `
+                    <div class="form-check mb-0">
+                        <input class="form-check-input sub-cat-item-check border-secondary shadow-sm" type="checkbox" value="${sub.id}" id="sub_cat_${sub.id}" data-parent-id="${parentId}" checked style="cursor: pointer; width:1em; height:1em;">
+                        <label class="form-check-label text-secondary" for="sub_cat_${sub.id}" style="cursor: pointer; font-size: 12px;">${escapeHTML(sub.name)}</label>
                     </div>`;
-            }
-            box.innerHTML = html;
+            });
+            container.innerHTML = subHtml;
+            
+        } catch (err) {
+            container.innerHTML = `<span class="text-danger small">Xəta baş verdi.</span>`;
         }
+    } else {
+        // Əsas kateqoriya işarədən çıxarıldısa, alt kateqoriyaları gizlət və seçimlərini ləğv et
+        container.classList.add('d-none');
+        container.classList.remove('d-flex');
+        const subChecks = container.querySelectorAll('.sub-cat-item-check');
+        subChecks.forEach(cb => cb.checked = false);
+    }
+}
 
         // TOPLU ƏMƏLİYYATLAR
         function toggleAllManageCarriers(checkbox) {
@@ -2894,9 +2959,25 @@ function loadBulkSubCategories(categoryId) {
                 const checkboxes = document.querySelectorAll(".carrier-item-check:checked");
                 checkboxes.forEach(cb => selectedCarriers.push(parseInt(cb.value)));
                 if (selectedCarriers.length === 0) { alert("Zəhmət olmasa siyahıdan ən azı bir daşıyıcı seçin!"); return; }
-            } else if (sendOpt === 'category' && !window.isPublicLinkMode) {                const checkboxes = document.querySelectorAll(".cat-item-check:checked");
+            } else if (sendOpt === 'category' && !window.isPublicLinkMode) {
+                // Həm əsas, həm də alt kateqoriyaları yığırıq
+                const checkboxes = document.querySelectorAll(".cat-item-check:checked");
                 checkboxes.forEach(cb => selectedCategories.push(parseInt(cb.value)));
-                if (selectedCategories.length === 0) { alert("Zəhmət olmasa siyahıdan ən azı bir kateqoriya seçin!"); return; }
+                
+                // YENİ: Seçilmiş alt kateqoriya ID-lərini yığmaq üçün
+                let selectedSubCategories = [];
+                const subCheckboxes = document.querySelectorAll(".sub-cat-item-check:checked");
+                subCheckboxes.forEach(cb => selectedSubCategories.push(parseInt(cb.value)));
+
+                if (selectedCategories.length === 0 && selectedSubCategories.length === 0) { 
+                    alert("Zəhmət olmasa siyahıdan ən azı bir kateqoriya və ya alt kateqoriya seçin!"); 
+                    return; 
+                }
+                
+                // QEYD: Backend-ə göndərilən payload-da 'sub_category_ids' adlı yeni bir field əlavə etmək lazımdır.
+                // Bir az aşağıda, payload obyektinin içərisindəki:
+                // category_ids: selectedCategories
+                // hissəsinin yanına bunu əlavə edin: sub_category_ids: selectedSubCategories
             }
 
             let uploadedAttachmentUrl = null;
