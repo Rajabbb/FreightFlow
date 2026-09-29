@@ -2254,19 +2254,30 @@ function resetFormForAI() {
         }
 
         async function setCarrierCategory(carrierId, categoryId) {
-            let catId = categoryId ? parseInt(categoryId) : null;
-            try {
-                const res = await fetch("/carriers/set-category", {
-                    method: "POST", headers: getAuthHeaders(),
-                    body: JSON.stringify({customer_id: getCustomerId(), carrier_id: carrierId, category_id: catId})
-                });
-                if (res.status === 401 || res.status === 403) { logout(); return; }
-                if(res.ok) {
-                    let c = globalCarriersCache.find(x => (x.id !== undefined ? x.id : x.carrier_id) == carrierId);
-                    if(c) c.category_id = catId;
-                }
-            } catch(err) {}
+         let catId = categoryId ? parseInt(categoryId) : null;
+         let subCatSelect = document.getElementById(`sub_cat_${carrierId}`); // YENİ
+         let subCatId = (subCatSelect && subCatSelect.value) ? parseInt(subCatSelect.value) : null; // YENİ
+
+        try {
+          const res = await fetch("/carriers/set-category", {
+            method: "POST", headers: getAuthHeaders(),
+            body: JSON.stringify({
+                customer_id: getCustomerId(), 
+                carrier_id: carrierId, 
+                category_id: catId,
+                sub_category_id: subCatId // YENİ ƏLAVƏ EDİLDİ
+             })
+         });
+         if (res.status === 401 || res.status === 403) { logout(); return; }
+         if(res.ok) {
+            let c = globalCarriersCache.find(x => (x.id !== undefined ? x.id : x.carrier_id) == carrierId);
+            if(c) {
+                c.category_id = catId;
+                c.sub_category_id = subCatId;
+            }
         }
+      } catch(err) { console.error(err); }
+   }
 
         function renderCategoryCheckboxList() {
             const box = document.getElementById("categoryCheckboxList");
@@ -2313,42 +2324,55 @@ function resetFormForAI() {
         }
 
         async function applyBulkCategory() {
-            const bulkSelect = document.getElementById("bulkCategorySelect");
-            const val = bulkSelect.value;
-            if(!val) {
-                alert("Zəhmət olmasa tətbiq etmək üçün kateqoriya seçin!");
-                return;
-            }
+    const bulkSelect = document.getElementById("bulkCategorySelect");
+    const bulkSubSelect = document.getElementById("bulk_sub_category"); // YENİ
+    
+    const val = bulkSelect.value;
+    const subVal = bulkSubSelect.value; // YENİ
+    
+    if(!val) {
+        alert("Zəhmət olmasa tətbiq etmək üçün kateqoriya seçin!");
+        return;
+    }
 
-            const selectedCheckboxes = document.querySelectorAll(".manage-carrier-cb:checked");
-            const carrierIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
+    const selectedCheckboxes = document.querySelectorAll(".manage-carrier-cb:checked");
+    const carrierIds = Array.from(selectedCheckboxes).map(cb => parseInt(cb.value));
 
-            if(carrierIds.length === 0) {
-                alert("Zəhmət olmasa ən azı bir daşıyıcı seçin!");
-                return;
-            }
+    if(carrierIds.length === 0) {
+        alert("Zəhmət olmasa ən azı bir daşıyıcı seçin!");
+        return;
+    }
 
-            let categoryId = null;
-            if(val !== "remove") { categoryId = parseInt(val); }
+    let categoryId = null;
+    if(val !== "remove") { categoryId = parseInt(val); }
 
-            try {
-                const res = await fetch("/carriers/bulk-set-category", {
-                    method: "POST",
-                    headers: getAuthHeaders(),
-                    body: JSON.stringify({ customer_id: getCustomerId(), carrier_ids: carrierIds, category_id: categoryId })
-                });
+    let subCategoryId = null; // YENİ
+    if(subVal) { subCategoryId = parseInt(subVal); } // YENİ
 
-                if (res.status === 401 || res.status === 403) { logout(); return; }
+    try {
+        const res = await fetch("/carriers/bulk-set-category", {
+            method: "POST",
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ 
+                customer_id: getCustomerId(), 
+                carrier_ids: carrierIds, 
+                category_id: categoryId,
+                sub_category_id: subCategoryId // YENİ ƏLAVƏ EDİLDİ
+            })
+        });
 
-                if(res.ok) {
-                    alert("Kateqoriya seçilmiş daşıyıcılara tətbiq edildi!");
-                    bulkSelect.value = "";
-                    document.getElementById("selectAllManageCarriers").checked = false;
-                    document.getElementById('bulkDeleteBtn').classList.add('d-none');
-                    loadManageCarriersList();
-                } else { alert("Xəta baş verdi"); }
-            } catch(err) {}
-        }
+        if (res.status === 401 || res.status === 403) { logout(); return; }
+
+        if(res.ok) {
+            alert("Kateqoriya seçilmiş daşıyıcılara tətbiq edildi!");
+            bulkSelect.value = "";
+            if(bulkSubSelect) { bulkSubSelect.value = ""; bulkSubSelect.disabled = true; }
+            document.getElementById("selectAllManageCarriers").checked = false;
+            document.getElementById('bulkDeleteBtn').classList.add('d-none');
+            loadManageCarriersList();
+        } else { alert("Xəta baş verdi"); }
+    } catch(err) { console.error(err); }
+}
 
         async function bulkDeleteCarriers() {
             const selectedCheckboxes = document.querySelectorAll('.manage-carrier-cb:checked');
