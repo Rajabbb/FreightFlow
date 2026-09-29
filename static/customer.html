@@ -2314,6 +2314,67 @@ function resetFormForAI() {
             } catch(err) {}
         }
 
+
+// Alt kategorileri ekrana rozet olarak çizer
+async function loadSubCategoriesList(categoryId) {
+    const container = document.getElementById("subCategoryListContainer");
+    if (!categoryId) {
+        container.innerHTML = '<span class="text-muted small">Alt kateqoriyaları görmək və silmək üçün soldan əsas kateqoriya seçin...</span>';
+        return;
+    }
+    
+    container.innerHTML = '<span class="text-muted small">Yüklənir...</span>';
+    
+    try {
+        const res = await fetch(`/carrier-sub-categories/${categoryId}`, { headers: getAuthHeaders() });
+        if (res.status === 401 || res.status === 403) { logout(); return; }
+        const data = await res.json();
+        
+        let subCategories = [];
+        if (data && data.status === "success" && data.data) subCategories = data.data;
+        else if (Array.isArray(data)) subCategories = data;
+        
+        if (subCategories.length === 0) {
+            container.innerHTML = '<span class="text-muted small">Bu əsas kateqoriyaya aid heç bir alt kateqoriya yoxdur.</span>';
+            return;
+        }
+        
+        let html = "";
+        subCategories.forEach(sub => {
+            html += `<div class="badge bg-white text-dark border p-2 d-flex align-items-center gap-2 shadow-sm" style="font-size: 12.5px;">
+                <span>${escapeHTML(sub.name)}</span>
+                <i class="bi bi-x-circle-fill text-danger fs-6" style="cursor:pointer;" onclick="deleteSubCategory(${sub.id}, ${categoryId})"></i>
+            </div>`;
+        });
+        container.innerHTML = html;
+    } catch (err) {
+        container.innerHTML = '<span class="text-danger small">Məlumatları çəkərkən xəta baş verdi.</span>';
+    }
+}
+
+// Alt kategoriyi siler
+  async function deleteSubCategory(subId, parentId) {
+       if(!confirm("Bu alt kateqoriyanı silmək istədiyinizə əminsiniz?")) return;
+    
+      try {
+         // Backend API rotanız farklıysa (örneğin POST ile çalışıyorsa) burayı ona göre ayarlayın
+         const res = await fetch(`/carrier-sub-categories/${subId}`, {
+            method: "DELETE", 
+            headers: getAuthHeaders()
+        });
+        if (res.status === 401 || res.status === 403) { logout(); return; }
+        
+        if(res.ok) {
+            alert("Alt kateqoriya uğurla silindi!");
+            loadSubCategoriesList(parentId); // Listeyi anında güncelle
+        } else {
+            alert("Silinərkən xəta baş verdi.");
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+        
         async function setCarrierCategory(carrierId, categoryId) {
          let catId = categoryId ? parseInt(categoryId) : null;
          let subCatSelect = document.getElementById(`sub_cat_${carrierId}`); // YENİ
