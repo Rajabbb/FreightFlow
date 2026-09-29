@@ -964,7 +964,13 @@
                             <input class="form-check-input opt-check" type="checkbox" id="chk_shipment_type" onchange="toggleOptField('shipment_type')">
                             <label class="form-check-label fw-bold text-dark" for="chk_shipment_type">Shipment Type (FTL / LTL / LCL / FCL)</label>
                         </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_shipment_type" placeholder="məs: FTL">
+                        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_shipment_type">
+                            <option value="">Daşınma tipini seçin...</option>
+                            <option value="FTL">FTL (Full Truck Load)</option>
+                            <option value="LTL">LTL (Less than Truck Load)</option>
+                            <option value="FCL">FCL (Full Container Load)</option>
+                            <option value="LCL">LCL (Less than Container Load)</option>
+                        </select>
                     </div>
 
                     <div class="opt-row">
@@ -972,7 +978,20 @@
                             <input class="form-check-input opt-check" type="checkbox" id="chk_incoterm" onchange="toggleOptField('incoterm')">
                             <label class="form-check-label fw-bold text-dark" for="chk_incoterm">Incoterm</label>
                         </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_incoterm" placeholder="məs: EXW / FAP">
+                        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_incoterm">
+                            <option value="">Incoterm şərtini seçin...</option>
+                            <option value="EXW">EXW (Ex Works)</option>
+                            <option value="FCA">FCA (Free Carrier)</option>
+                            <option value="FAS">FAS (Free Alongside Ship)</option>
+                            <option value="FOB">FOB (Free On Board)</option>
+                            <option value="CFR">CFR (Cost and Freight)</option>
+                            <option value="CIF">CIF (Cost, Insurance and Freight)</option>
+                            <option value="CPT">CPT (Carriage Paid To)</option>
+                            <option value="CIP">CIP (Carriage and Insurance Paid To)</option>
+                            <option value="DAP">DAP (Delivered at Place)</option>
+                            <option value="DPU">DPU (Delivered at Place Unloaded)</option>
+                            <option value="DDP">DDP (Delivered Duty Paid)</option>
+                        </select>
                     </div>
 
                     <div class="opt-row">
