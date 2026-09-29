@@ -321,7 +321,19 @@
                 if (routeEl) routeEl.innerText = `${escapeHTML(req.origin)} ➔ ${escapeHTML(req.destination)}`;
                 
                 let volumeText = req.volume_m3;
-                if (!volumeText || volumeText === 0 || volumeText === "0" || volumeText === 0.0 || volumeText === "Qeyd edilməyib" || volumeText === "Not specified") {
+                
+                // ALT NOTLARDAN PALET/CBM YAZISINI ÇEKİP YUKARI ALIYORUZ
+                let extractedVolumeStr = null;
+                if (req.required_fields && req.required_fields.length > 0) {
+                    const volField = req.required_fields.find(f => typeof f === 'string' && f.includes("Həcm / Palet:"));
+                    if (volField) {
+                        extractedVolumeStr = volField.replace("Həcm / Palet:", "").trim(); 
+                    }
+                }
+
+                if (extractedVolumeStr) {
+                    volumeText = extractedVolumeStr;
+                } else if (!volumeText || volumeText === 0 || volumeText === "0" || volumeText === 0.0 || volumeText === "Qeyd edilməyib" || volumeText === "Not specified") {
                     volumeText = "Not specified";
                 } else { volumeText = `${volumeText}`; }
                 
@@ -362,6 +374,12 @@
 
                 const deadlineBox = document.getElementById("deadline_box");
                 const deadlineText = document.getElementById("deadline_text");
+                
+                // LOADING DATE İLE DEADLINE BİREBİR AYNIYSA DEADLINE'I GİZLE
+                if (deadlineVal === loadingDateVal) {
+                    deadlineVal = null;
+                }
+
                 if (deadlineVal && String(deadlineVal).trim() !== "") {
                     if (deadlineText) deadlineText.innerText = formatDateTime(deadlineVal);
                     if (deadlineBox) deadlineBox.classList.remove("hidden");
@@ -385,9 +403,10 @@
                     if (req.required_fields && req.required_fields.length > 0) {
                         req.required_fields.forEach(field => {
                             if (typeof field === 'string') {
-                                const lowField = field.toLowerCase();
-                                if (lowField.includes("loading") || lowField.includes("deadline") || lowField.includes("deadl") || lowField.includes("fayl") || lowField.includes("attachment") || field.includes("http") || field.includes("Fayl:")) return;
-                            }
+                            const lowField = field.toLowerCase();
+                            // "həcm / palet" BİLGİSİNİN ALT NOTLARDA ÇIKMASINI ENGELLİYORUZ
+                            if (lowField.includes("loading") || lowField.includes("deadline") || lowField.includes("deadl") || lowField.includes("fayl") || lowField.includes("attachment") || field.includes("http") || field.includes("Fayl:") || lowField.includes("həcm / palet")) return;
+                        }
                             hasItems = true;
                             const noteDiv = document.createElement("div");
                             noteDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer Note / Requirement:</span><div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed">${escapeHTML(field)}</div>`;
