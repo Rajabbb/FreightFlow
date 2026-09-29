@@ -3109,10 +3109,12 @@ function loadBulkSubCategories(categoryId) {
             const customEmailSubjectVal = useCustomTemplate ? (document.getElementById("custom_email_subject")?.value.trim() || "") : "";
             const customEmailBodyVal = useCustomTemplate ? (document.getElementById("custom_email_body")?.value.trim() || "") : "";
 
-            // CBM veya Palet türünü alıp sayıyla birleştiriyoruz (Örn: "12 Palet")
-            const volTypeSelected = document.getElementById("volume_type")?.value || "CBM";
-            const finalVolumeStr = volumeVal ? `${volumeVal} ${volTypeSelected}` : "";
-
+            // YENİ ƏLAVƏ: CBM / Palet seçimini tutub daşıyıcıya göndəriləcək detallara əlavə edirik
+            const volValCheck = document.getElementById("volume_cbm")?.value.trim();
+            const volTypeCheck = document.getElementById("volume_type")?.value || "CBM";
+            if(volValCheck) {
+                requiredFieldsList.push(`Həcm / Palet: ${volValCheck} ${volTypeCheck}`);
+            }
             const payload = {
                 customer_id: getCustomerId(), origin: originVal, loading_location: originVal, destination: destinationVal, delivery_location: destinationVal,
                 cargo_type: cargoTypeVal, cargo: cargoTypeVal, weight_kg: parseFloat(weightVal) || 0, weight: parseFloat(weightVal) || 0,
