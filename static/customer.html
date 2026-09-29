@@ -779,35 +779,27 @@
             </div>
 
             <!-- TOPLU ƏMƏLİYYATLAR TOOLBAR -->
-            <div class="bg-light border rounded-3 p-2 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm">
-                <div class="form-check mb-0 ms-2">
-                    <input type="checkbox" id="selectAllManageCarriers" class="form-check-input border-secondary shadow-sm" style="width: 1.1em; height: 1.1em; cursor: pointer; margin-top: 0.15em;" onchange="toggleAllManageCarriers(this)">
-                    <label for="selectAllManageCarriers" class="form-check-label fw-bold text-dark ms-1" style="font-size: 13px; cursor: pointer;">Hamısını seç</label>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                    <button id="bulkDeleteBtn" type="button" class="btn btn-sm btn-danger px-3 shadow-sm fw-bold d-none" style="font-size: 12px;" onclick="bulkDeleteCarriers()">
-                        <i class="bi bi-trash"></i> Seçilmişləri Sil (<span id="selectedCount">0</span>)
-            </button>
+<div class="bg-light border rounded-3 p-2 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm">
+    <div class="form-check mb-0 ms-2 flex-shrink-0">
+        <input type="checkbox" id="selectAllManageCarriers" class="form-check-input border-secondary shadow-sm" style="width: 1.1em; height: 1.1em; cursor: pointer; margin-top: 0.15em;" onchange="toggleAllManageCarriers(this)">
+        <label for="selectAllManageCarriers" class="form-check-label fw-bold text-dark ms-1 text-nowrap" style="font-size: 13px; cursor: pointer;">Hamısını seç</label>
+    </div>
+    <div class="d-flex align-items-center gap-2 flex-wrap justify-content-sm-end">
+        <button id="bulkDeleteBtn" type="button" class="btn btn-sm btn-danger px-3 shadow-sm fw-bold d-none text-nowrap flex-shrink-0" style="font-size: 12px; width: max-content;" onclick="bulkDeleteCarriers()">
+            <i class="bi bi-trash"></i> Seçilmişləri Sil (<span id="selectedCount">0</span>)
+        </button>
 
-              <select id="bulkCategorySelect" onchange="loadBulkSubCategories(this.value)" class="form-select form-select-sm shadow-sm" style="min-width: 180px; font-size: 12px;">
-                <option value="">-- Kateqoriya Seçin --</option>
-              </select>
+        <select id="bulkCategorySelect" onchange="loadBulkSubCategories(this.value)" class="form-select form-select-sm shadow-sm flex-shrink-0" style="width: 160px; font-size: 12px;">
+            <option value="">-- Kateqoriya Seçin --</option>
+        </select>
 
-           <!-- YENİ ƏLAVƏ: Alt kateqoriya dropdown-u -->
-           <select id="bulk_sub_category" class="form-select form-select-sm shadow-sm" style="min-width: 180px; font-size: 12px;" disabled>
+        <select id="bulk_sub_category" class="form-select form-select-sm shadow-sm flex-shrink-0" style="width: 160px; font-size: 12px;" disabled>
             <option value="">-- Alt Kateqoriya --</option>
-           </select>
+        </select>
 
-          <button type="button" class="btn btn-sm btn-primary px-3 shadow-sm fw-bold" style="font-size: 12px;" onclick="applyBulkCategory()">Tətbiq et</button>
-                </div>
-            </div>
-
-            <div class="carrier-select-box p-0" id="manageCarriersContainer">
-                <span class="text-muted small p-3 d-block">Daşıyıcılar yüklənir...</span>
-            </div>
-        </div>
-
-        </div>
+        <button type="button" class="btn btn-sm btn-primary px-3 shadow-sm fw-bold text-nowrap flex-shrink-0" style="font-size: 12px; width: max-content;" onclick="applyBulkCategory()">Tətbiq et</button>
+    </div>
+</div>
         <!-- ================= /TAB 2 ================= -->
 
         <!-- ================= TAB 3: YENİ RFQ YARAT ================= -->
