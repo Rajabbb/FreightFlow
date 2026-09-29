@@ -897,8 +897,14 @@
                         <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Volume (CBM) <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="volume_cbm" required placeholder="məs: 15 m3">
+                        <label class="form-label">Həcm / Palet (Volume / Pallet) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <select class="form-select border-end-0 bg-white shadow-sm" id="volume_type" style="max-width: 110px; cursor: pointer; font-weight: 600;">
+                                <option value="CBM">CBM</option>
+                                <option value="Palet">Palet</option>
+                            </select>
+                            <input type="number" step="any" class="form-control shadow-sm" id="volume_cbm" required placeholder="Miqdarı yazın (məs: 15)">
+                        </div>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Transportation Mode (Daşınma Növü) <span class="text-danger">*</span></label>
@@ -3019,6 +3025,13 @@ function loadBulkSubCategories(categoryId) {
             }
 
             const requiredFieldsList = [];
+
+            // CBM / Palet seçimini tutub detallara əlavə edirik
+            const volValCheck = document.getElementById("volume_cbm")?.value.trim();
+            const volTypeCheck = document.getElementById("volume_type")?.value || "CBM";
+            if(volValCheck) {
+                requiredFieldsList.push(`Həcm / Palet: ${volValCheck} ${volTypeCheck}`);
+            }
 
             if(document.getElementById("chk_loading_date")?.checked) {
                 let val = document.getElementById("inp_loading_date")?.value.trim();
