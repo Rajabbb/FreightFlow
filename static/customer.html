@@ -667,13 +667,9 @@
             <div class="section-desc mb-3">Daşıyıcılarınızı qruplaşdırmaq üçün kateqoriyalar yaradın.</div>
             
             <!-- ƏSAS KATEQORİYA YARATMAQ -->
-            <div class="row g-2 mb-3">
-                <div class="col-12 col-sm-8 col-md-6 col-lg-5">
-                    <div class="input-group input-group-sm shadow-sm">
-                        <input type="text" id="newCategoryName" class="form-control border-end-0" placeholder="Yeni əsas kateqoriya adı...">
-                        <button class="btn btn-primary px-4 fw-bold" onclick="createCategory()">Yarat</button>
-                    </div>
-                </div>
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <input type="text" id="newCategoryName" class="form-control form-control-sm shadow-sm" placeholder="Yeni əsas kateqoriya adı daxil edin..." style="max-width: 300px; width: auto; flex-grow: 1;">
+                <button class="btn btn-primary btn-sm px-4 fw-bold w-auto shadow-sm" onclick="createCategory()">Yarat</button>
             </div>
             
             <div id="categoryListContainer" class="d-flex flex-wrap gap-2">
@@ -687,18 +683,12 @@
                 <i class="bi bi-diagram-3-fill text-secondary me-1"></i> Alt Kateqoriya Yarat
             </div>
             
-            <div class="row g-2 align-items-center">
-                <div class="col-12 col-sm-5 col-md-4 col-lg-3">
-                    <select id="parentCategoryForSub" class="form-select form-select-sm shadow-sm">
-                        <option value="">-- Əsas Kateqoriyanı Seçin --</option>
-                    </select>
-                </div>
-                <div class="col-12 col-sm-7 col-md-6 col-lg-5">
-                    <div class="input-group input-group-sm shadow-sm">
-                        <input type="text" id="newSubCategoryName" class="form-control border-end-0" placeholder="Alt kateqoriya adı (məs: Şimali Rusiya)">
-                        <button class="btn btn-secondary px-3 fw-bold" onclick="createSubCategory()">Əlavə Et</button>
-                    </div>
-                </div>
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <select id="parentCategoryForSub" class="form-select form-select-sm shadow-sm w-auto" style="min-width: 220px; flex-grow: 1;">
+                    <option value="">-- Əsas Kateqoriyanı Seçin --</option>
+                </select>
+                <input type="text" id="newSubCategoryName" class="form-control form-control-sm shadow-sm" placeholder="Alt kateqoriya adı (məs: Şimali Rusiya)" style="max-width: 250px; width: auto; flex-grow: 1;">
+                <button class="btn btn-secondary btn-sm px-4 fw-bold shadow-sm w-auto" onclick="createSubCategory()">Əlavə Et</button>
             </div>
         </div>
 
