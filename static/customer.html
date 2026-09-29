@@ -678,19 +678,32 @@
 
             <hr class="my-4 text-muted opacity-25">
 
-            <!-- ALT KATEQORİYA YARATMAQ -->
+
+            <div id="categoryListContainer" class="d-flex flex-wrap gap-2">
+                <span class="text-muted small">Kateqoriyalar yüklənir...</span>
+            </div>
+
+            <hr class="my-4 text-muted opacity-25">
+
+            <!-- ALT KATEQORİYA YARATMAQ VƏ SİLMƏK (Sizin verdiyiniz kod bura gəlir) -->
             <div class="section-desc mb-2 fw-bold text-dark">
-                <i class="bi bi-diagram-3-fill text-secondary me-1"></i> Alt Kateqoriya Yarat
+                <i class="bi bi-diagram-3-fill text-secondary me-1"></i> Alt Kateqoriya Yarat və İdarə Et
             </div>
             
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <select id="parentCategoryForSub" class="form-select form-select-sm" style="width: 230px; max-width: 100%;">
+            <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+                <select id="parentCategoryForSub" class="form-select form-select-sm" style="width: 230px; max-width: 100%;" onchange="loadSubCategoriesList(this.value)">
                     <option value="">-- Əsas Kateqoriya --</option>
                 </select>
                 <input type="text" id="newSubCategoryName" class="form-control form-control-sm" placeholder="Yeni alt kateqoriya adı daxil edin..." style="max-width: 300px; width: 100%;">
                 <button class="btn btn-primary btn-sm px-4 fw-bold" style="width: max-content;" onclick="createSubCategory()">Yarat</button>
             </div>
-        </div>
+
+            <!-- Seçilən ana kateqoriyanın alt kateqoriyalarının görünəcəyi yer -->
+            <div id="subCategoryListContainer" class="d-flex flex-wrap gap-2">
+                <span class="text-muted small">Alt kateqoriyaları görmək və silmək üçün soldan əsas kateqoriya seçin...</span>
+            </div>
+        </div> <!-- Bu bağlanış div-i Daşıyıcı Kateqoriyaları kartının sonudur -->
+            
 
         <div class="card shadow-sm border-0 mb-4">
             <div class="section-title mb-1">
