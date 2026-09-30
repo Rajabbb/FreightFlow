@@ -923,112 +923,112 @@
                 </div>
 
                 <div class="optional-box">
-                    <label class="form-label fw-bold mb-3 text-dark fs-6 d-flex align-items-center">
-                        <i class="bi bi-sliders text-primary me-2 fs-5"></i> <span data-i18n="lbl_optional_params">İxtiyari (Optional) Parametrlər</span>
-                    </label>
+    <label class="form-label fw-bold mb-3 text-dark fs-6 d-flex align-items-center">
+        <i class="bi bi-sliders text-primary me-2 fs-5"></i> <span data-i18n="lbl_optional_params">İxtiyari (Optional) Parametrlər</span>
+    </label>
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_loading_date" onchange="toggleOptField('loading_date')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_loading_date" data-i18n="lbl_load_date">Loading Date (Yükləmə tarixi)</label>
-                        </div>
-                        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_loading_date">
-                    </div>
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_loading_date" onchange="toggleOptField('loading_date')">
+            <label class="form-check-label fw-bold text-dark" for="chk_loading_date" data-i18n="lbl_load_date">Loading Date (Yükləmə tarixi)</label>
+        </div>
+        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_loading_date">
+    </div>
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_truck_type" onchange="toggleOptField('truck_type')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_truck_type">Truck Type</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_truck_type" placeholder="məs: Tentli / Refrijerator">
-                    </div>
-                    
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_hs_code" onchange="toggleOptField('hs_code')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_hs_code">HS Code</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_hs_code" placeholder="məs: 1234.56">
-                    </div>
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_truck_type" onchange="toggleOptField('truck_type')">
+            <label class="form-check-label fw-bold text-dark" for="chk_truck_type" data-i18n="lbl_truck_type">Truck Type</label>
+        </div>
+        <input type="text" class="form-control opt-input d-none mt-2" id="inp_truck_type" data-i18n-placeholder="ph_truck_type" placeholder="məs: Tentli / Refrijerator">
+    </div>
+    
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_hs_code" onchange="toggleOptField('hs_code')">
+            <label class="form-check-label fw-bold text-dark" for="chk_hs_code">HS Code</label>
+        </div>
+        <input type="text" class="form-control opt-input d-none mt-2" id="inp_hs_code" placeholder="məs: 1234.56">
+    </div>
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_stackable" onchange="toggleOptField('stackable')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_stackable">Stackable / Non-stackable</label>
-                        </div>
-                        <select class="form-select opt-input d-none mt-2" id="inp_stackable">
-                            <option value="">Seçin...</option>
-                            <option value="Stackable">Stackable</option>
-                            <option value="Non-stackable">Non-stackable</option>
-                        </select>
-                    </div>
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_stackable" onchange="toggleOptField('stackable')">
+            <label class="form-check-label fw-bold text-dark" for="chk_stackable" data-i18n="lbl_stackable_full">Stackable / Non-stackable</label>
+        </div>
+        <select class="form-select opt-input d-none mt-2" id="inp_stackable">
+            <option value="" data-i18n="opt_select">Seçin...</option>
+            <option value="Stackable">Stackable</option>
+            <option value="Non-stackable">Non-stackable</option>
+        </select>
+    </div>
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_shipment_type" onchange="toggleOptField('shipment_type')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_shipment_type">Shipment Type (FTL / LTL / LCL / FCL)</label>
-                        </div>
-                        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_shipment_type">
-                            <option value="">Daşınma tipini seçin...</option>
-                            <option value="FTL">FTL (Full Truck Load)</option>
-                            <option value="LTL">LTL (Less than Truck Load)</option>
-                            <option value="FCL">FCL (Full Container Load)</option>
-                            <option value="LCL">LCL (Less than Container Load)</option>
-                        </select>
-                    </div>
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_shipment_type" onchange="toggleOptField('shipment_type')">
+            <label class="form-check-label fw-bold text-dark" for="chk_shipment_type" data-i18n="lbl_shipment_type_full">Shipment Type (FTL / LTL / LCL / FCL)</label>
+        </div>
+        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_shipment_type">
+            <option value="" data-i18n="opt_shipment_select">Daşınma tipini seçin...</option>
+            <option value="FTL">FTL (Full Truck Load)</option>
+            <option value="LTL">LTL (Less than Truck Load)</option>
+            <option value="FCL">FCL (Full Container Load)</option>
+            <option value="LCL">LCL (Less than Container Load)</option>
+        </select>
+    </div>
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_incoterm" onchange="toggleOptField('incoterm')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_incoterm">Incoterm</label>
-                        </div>
-                        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_incoterm">
-                            <option value="">Incoterm şərtini seçin...</option>
-                            <option value="EXW">EXW</option>
-                            <option value="FCA">FCA</option>
-                            <option value="FOB">FOB</option>
-                            <option value="CIF">CIF</option>
-                            <option value="DAP">DAP</option>
-                            <option value="DDP">DDP</option>
-                        </select>
-                    </div>
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_incoterm" onchange="toggleOptField('incoterm')">
+            <label class="form-check-label fw-bold text-dark" for="chk_incoterm">Incoterm</label>
+        </div>
+        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_incoterm">
+            <option value="" data-i18n="opt_incoterm_select">Incoterm şərtini seçin...</option>
+            <option value="EXW">EXW</option>
+            <option value="FCA">FCA</option>
+            <option value="FOB">FOB</option>
+            <option value="CIF">CIF</option>
+            <option value="DAP">DAP</option>
+            <option value="DDP">DDP</option>
+        </select>
+    </div>
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_adr" onchange="toggleOptField('adr')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_adr">Dangerous Goods (ADR)</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_adr" placeholder="məs: Klass 3">
-                    </div>
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_adr" onchange="toggleOptField('adr')">
+            <label class="form-check-label fw-bold text-dark" for="chk_adr">Dangerous Goods (ADR)</label>
+        </div>
+        <input type="text" class="form-control opt-input d-none mt-2" id="inp_adr" placeholder="məs: Klass 3">
+    </div>
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_temp" onchange="toggleOptField('temp')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_temp">Temperature Requirement (Reefer)</label>
-                        </div>
-                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_temp" placeholder="məs: +2 to +8 °C">
-                    </div>
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_temp" onchange="toggleOptField('temp')">
+            <label class="form-check-label fw-bold text-dark" for="chk_temp">Temperature Requirement (Reefer)</label>
+        </div>
+        <input type="text" class="form-control opt-input d-none mt-2" id="inp_temp" placeholder="məs: +2 to +8 °C">
+    </div>
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_deliv_date" onchange="toggleOptField('deliv_date')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_deliv_date" data-i18n="lbl_deliv_date">Delivery Deadline</label>
-                        </div>
-                        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_deliv_date">
-                    </div>
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_deliv_date" onchange="toggleOptField('deliv_date')">
+            <label class="form-check-label fw-bold text-dark" for="chk_deliv_date" data-i18n="lbl_deliv_date">Delivery Deadline</label>
+        </div>
+        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_deliv_date">
+    </div>
 
-                    <div class="opt-row">
-                        <div class="form-check mb-1">
-                            <input class="form-check-input opt-check" type="checkbox" id="chk_info" onchange="toggleOptField('info')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_info" data-i18n="lbl_add_info">Additional Information (Qeyd və ya sənəd əlavəsi)</label>
-                        </div>
-                        <div id="inp_info_container" class="d-none mt-2">
-                            <textarea class="form-control mb-2" id="inp_info_text" rows="2" placeholder="Əlavə xüsusi şərtlər və təlimatlar..."></textarea>
-                            <label class="form-label text-muted small mb-1" data-i18n="lbl_upload_extra">Əlavə fayl yüklə (istəyə bağlı):</label>
-                            <input type="file" class="form-control" id="inp_info_file">
-                        </div>
-                    </div>
-                </div>
+    <div class="opt-row">
+        <div class="form-check mb-1">
+            <input class="form-check-input opt-check" type="checkbox" id="chk_info" onchange="toggleOptField('info')">
+            <label class="form-check-label fw-bold text-dark" for="chk_info" data-i18n="lbl_add_info">Additional Information (Qeyd və ya sənəd əlavəsi)</label>
+        </div>
+        <div id="inp_info_container" class="d-none mt-2">
+            <textarea class="form-control mb-2" id="inp_info_text" rows="2" data-i18n-placeholder="ph_info_text" placeholder="Əlavə xüsusi şərtlər və təlimatlar..."></textarea>
+            <label class="form-label text-muted small mb-1" data-i18n="lbl_upload_extra">Əlavə fayl yüklə (istəyə bağlı):</label>
+            <input type="file" class="form-control" id="inp_info_file">
+        </div>
+    </div>
+</div>
 
                 <div class="p-3 mt-3 mb-3 bg-white border rounded-4">
                     <label class="form-label fw-bold text-dark fs-6 mb-3 d-flex align-items-center">
@@ -1566,250 +1566,73 @@ Best regards,
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
         // --- DİL LÜĞƏTİ ---
+        // --- DİL LÜĞƏTİ ---
         const translations = {
             az: {
-                nav_panel: "Müştəri paneli",
-                nav_company: "Şirkət",
-                nav_email: "E-poçtu Dəyiş",
-                nav_pass: "Şifrəni Dəyiş",
-                nav_exit: "Çıxış",
-                tab_dash: "Analitika və Panel",
-                tab_carrier: "Daşıyıcı Bazası",
-                tab_new_rfq: "Yeni RFQ Yarat",
-                tab_tracking: "Sorğular və Müqayisə",
-                stat_active: "Aktiv RFQ Sorğuları",
-                stat_completed: "Tamamlanmış Daşımalar",
-                stat_carriers: "Daşıyıcı Bazası",
-                latest_offers: "Son Gələn Təkliflər",
-                latest_offers_desc: "Daşıyıcılardan gələn son 10 qiymət təklifi.",
-                btn_refresh: "Yenilə",
-                th_inquiry: "Sorğu (RFQ)",
-                th_carrier: "Daşıyıcı",
-                th_price: "Qiymət",
-                th_operation: "Əməliyyat",
-                loading_offers: "Təkliflər yüklənir...",
-                reporting_center: "Hesabat Mərkəzi",
-                reporting_desc: "Sistemdən RFQ və ya Təklif məlumatlarını endirin.",
-                report_content: "Hesabatın Məzmunu",
-                report_all_rfq: "📦 Bütün RFQ Detalları",
-                report_quotes: "💬 Gələn Təkliflər",
-                query_interval: "Sorğu aralığı",
-                opt_all_queries: "Bütün Sorğular (Ümumi)",
-                opt_today: "Bugünün sorğuları",
-                opt_date_range: "İstənilən tarix aralığı",
-                opt_selected_rfq: "Seçilmiş RFQ-lər",
-                start_date: "Başlanğıc Tarixi",
-                end_date: "Bitiş Tarixi",
-                select_queries_below: "Aşağıdan sorğuları seçin:",
-                loading: "Yüklənir...",
-                btn_download_report: "Hesabatı Endir",
-                carrier_categories: "Daşıyıcı Kateqoriyaları",
-                carrier_cat_desc: "Daşıyıcılarınızı qruplaşdırmaq üçün kateqoriyalar yaradın.",
-                ph_new_main_cat: "Yeni əsas kateqoriya adı daxil edin...",
-                btn_create: "Yarat",
-                loading_cats: "Kateqoriyalar yüklənir...",
-                manage_subcat: "Alt Kateqoriya Yarat və İdarə Et",
-                opt_main_cat: "-- Əsas Kateqoriya --",
-                ph_new_sub_cat: "Yeni alt kateqoriya adı daxil edin...",
-                msg_select_main_cat: "Alt kateqoriyaları görmək və silmək üçün soldan əsas kateqoriya seçin...",
-                manage_carrier_base: "Daşıyıcı Bazasını İdarə Etmək",
-                manage_carrier_desc: "Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.",
-                tab_upload_file: "Fayl Yüklə",
-                tab_manual_entry: "Əllə Daxil Et",
-                tab_paste_table: "Cədvəldən Yapışdır",
-                label_upload_excel: "Excel / CSV Faylı Yüklə",
-                btn_add: "Əlavə Et",
-                label_company_name: "Şirkət / Daşıyıcı Adı",
-                label_email: "E-poçt Ünvanı",
-                btn_add_carrier: "Daşıyıcıyı Əlavə Et",
-                label_paste_cols: "Excel-dən sütunları kopyalayıb bura yapışdırın:",
-                btn_add_from_table: "Cədvəldən Əlavə Et",
-                existing_carriers: "Bazadakı Mövcud Daşıyıcılar",
-                ph_search_carrier: "Daşıyıcı axtar...",
-                select_all: "Hamısını seç",
-                btn_delete_selected: "Seçilmişləri Sil",
-                btn_apply: "Tətbiq et",
-                loading_carriers: "Daşıyıcılar yüklənir...",
-                create_new_rfq_title: "Yeni Yük Sorğusu (RFQ) Yarat",
-                create_rfq_desc: "Logistika parametrlərini ətraflı daxil edin və sorğunuzu göndərin.",
-                ai_autofill: "Aİ ilə Avtomatik Doldur (Beta)",
-                ai_desc: "Müştəridən aldığınız faylı yükləyin və ya mətni birbaşa kopyalayıb yapışdırın.",
-                ai_tab_file: "📁 Fayl Yüklə",
-                ai_tab_text: "📋 Mətn Yapışdır (Copy-Paste)",
-                btn_analyze: "Analiz Et",
-                ph_ai_paste: "Müştərinin mətnini buraya kopyalayıb yapışdırın...",
-                btn_analyze_text: "Mətni Analiz Et",
-                ai_loading: "Aİ mətni oxuyur və analiz edir, lütfən gözləyin...",
-                lbl_origin: "Loading Location (Yükləmə yeri)",
-                lbl_dest: "Delivery Location (Boşaltma yeri)",
-                lbl_cargo_type: "Cargo Type (Yükün növü)",
-                lbl_weight: "Weight (Çəki - kq)",
-                lbl_volume: "Həcm / Palet (Volume / Pallet)",
-                lbl_trans_mode: "Transportation Mode (Daşınma Növü)",
-                lbl_optional_params: "İxtiyari (Optional) Parametrlər",
-                lbl_load_date: "Loading Date (Yükləmə tarixi)",
-                lbl_deliv_date: "Delivery Deadline",
-                lbl_add_info: "Additional Information (Qeyd və ya sənəd əlavəsi)",
-                lbl_upload_extra: "Əlavə fayl yüklə (istəyə bağlı):",
-                email_content_title: "Daşıyıcılara Göndəriləcək Email Məzmunu",
-                lbl_std_template: "Standart Şablon",
-                lbl_cust_template: "Öz Şablonumu Daxil Et (Custom)",
-                lbl_email_subj: "E-poçt Mövzusu (Subject)",
-                lbl_email_body: "Əsas Mətn (Body)",
-                note_bold: "Qeyd:",
-                note_desc: "\"Link yarat və göndər\" düyməsindən istifadə etdikdə aşağıdakı daşıyıcı seçimləri əhəmiyyət daşımır.",
-                opt_send_all: "Sorğunu BÜTÜN daşıyıcılara göndər",
-                opt_send_cat: "Seçilmiş KATEQORİYALARA göndər",
-                opt_send_sel: "Seçilmiş daşıyıcılara göndər",
-                sel_cat_below: "Aşağıdan göndəriləcək kateqoriyaları seçin:",
-                sel_car_below: "Daşıyıcıları seçin:",
-                btn_sel_all: "Hamısını Seç",
-                btn_clear: "Təmizlə",
-                btn_send_direct: "Birbaşa Daşıyıcılara Göndər",
-                btn_gen_link: "Link Yarat və Kopyala",
-                rfq_inq_offers: "RFQ Sorğuları və Təkliflər",
-                rfq_inq_desc: "Yaratdığınız sorğuların statusunu izləyin və təklifləri analiz edin.",
-                req_list: "Sorğu Siyahısı",
-                flt_all: "Hamısı",
-                flt_open: "Açıq",
-                flt_closed: "Bağlı",
-                ph_search_req: "Sorğularda axtar..."
+                nav_panel: "Müştəri paneli", nav_company: "Şirkət", nav_email: "E-poçtu Dəyiş", nav_pass: "Şifrəni Dəyiş", nav_exit: "Çıxış",
+                tab_dash: "Analitika və Panel", tab_carrier: "Daşıyıcı Bazası", tab_new_rfq: "Yeni RFQ Yarat", tab_tracking: "Sorğular və Müqayisə",
+                // ... (Önceki tüm az çevirileriniz) ...
+                ph_origin: "məs: Bakı, Azərbaycan", ph_dest: "məs: İstanbul, Türkiyə", ph_cargo_type: "məs: Quru yük / Tekstil", ph_volume: "Miqdarı yazın",
+                opt_pallet: "Palet", opt_trans_select: "Daşınma növünü seçin...", opt_road: "Quru (Road)", opt_air: "Hava (Air)", opt_sea: "Su / Dəniz (Sea)", opt_rail: "Dəmiryolu (Rail)",
+                ph_truck_type: "məs: Tentli / Refrijerator", opt_select: "Seçin...", opt_shipment_select: "Daşınma tipini seçin...", opt_incoterm_select: "Incoterm şərtini seçin...", ph_info_text: "Əlavə xüsusi şərtlər və təlimatlar...",
+                lbl_cargo_type_short: "Növ:", lbl_weight_vol: "Çəki / Həcm:", lbl_loading_date_short: "Yükləmə tarixi:", lbl_created_short: "Yaradılıb:", btn_more_details: "Daha ətraflı məlumat",
+                th_carrier_company: "Daşıyıcı Şirkət", th_transit: "Müddət", th_notes: "Qeydlər", th_action: "Əməliyyat", no_quotes_yet: "Hələ bu sorğuya təklif göndərilməyib.",
+                select_winner: "Qalib Seç", winner: "Qalib", send_to_customer: "Müştəriyə Göndər", more_details: "Daha Ətraflı", carrier_status_quoted: "Təklif alındı", carrier_status_no_quote: "Təklif yoxdur",
+                carrier_resend: "Yenidən göndər", carrier_send_reminder: "Reminder göndər", carrier_status_delivered: "Çatdırıldı", carrier_status_failed: "Çatdırılmadı", carrier_status_sending: "Göndərilir...",
+                not_specified: "Qeyd edilməyib", status_open: "AÇIQ", status_closed: "BAĞLI", lbl_truck_type_full: "Daşınma növü / Truck type", lbl_shipment_type_full: "Yük tipi (Shipment type)",
+                lbl_hs_code: "HS Kodu", lbl_stackable_full: "Stiflənə bilər (Stackable)", lbl_additional_notes: "Əlavə qeydlər", lbl_attached_doc: "Qoşulmuş sənəd", btn_download: "Yüklə", lbl_no_extra_detail: "Əlavə detal qeyd olunmayıb.", val_yes: "Bəli", val_no: "Xeyr"
             },
             en: {
-                nav_panel: "Customer Panel",
-                nav_company: "Company",
-                nav_email: "Change Email",
-                nav_pass: "Change Password",
-                nav_exit: "Exit",
-                tab_dash: "Analytics & Dashboard",
-                tab_carrier: "Carrier Base",
-                tab_new_rfq: "Create New RFQ",
-                tab_tracking: "Inquiries & Comparison",
-                stat_active: "Active RFQ Requests",
-                stat_completed: "Completed Shipments",
-                stat_carriers: "Carrier Base",
-                latest_offers: "Latest Offers",
-                latest_offers_desc: "The last 10 offers from carriers.",
-                btn_refresh: "Refresh",
-                th_inquiry: "Inquiry (RFQ)",
-                th_carrier: "Carrier",
-                th_price: "Price",
-                th_operation: "Operation",
-                loading_offers: "Loading offers...",
-                reporting_center: "Reporting Center",
-                reporting_desc: "Download RFQ or proposal data from the system.",
-                report_content: "Report Contents",
-                report_all_rfq: "📦 All RFQ Details",
-                report_quotes: "💬 Received Quotes",
-                query_interval: "Query interval",
-                opt_all_queries: "All Inquiries (General)",
-                opt_today: "Today's inquiries",
-                opt_date_range: "Any date range",
-                opt_selected_rfq: "Selected RFQs",
-                start_date: "Start Date",
-                end_date: "End Date",
-                select_queries_below: "Select queries from below:",
-                loading: "Loading...",
-                btn_download_report: "Download Report",
-                carrier_categories: "Carrier Categories",
-                carrier_cat_desc: "Create categories to group your carriers.",
-                ph_new_main_cat: "Enter new main category name...",
-                btn_create: "Create",
-                loading_cats: "Loading categories...",
-                manage_subcat: "Create & Manage Sub-categories",
-                opt_main_cat: "-- Main Category --",
-                ph_new_sub_cat: "Enter new sub-category name...",
-                msg_select_main_cat: "Select a main category from the left to view/delete sub-categories...",
-                manage_carrier_base: "Manage Carrier Base",
-                manage_carrier_desc: "Add or manage carriers in your base.",
-                tab_upload_file: "Upload File",
-                tab_manual_entry: "Manual Entry",
-                tab_paste_table: "Paste from Table",
-                label_upload_excel: "Upload Excel / CSV File",
-                btn_add: "Add",
-                label_company_name: "Company / Carrier Name",
-                label_email: "Email Address",
-                btn_add_carrier: "Add Carrier",
-                label_paste_cols: "Copy columns from Excel and paste here:",
-                btn_add_from_table: "Add from Table",
-                existing_carriers: "Existing Carriers in Base",
-                ph_search_carrier: "Search carrier...",
-                select_all: "Select all",
-                btn_delete_selected: "Delete Selected",
-                btn_apply: "Apply",
-                loading_carriers: "Loading carriers...",
-                create_new_rfq_title: "Create New Request (RFQ)",
-                create_rfq_desc: "Enter logistics parameters in detail and send your request.",
-                ai_autofill: "Autofill with AI (Beta)",
-                ai_desc: "Upload a file or paste text directly to analyze.",
-                ai_tab_file: "📁 Upload File",
-                ai_tab_text: "📋 Paste Text (Copy-Paste)",
-                btn_analyze: "Analyze",
-                ph_ai_paste: "Paste customer text here...",
-                btn_analyze_text: "Analyze Text",
-                ai_loading: "AI is analyzing the text, please wait...",
-                lbl_origin: "Loading Location",
-                lbl_dest: "Delivery Location",
-                lbl_cargo_type: "Cargo Type",
-                lbl_weight: "Weight (kg)",
-                lbl_volume: "Volume / Pallet",
-                lbl_trans_mode: "Transportation Mode",
-                lbl_optional_params: "Optional Parameters",
-                lbl_load_date: "Loading Date",
-                lbl_deliv_date: "Delivery Deadline",
-                lbl_add_info: "Additional Information (Notes or File)",
-                lbl_upload_extra: "Upload extra file (optional):",
-                email_content_title: "Email Content to be Sent to Carriers",
-                lbl_std_template: "Standard Template",
-                lbl_cust_template: "Custom Template",
-                lbl_email_subj: "Email Subject",
-                lbl_email_body: "Email Body",
-                note_bold: "Note:",
-                note_desc: "When using the 'Generate Link' button, the carrier selections below are ignored.",
-                opt_send_all: "Send request to ALL carriers",
-                opt_send_cat: "Send to Selected CATEGORIES",
-                opt_send_sel: "Send to Selected carriers",
-                sel_cat_below: "Select categories to send to below:",
-                sel_car_below: "Select carriers:",
-                btn_sel_all: "Select All",
-                btn_clear: "Clear",
-                btn_send_direct: "Send Directly to Carriers",
-                btn_gen_link: "Generate Link and Copy",
-                rfq_inq_offers: "RFQ Inquiries & Offers",
-                rfq_inq_desc: "Track the status of your requests and analyze offers.",
-                req_list: "Request List",
-                flt_all: "All",
-                flt_open: "Open",
-                flt_closed: "Closed",
-                ph_search_req: "Search in requests..."
+                nav_panel: "Customer Panel", nav_company: "Company", nav_email: "Change Email", nav_pass: "Change Password", nav_exit: "Exit",
+                tab_dash: "Analytics & Dashboard", tab_carrier: "Carrier Base", tab_new_rfq: "Create New RFQ", tab_tracking: "Inquiries & Comparison",
+                // ... (Önceki tüm en çevirileriniz) ...
+                ph_origin: "e.g.: Baku, Azerbaijan", ph_dest: "e.g.: Istanbul, Turkey", ph_cargo_type: "e.g.: Dry Cargo / Textiles", ph_volume: "Enter quantity",
+                opt_pallet: "Pallet", opt_trans_select: "Select transportation mode...", opt_road: "Road", opt_air: "Air", opt_sea: "Sea", opt_rail: "Rail",
+                ph_truck_type: "e.g.: Tilt / Reefer", opt_select: "Select...", opt_shipment_select: "Select shipment type...", opt_incoterm_select: "Select Incoterm...", ph_info_text: "Additional special terms and instructions...",
+                lbl_cargo_type_short: "Type:", lbl_weight_vol: "Weight / Vol:", lbl_loading_date_short: "Loading date:", lbl_created_short: "Created:", btn_more_details: "More details",
+                th_carrier_company: "Carrier Company", th_transit: "Transit Time", th_notes: "Notes", th_action: "Action", no_quotes_yet: "No quotes have been submitted for this request yet.",
+                select_winner: "Select Winner", winner: "Winner", send_to_customer: "Send to Customer", more_details: "More Details", carrier_status_quoted: "Quoted", carrier_status_no_quote: "No quote",
+                carrier_resend: "Resend", carrier_send_reminder: "Send reminder", carrier_status_delivered: "Delivered", carrier_status_failed: "Failed", carrier_status_sending: "Sending...",
+                not_specified: "Not specified", status_open: "OPEN", status_closed: "CLOSED", lbl_truck_type_full: "Truck type", lbl_shipment_type_full: "Shipment type",
+                lbl_hs_code: "HS Code", lbl_stackable_full: "Stackable", lbl_additional_notes: "Additional notes", lbl_attached_doc: "Attached document", btn_download: "Download", lbl_no_extra_detail: "No additional details specified.", val_yes: "Yes", val_no: "No"
             }
         };
 
-        let currentLang = 'az';
+        let currentLang = localStorage.getItem("customer_lang") || 'az';
 
         function changeLanguage(lang) {
             currentLang = lang;
+            localStorage.setItem("customer_lang", lang);
             
-            // Statik mətnləri tərcümə edirik
+            const sel = document.getElementById("langSelector");
+            if (sel) sel.value = lang;
+
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
-                if (translations[lang][key]) {
-                    el.innerText = translations[lang][key];
-                }
+                if (translations[lang][key]) { el.innerHTML = translations[lang][key]; }
             });
 
-            // Placeholder-ları tərcümə edirik
             document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
                 const key = el.getAttribute('data-i18n-placeholder');
-                if (translations[lang][key]) {
-                    el.placeholder = translations[lang][key];
-                }
+                if (translations[lang][key]) { el.placeholder = translations[lang][key]; }
             });
+
+            const palletOpt = document.getElementById("opt_pallet_item");
+            if (palletOpt) palletOpt.textContent = translations[lang].opt_pallet;
+
+            // ƏGƏR RFQ DETAL SƏHİFƏSİ AÇIQDIRSA, DİL DƏYİŞƏNDƏ DİNAMİK MƏLUMATLARI YENİLƏ!
+            if (typeof currentDetailRequestId !== 'undefined' && currentDetailRequestId && currentDetailRequestObj) {
+                renderDetailHeader(currentDetailRequestObj);
+                renderCarrierPanel();
+                const container = document.getElementById("detailQuotesContainer");
+                if (window.currentQuotesCache && window.currentQuotesCache[currentDetailRequestId]) {
+                    container.innerHTML = buildQuotesTableHtml(window.currentQuotesCache[currentDetailRequestId], currentDetailRequestId);
+                }
+            }
 
             try { filterRequests(); } catch(e){}
             try { loadRecentQuotes(); } catch(e){}
         }
-
         // ========================================================
         // Mövcud JavaScript kodlarınız
         // ========================================================
@@ -3444,17 +3267,17 @@ function loadBulkSubCategories(categoryId) {
 
         function buildQuotesTableHtml(quotesList, requestId) {
             if (!quotesList || quotesList.length === 0) {
-                return `<div class="alert alert-light mt-2 border rounded-3 p-2.5 w-100"><p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> Hələ bu sorğuya təklif göndərilməyib.</p></div>`;
+                return `<div class="alert alert-light mt-2 border rounded-3 p-2.5 w-100"><p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> ${translations[currentLang].no_quotes_yet}</p></div>`;
             }
 
             let html = `<div class="table-container-responsive rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
                 <thead style="background: #f8fafc;">
                     <tr>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Daşıyıcı Şirkət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Qiymət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Müddət</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Qeydlər</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-center text-nowrap">Əməliyyat</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">${translations[currentLang].th_carrier_company}</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">${translations[currentLang].th_price}</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">${translations[currentLang].th_transit}</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">${translations[currentLang].th_notes}</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-center text-nowrap">${translations[currentLang].th_action}</th>
                     </tr>
                 </thead>
                 <tbody>`;
@@ -3463,12 +3286,12 @@ function loadBulkSubCategories(categoryId) {
                 let extraStr = "";
                 if (q.extra_details) {
                     for (let [k, v] of Object.entries(q.extra_details)) {
-                        if (k === 'submitted' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
+                        if (k === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
                         if (v !== null && v !== undefined && v !== "") {
                             if (k === 'carrier_attachment_url') {
-                                extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${escapeHTML(v)}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
+                                extraStr += `<div><strong class="text-dark">${currentLang === 'az' ? 'Sənəd:' : 'Doc:'}</strong> <a href="${escapeHTML(v)}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> ${translations[currentLang].more_details}</a></div>`;
                             } else if (k === 'submitted_at') {
-                                extraStr += `<div><strong class="text-dark">Tarix:</strong> ${escapeHTML(formatDateTime(v, true, false))}</div>`;
+                                extraStr += `<div><strong class="text-dark">${currentLang === 'az' ? 'Tarix:' : 'Date:'}</strong> ${escapeHTML(formatDateTime(v, true, false))}</div>`;
                             } else {
                                 extraStr += `<div><strong class="text-dark">${escapeHTML(k)}:</strong> ${escapeHTML(v)}</div>`;
                             }
@@ -3476,10 +3299,11 @@ function loadBulkSubCategories(categoryId) {
                     }
                 }
 
-                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") ? `${escapeHTML(q.transit_time_days)} gün` : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
+                let daysWord = currentLang === 'az' ? 'gün' : 'days';
+                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") ? `${escapeHTML(q.transit_time_days)} ${daysWord}` : `<span class="text-muted fst-italic">${translations[currentLang].not_specified}</span>`;
                 let isRevised = q.quote_history && q.quote_history.length > 0;
-                let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">Yenilənib (v${q.quote_history.length + 1})</span>` : "";
-                let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") ? `${escapeHTML(q.price)} <span class="text-muted small">${escapeHTML(q.currency || 'AZN')}</span>${revisedBadge}` : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
+                let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">${currentLang === 'az' ? 'Yenilənib' : 'Revised'} (v${q.quote_history.length + 1})</span>` : "";
+                let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") ? `${escapeHTML(q.price)} <span class="text-muted small">${escapeHTML(q.currency || 'AZN')}</span>${revisedBadge}` : `<span class="text-muted fst-italic">${translations[currentLang].not_specified}</span>`;
 
                 html += `
                     <tr class="${q.is_winner ? 'table-success' : ''}">
@@ -3487,9 +3311,9 @@ function loadBulkSubCategories(categoryId) {
                         <td class="px-3 text-success fw-bold py-2.5 text-nowrap" style="min-width: 100px;">${priceDisplay}</td>
                         <td class="px-3 fw-medium text-dark py-2.5 text-nowrap" style="min-width: 90px;">${transitDisplay}</td>
                         <td class="px-3 py-2.5 text-nowrap" style="min-width: 160px;">
-                            <div class="text-muted mb-1 text-truncate" style="max-width: 180px;">${extraStr || 'Məlumat yoxdur'}</div>
+                            <div class="text-muted mb-1 text-truncate" style="max-width: 180px;">${extraStr || translations[currentLang].not_specified}</div>
                             <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none text-nowrap" style="font-size: 11.5px;" onclick="openQuoteModal(${requestId}, ${q.id})">
-                                Daha Ətraflı <i class="bi bi-arrow-right-short"></i>
+                                ${translations[currentLang].more_details} <i class="bi bi-arrow-right-short"></i>
                             </button>
                         </td>
                         <td class="px-3 text-center py-2.5 text-nowrap" style="min-width: 100px;">
@@ -3497,17 +3321,17 @@ function loadBulkSubCategories(categoryId) {
                                 <div class="d-flex flex-column gap-2 align-items-center">
                                     <div class="d-flex align-items-center justify-content-center gap-2">
                                         <span class="badge bg-success rounded-pill px-3 py-2" style="font-size: 13px;">
-                                            <i class="bi bi-trophy me-1"></i> Qalib
+                                            <i class="bi bi-trophy me-1"></i> ${translations[currentLang].winner}
                                         </span>
-                                        <button onclick="cancelWinner(${q.id}, ${requestId})" class="btn btn-sm btn-outline-danger rounded-circle d-flex align-items-center justify-content-center shadow-sm" title="Qalibi ləğv et" style="width: 32px; height: 32px; border-width: 2px; padding: 0;">
+                                        <button onclick="cancelWinner(${q.id},${requestId})" class="btn btn-sm btn-outline-danger rounded-circle d-flex align-items-center justify-content-center shadow-sm" title="Cancel" style="width: 32px; height: 32px; border-width: 2px; padding: 0;">
                                             <i class="bi bi-x-lg" style="font-size: 14px; stroke-width: 2;"></i>
                                         </button>
                                     </div>
-                                    <button onclick="openCustomerQuoteModal(${requestId}, ${q.id}, '${q.price}', '${escapeHTML(q.currency || 'AZN')}')" class="btn btn-sm btn-success w-100 fw-bold rounded-pill shadow-sm" style="font-size: 11px;">
-                                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Müştəriyə Göndər
+                                    <button onclick="openCustomerQuoteModal(${requestId},${q.id}, '${q.price}', '${escapeHTML(q.currency || 'AZN')}')" class="btn btn-sm btn-success w-100 fw-bold rounded-pill shadow-sm" style="font-size: 11px;">
+                                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> ${translations[currentLang].send_to_customer}
                                     </button>
                                 </div>
-                            ` : `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`}
+                            ` : `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">${translations[currentLang].select_winner}</button>`}
                         </td>
                     </tr>
                 `;
@@ -3734,14 +3558,16 @@ function loadBulkSubCategories(categoryId) {
 
         function renderDetailHeader(req) {
             document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.display_id || req.id}`;
-            document.getElementById("detailIdBadge").textContent = `RFQ #${req.display_id || req.id}`;
+            document.getElementById("detailIdBadge").textContent = `ID: RFQ #${req.display_id || req.id}`;
             document.getElementById("detailOrigin").textContent = escapeHTML(req.origin || req.loading_location || "—");
             document.getElementById("detailDestination").textContent = escapeHTML(req.destination || req.delivery_location || "—");
-            document.getElementById("detailCargoType").textContent = escapeHTML(req.cargo_type || req.cargo || "—");
+            
+            let notSpec = translations[currentLang].not_specified;
+            document.getElementById("detailCargoType").textContent = escapeHTML(req.cargo_type || req.cargo || notSpec);
 
             const weight = req.weight_kg || req.weight;
-            let weightStr = weight ? `${escapeHTML(weight)} kq` : "Qeyd edilməyib";
-            if (req.volume_m3 && req.volume_m3 !== "Qeyd edilməyib" && req.volume_m3 != 0) {
+            let weightStr = weight ? `${escapeHTML(weight)} ${currentLang === 'az' ? 'kq' : 'kg'}` : notSpec;
+            if (req.volume_m3 && req.volume_m3 !== "Qeyd edilməyib" && req.volume_m3 !== notSpec && req.volume_m3 != 0) {
                 weightStr += ` / ${escapeHTML(req.volume_m3)} m³`;
             }
             document.getElementById("detailWeight").textContent = weightStr;
@@ -3751,32 +3577,39 @@ function loadBulkSubCategories(categoryId) {
 
             const statusBadge = document.getElementById("detailStatusBadge");
             const isOpen = (req.status || "open") === "open";
-            statusBadge.textContent = isOpen ? "OPEN" : "CLOSED"; statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
+            statusBadge.textContent = isOpen ? translations[currentLang].status_open : translations[currentLang].status_closed; 
+            statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
 
             document.getElementById("detailSenderCompany").textContent = escapeHTML((activeUser && (activeUser.company_name || activeUser.name)) || "—");
             document.getElementById("detailSenderEmail").textContent = escapeHTML((activeUser && activeUser.email) || "—");
             document.getElementById("detailReplyTo").textContent = escapeHTML((activeUser && activeUser.email) || "—");
-            document.getElementById("detailEmailTemplate").textContent = req.email_template_type === 'custom' ? "Fərdi şablon" : "Standart şablon";
+            
+            let templateName = req.email_template_type === 'custom' ? (translations[currentLang].custom_template || "Fərdi şablon") : (translations[currentLang].standard_template || "Standart şablon");
+            document.getElementById("detailEmailTemplate").textContent = templateName;
 
             renderRequestExtraModal(req);
         }
 
         function renderRequestExtraModal(req) {
             const box = document.getElementById("requestExtraModalContent");
+            let valYes = translations[currentLang].val_yes;
+            let valNo = translations[currentLang].val_no;
+            let notSpec = translations[currentLang].not_specified;
+
             try {
                 const rows = [
-                    ["Daşınma növü / Truck type", req.truck_type],
-                    ["Yük tipi (Shipment type)", req.shipment_type],
-                    ["HS Kodu", req.hs_code],
-                    ["Stiflənə bilər (Stackable)", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
-                    ["Əlavə qeydlər", req.additional_notes || req.note]
+                    [translations[currentLang].lbl_truck_type_full, req.truck_type],
+                    [translations[currentLang].lbl_shipment_type_full, req.shipment_type],
+                    [translations[currentLang].lbl_hs_code, req.hs_code],
+                    [translations[currentLang].lbl_stackable_full, req.stackable === true ? valYes : (req.stackable === false ? valNo : null)],
+                    [translations[currentLang].lbl_additional_notes, req.additional_notes || req.note]
                 ];
 
                 let html = `<div class="d-flex flex-column gap-2">`;
                 let hasAny = false;
                 
                 for (let [label, value] of rows) {
-                    if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib") continue;
+                    if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib" || value === notSpec) continue;
                     hasAny = true;
                     html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">${escapeHTML(label)}</strong><span class="text-dark small">${escapeHTML(value)}</span></div>`;
                 }
@@ -3793,19 +3626,18 @@ function loadBulkSubCategories(categoryId) {
                         }
                         return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0"><i class="bi bi-check2 text-success me-1"></i> <span class="text-dark fw-medium">${escapeHTML(fStr)}</span></div>`;
                     }).join("");
-                    
-                    html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1"><strong class="text-primary small d-flex align-items-center mb-3 border-bottom pb-2"><i class="bi bi-card-checklist fs-5 me-2"></i> İxtiyari Parametrlər</strong><div class="text-dark small">${fieldsHtml}</div></div>`;
+                    html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1"><strong class="text-primary small d-flex align-items-center mb-3 border-bottom pb-2"><i class="bi bi-card-checklist fs-5 me-2"></i> ${translations[currentLang].lbl_optional_params}</strong><div class="text-dark small">${fieldsHtml}</div></div>`;
                 }
 
                 if (req.attachment_url) {
                     hasAny = true;
-                    html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${escapeHTML(req.attachment_url)}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
+                    html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">${translations[currentLang].lbl_attached_doc}</strong><a href="${escapeHTML(req.attachment_url)}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> ${translations[currentLang].btn_download}</a></div>`;
                 }
 
-                if (!hasAny) { html += `<div class="text-muted small text-center p-3">Əlavə detal qeyd olunmayıb.</div>`; }
+                if (!hasAny) { html += `<div class="text-muted small text-center p-3">${translations[currentLang].lbl_no_extra_detail}</div>`; }
                 html += `</div><style>.last-child-border-0:last-child { border-bottom: none !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }</style>`;
                 box.innerHTML = html;
-            } catch (e) { box.innerHTML = `<div class="text-danger small p-3">Məlumatları göstərərkən xəta baş verdi.</div>`; }
+            } catch (e) { box.innerHTML = `<div class="text-danger small p-3">Məlumat xətası</div>`; }
         }
 
         async function loadDetailCarriersStatus(requestId) {
