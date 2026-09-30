@@ -544,132 +544,132 @@
         <div class="tab-content" id="mainAppTabsContent">
 
         <!-- ================= TAB 1: DASHBOARD ================= -->
-        <div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel" aria-labelledby="tab-dashboard-btn">
-        
-        <!-- STATS ROW -->
-        <div class="row g-2 g-md-3 mb-4">
-            <div class="col-12 col-sm-4">
-                <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider" data-i18n="stat_active">Aktiv RFQ Sorğuları</span>
-                    <h3 id="statActiveRfqs">0</h3>
-                </div>
-            </div>
-            <div class="col-12 col-sm-4">
-                <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider" data-i18n="stat_completed">Tamamlanmış Daşımalar</span>
-                    <h3 id="statCompleted">0</h3>
-                </div>
-            </div>
-            <div class="col-12 col-sm-4">
-                <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider" data-i18n="stat_carriers">Daşıyıcı Bazası</span>
-                    <h3 id="statCarriersCount">0</h3>
-                </div>
+<div class="tab-pane fade show active" id="tab-dashboard" role="tabpanel" aria-labelledby="tab-dashboard-btn">
+
+    <!-- STATS ROW -->
+    <div class="row g-2 g-md-3 mb-4">
+        <div class="col-12 col-sm-4">
+            <div class="stats-card">
+                <span class="text-muted small fw-bold text-uppercase tracking-wider" data-i18n="stat_active">Aktiv RFQ Sorğuları</span>
+                <h3 id="statActiveRfqs">0</h3>
             </div>
         </div>
-
-        <div class="row g-3 mb-4">
-            <!-- SON TƏKLİFLƏR PANELİ -->
-            <div class="col-12 col-lg-8">
-                <div class="card h-100 mb-0 shadow-sm border-0">
-                    <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
-                        <div>
-                            <div class="section-title mb-1">
-                                <i class="bi bi-clock-history text-primary me-2"></i> <span data-i18n="latest_offers">Son Gələn Təkliflər</span>
-                            </div>
-                            <div class="section-desc" style="font-size: 13px;" data-i18n="latest_offers_desc">Daşıyıcılardan gələn son 10 qiymət təklifi.</div>
-                        </div>
-                        <button onclick="loadRecentQuotes()" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm d-flex align-items-center text-nowrap flex-shrink-0" style="font-size: 12px; font-weight: 500; transition: all 0.2s;">
-                            <i class="bi bi-arrow-clockwise me-1" style="font-size: 14px;"></i> <span data-i18n="btn_refresh">Yenilə</span>
-                        </button>
-                    </div>
-                    
-                    <div class="table-responsive rounded-3 border">
-                        <table class="table table-hover align-middle mb-0 text-sm">
-                            <thead class="bg-light text-muted text-nowrap" style="font-size: 12.5px;">
-                                <tr>
-                                    <th class="py-3 px-3" data-i18n="th_inquiry">Sorğu (RFQ)</th>
-                                    <th class="py-3 px-3" data-i18n="th_carrier">Daşıyıcı</th>
-                                    <th class="py-3 px-3 text-success" data-i18n="th_price">Qiymət</th>
-                                    <th class="py-3 px-3 text-end" data-i18n="th_operation">Əməliyyat</th>
-                                </tr>
-                            </thead>
-                            <tbody id="recentQuotesContainer">
-                                <tr><td colspan="4" class="text-center text-muted py-4 small" data-i18n="loading_offers">Təkliflər yüklənir...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        <div class="col-12 col-sm-4">
+            <div class="stats-card">
+                <span class="text-muted small fw-bold text-uppercase tracking-wider" data-i18n="stat_completed">Tamamlanmış Daşımalar</span>
+                <h3 id="statCompleted">0</h3>
             </div>
+        </div>
+        <div class="col-12 col-sm-4">
+            <div class="stats-card">
+                <span class="text-muted small fw-bold text-uppercase tracking-wider" data-i18n="stat_carriers">Daşıyıcı Bazası</span>
+                <h3 id="statCarriersCount">0</h3>
+            </div>
+        </div>
+    </div>
 
-            <!-- HESABATLAR PANELİ -->
-            <div class="col-12 col-lg-4">
-                <div class="card h-100 mb-0 shadow-sm border-0 bg-light">
-                    <div class="section-title mb-1">
-                        <i class="bi bi-file-earmark-bar-graph text-success"></i> <span data-i18n="reporting_center">Hesabat Mərkəzi</span>
-                    </div>
-                    <div class="section-desc mb-3" data-i18n="reporting_desc">Sistemdən RFQ və ya Təklif məlumatlarını endirin.</div>
-                    
-                    <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm">
-                        <label class="form-label text-muted small fw-bold mb-2 d-block" data-i18n="report_content">Hesabatın Məzmunu</label>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catRfq" value="rfq" checked>
-                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catRfq" data-i18n="report_all_rfq">📦 Bütün RFQ Detalları</label>
+    <div class="row g-3 mb-4">
+        <!-- SON TƏKLİFLƏR PANELİ -->
+        <div class="col-12 col-lg-8">
+            <div class="card h-100 mb-0 shadow-sm border-0">
+                <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+                    <div>
+                        <div class="section-title mb-1">
+                            <i class="bi bi-clock-history text-primary me-2"></i> <span data-i18n="latest_offers">Son Gələn Təkliflər</span>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catQuote" value="quote">
-                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catQuote" data-i18n="report_quotes">💬 Gələn Təkliflər</label>
-                        </div>
+                        <div class="section-desc" style="font-size: 13px;" data-i18n="latest_offers_desc">Daşıyıcılardan gələn son 10 qiymət təklifi.</div>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold" data-i18n="query_interval">Sorğu aralığı</label>
-                        <select class="form-select shadow-sm" id="reportTypeSelect" onchange="toggleReportOptions()" style="font-size: 13px;">
-                            <option value="all" data-i18n="opt_all_queries">Bütün Sorğular (Ümumi)</option>
-                            <option value="today" data-i18n="opt_today">Bugünün sorğuları</option>
-                            <option value="date_range" data-i18n="opt_date_range">İstənilən tarix aralığı</option>
-                            <option value="selected" data-i18n="opt_selected_rfq">Seçilmiş RFQ-lər</option>
-                        </select>
-                    </div>
-
-                    <div id="reportDateRangeOptions" class="d-none mb-3 p-3 bg-white border rounded-3 shadow-sm">
-                        <div class="mb-2">
-                            <label class="form-label text-muted" style="font-size: 11px;" data-i18n="start_date">Başlanğıc Tarixi</label>
-                            <input type="date" class="form-control form-control-sm" id="reportStartDate">
-                        </div>
-                        <div>
-                            <label class="form-label text-muted" style="font-size: 11px;" data-i18n="end_date">Bitiş Tarixi</label>
-                            <input type="date" class="form-control form-control-sm" id="reportEndDate">
-                        </div>
-                    </div>
-
-                    <div id="reportSelectedOptions" class="d-none mb-3 p-2 bg-white border rounded-3 shadow-sm" style="max-height: 150px; overflow-y: auto;">
-                        <small class="text-muted fw-bold d-block mb-2 ps-1" style="font-size: 11px;" data-i18n="select_queries_below">Aşağıdan sorğuları seçin:</small>
-                        <div id="reportRfqCheckboxes">
-                            <span class="text-muted small" data-i18n="loading">Yüklənir...</span>
-                        </div>
-                    </div>
-
-                    <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm d-flex justify-content-between">
-                        <div class="form-check">
-                           <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportFormat" id="fmtExcel" value="xlsx" checked>
-                           <label class="form-check-label text-success fw-bold" style="font-size: 13px; cursor: pointer;" for="fmtExcel"><i class="bi bi-file-earmark-excel"></i> Excel</label>
-                   </div>
-                        <div class="form-check pe-2">
-                            <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportFormat" id="fmtPdf" value="pdf">
-                            <label class="form-check-label text-danger fw-bold" style="font-size: 13px; cursor: pointer;" for="fmtPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</label>
-                        </div>
-                    </div>
-
-                    <button class="btn btn-success w-100 fw-bold shadow-sm" onclick="downloadReport()">
-                        <i class="bi bi-cloud-arrow-down-fill me-1"></i> <span data-i18n="btn_download_report">Hesabatı Endir</span>
+                    <button onclick="loadRecentQuotes()" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm d-flex align-items-center text-nowrap flex-shrink-0" style="font-size: 12px; font-weight: 500; transition: all 0.2s;">
+                        <i class="bi bi-arrow-clockwise me-1" style="font-size: 14px;"></i> <span data-i18n="btn_refresh">Yenilə</span>
                     </button>
                 </div>
+                
+                <div class="table-responsive rounded-3 border">
+                    <table class="table table-hover align-middle mb-0 text-sm">
+                        <thead class="bg-light text-muted text-nowrap" style="font-size: 12.5px;">
+                            <tr>
+                                <th class="py-3 px-3" data-i18n="th_inquiry">Sorğu (RFQ)</th>
+                                <th class="py-3 px-3" data-i18n="th_carrier">Daşıyıcı</th>
+                                <th class="py-3 px-3 text-success" data-i18n="th_price">Qiymət</th>
+                                <th class="py-3 px-3 text-end" data-i18n="th_operation">Əməliyyat</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recentQuotesContainer">
+                            <tr><td colspan="4" class="text-center text-muted py-4 small" data-i18n="loading_offers">Təkliflər yüklənir...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
+        <!-- HESABATLAR PANELİ -->
+        <div class="col-12 col-lg-4">
+            <div class="card h-100 mb-0 shadow-sm border-0 bg-light">
+                <div class="section-title mb-1">
+                    <i class="bi bi-file-earmark-bar-graph text-success"></i> <span data-i18n="reporting_center">Hesabat Mərkəzi</span>
+                </div>
+                <div class="section-desc mb-3" data-i18n="reporting_desc">Sistemdən RFQ və ya Təklif məlumatlarını endirin.</div>
+                
+                <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm">
+                    <label class="form-label text-muted small fw-bold mb-2 d-block" data-i18n="report_content">Hesabatın Məzmunu</label>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catRfq" value="rfq" checked>
+                        <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catRfq" data-i18n="report_all_rfq">📦 Bütün RFQ Detalları</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catQuote" value="quote">
+                        <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catQuote" data-i18n="report_quotes">💬 Gələn Təkliflər</label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small fw-bold" data-i18n="query_interval">Sorğu aralığı</label>
+                    <select class="form-select shadow-sm" id="reportTypeSelect" onchange="toggleReportOptions()" style="font-size: 13px;">
+                        <option value="all" data-i18n="opt_all_queries">Bütün Sorğular (Ümumi)</option>
+                        <option value="today" data-i18n="opt_today">Bugünün sorğuları</option>
+                        <option value="date_range" data-i18n="opt_date_range">İstənilən tarix aralığı</option>
+                        <option value="selected" data-i18n="opt_selected_rfq">Seçilmiş RFQ-lər</option>
+                    </select>
+                </div>
+
+                <div id="reportDateRangeOptions" class="d-none mb-3 p-3 bg-white border rounded-3 shadow-sm">
+                    <div class="mb-2">
+                        <label class="form-label text-muted" style="font-size: 11px;" data-i18n="start_date">Başlanğıc Tarixi</label>
+                        <input type="date" class="form-control form-control-sm" id="reportStartDate">
+                    </div>
+                    <div>
+                        <label class="form-label text-muted" style="font-size: 11px;" data-i18n="end_date">Bitiş Tarixi</label>
+                        <input type="date" class="form-control form-control-sm" id="reportEndDate">
+                    </div>
+                </div>
+
+                <div id="reportSelectedOptions" class="d-none mb-3 p-2 bg-white border rounded-3 shadow-sm" style="max-height: 150px; overflow-y: auto;">
+                    <small class="text-muted fw-bold d-block mb-2 ps-1" style="font-size: 11px;" data-i18n="select_queries_below">Aşağıdan sorğuları seçin:</small>
+                    <div id="reportRfqCheckboxes">
+                        <span class="text-muted small" data-i18n="loading">Yüklənir...</span>
+                    </div>
+                </div>
+
+                <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm d-flex justify-content-between">
+                    <div class="form-check">
+                       <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportFormat" id="fmtExcel" value="xlsx" checked>
+                       <label class="form-check-label text-success fw-bold" style="font-size: 13px; cursor: pointer;" for="fmtExcel"><i class="bi bi-file-earmark-excel"></i> Excel</label>
+               </div>
+                    <div class="form-check pe-2">
+                        <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportFormat" id="fmtPdf" value="pdf">
+                        <label class="form-check-label text-danger fw-bold" style="font-size: 13px; cursor: pointer;" for="fmtPdf"><i class="bi bi-file-earmark-pdf"></i> PDF</label>
+                    </div>
+                </div>
+
+                <button class="btn btn-success w-100 fw-bold shadow-sm" onclick="downloadReport()">
+                    <i class="bi bi-cloud-arrow-down-fill me-1"></i> <span data-i18n="btn_download_report">Hesabatı Endir</span>
+                </button>
+            </div>
         </div>
-        <!-- ================= /TAB 1 ================= -->
+    </div>
+
+</div>
+<!-- ================= /TAB 1 ================= -->
 
         <!-- ================= TAB 2: DAŞIYICI BAZASI ================= -->
         <div class="tab-pane fade" id="tab-vendors" role="tabpanel" aria-labelledby="tab-vendors-btn">
