@@ -7,21 +7,23 @@
     <link rel="icon" type="image/png" href="/static/arachi-logo.png">
     <link rel="apple-touch-icon" href="/static/arachi-logo.png">
     <link rel="shortcut icon" href="/static/arachi-logo.png">
-    <script src="https://cdn.tailwindcss.com"></script>
-<!-- QƏTİ HƏLL: GÖZƏTÇİ SKRİPT (Kəşə qarşı) -->
-
-<script>
-    // Əgər səhifə ilk dəfə açılırsa və dizayn yüklənməyibsə, Apple cihazları üçün avtomatik bir dəfə yeniləyirik
-    window.addEventListener('DOMContentLoaded', () => {
-        if (!window.tailwind && !sessionStorage.getItem('reloaded')) {
-            sessionStorage.setItem('reloaded', 'true');
-            window.location.reload();
-        }
-    });
-</script>
     
-    <script
-        
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- QƏTİ HƏLL: GÖZƏTÇİ SKRİPT (Kəşə qarşı) -->
+    <script>
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!window.tailwind && !sessionStorage.getItem('reloaded')) {
+                sessionStorage.setItem('reloaded', 'true');
+                window.location.reload();
+            }
+        });
+    </script>
+    
+    <script>
         if (window.location.search.includes('public=1') || window.location.search.includes('public_link')) {
             const observer = new MutationObserver(() => {
                 const backBtn = document.querySelector('button[onclick="window.location.reload()"]');
@@ -29,7 +31,6 @@
                 const optionsTabs = document.getElementById("options_tabs_container");
                 const updateNotice = document.getElementById("update_notice");
                 
-                // O düymə və ya tablar yarandığı millisaniyədə silinir!
                 if (backBtn) backBtn.remove(); 
                 if (altBtn) altBtn.remove();
                 if (optionsTabs) optionsTabs.remove();
@@ -37,110 +38,184 @@
             });
             observer.observe(document, { childList: true, subtree: true });
         }
-    </script
-    
+    </script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans p-4 md:p-8">
 
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl p-8 shadow-2xl">
-        <div class="flex items-center justify-center gap-2 mb-4">
-            <img src="/static/arachi-logo.png" alt="Arachi" style="height: 28px; width: auto;">
+    <!-- Navbar / Header -->
+    <div class="max-w-4xl mx-auto flex justify-between items-center mb-6">
+        <div class="flex items-center gap-2">
+            <img src="/static/arachi-logo.png" alt="Arachi" class="h-8 w-auto">
+            <span class="text-2xl font-bold text-slate-900">Arachi</span>
         </div>
-        <h2 class="text-2xl font-bold text-center mb-6 text-indigo-400">Carrier Quote Form</h2>
+        <button class="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-full text-sm hover:bg-slate-50 transition shadow-sm">
+            <i data-lucide="globe" class="w-4 h-4"></i>
+            <span>EN</span>
+        </button>
+    </div>
 
+    <!-- Main Container -->
+    <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8">
+        
         <!-- Re-submission Notice -->
-        <div id="update_notice" class="hidden bg-indigo-900/40 border border-indigo-800 text-indigo-200 p-3 rounded-lg mb-6 text-sm">
+        <div id="update_notice" class="hidden bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl mb-6 text-sm">
             <span class="block font-semibold mb-1">ℹ️ You have previously submitted a quote.</span>
             You can select an option below to update it OR submit a completely new alternative option.
         </div>
+        
+        <!-- Options Tabs Container -->
+        <div id="options_tabs_container"></div>
 
-        <!-- Cargo Details -->
-        <div class="bg-slate-800/50 border border-slate-700/50 rounded-xl p-5 mb-6">
-            <h3 class="text-sm font-semibold text-indigo-300 uppercase tracking-wider mb-4">📦 Cargo Details</h3>
+        <!-- RFQ Header -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+            <div class="flex items-center gap-3">
+                <span class="bg-blue-100 text-blue-700 font-semibold px-3 py-1 rounded-full text-sm">RFQ</span>
+                <span class="text-slate-500 font-medium tracking-wide">REQUEST DETAILS</span>
+            </div>
+            <div class="flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg text-sm font-medium">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+                Please submit your quote
+            </div>
+        </div>
+
+        <!-- Route Info -->
+        <div class="flex flex-col md:flex-row items-center justify-center text-center bg-slate-50/80 border border-slate-100 rounded-xl p-5 mb-6">
+            <div class="flex items-center justify-center gap-4 w-full">
+                <i data-lucide="map-pin" class="text-blue-500 w-6 h-6"></i>
+                <h3 id="route_text" class="font-bold text-lg text-slate-700">-</h3>
+            </div>
+        </div>
+
+        <!-- Cargo Details Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="border border-slate-200 rounded-xl p-4 flex gap-3 bg-white">
+                <i data-lucide="package" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
+                <div>
+                    <p class="text-xs text-slate-500 mb-1">Total Cargo (Weight / Vol)</p>
+                    <p id="weight_volume_text" class="font-bold text-sm text-slate-800">-</p>
+                </div>
+            </div>
             
-            <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+            <div id="loading_date_box" class="border border-slate-200 rounded-xl p-4 flex gap-3 bg-white hidden">
+                <i data-lucide="calendar" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
                 <div>
-                    <span class="text-slate-400 block text-xs">Route</span>
-                    <span id="route_text" class="font-bold text-white text-base">-</span>
-                </div>
-                <div>
-                    <span class="text-slate-400 block text-xs">Weight / Volume</span>
-                    <span id="weight_volume_text" class="font-bold text-white text-base">-</span>
-                </div>
-                <div class="col-span-2">
-                    <span class="text-slate-400 block text-xs">Cargo Type</span>
-                    <span id="cargo_type_text" class="font-bold text-white text-base">-</span>
+                    <p class="text-xs text-slate-500 mb-1">Loading Date</p>
+                    <p id="loading_date_text" class="font-bold text-sm text-slate-800">-</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4 text-sm pt-3 border-t border-slate-700/40">
-                <div id="loading_date_box" class="hidden">
-                    <span class="text-slate-400 block text-xs">Loading Date</span>
-                    <span id="loading_date_text" class="font-bold text-white text-base">-</span>
-                </div>
-                <div id="deadline_box" class="hidden">
-                    <span class="text-slate-400 block text-xs">Deadline</span>
-                    <span id="deadline_text" class="font-bold text-white text-base">-</span>
+            <div id="deadline_box" class="border border-slate-200 rounded-xl p-4 flex gap-3 bg-white hidden">
+                <i data-lucide="clock" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
+                <div>
+                    <p class="text-xs text-slate-500 mb-1">Deadline</p>
+                    <p id="deadline_text" class="font-bold text-sm text-slate-800">-</p>
                 </div>
             </div>
 
-            <div id="dynamic_fields_container" class="mt-4 pt-4 border-t border-slate-700/50 space-y-3">
-                <h4 id="container_title" class="text-xs font-semibold text-indigo-300 uppercase tracking-wider">Customer Requirements & Notes</h4>
-                <div id="fields_list" class="space-y-3"></div>
+            <div class="border border-slate-200 rounded-xl p-4 flex gap-3 bg-white">
+                <i data-lucide="layers" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
+                <div>
+                    <p class="text-xs text-slate-500 mb-1">Cargo Type</p>
+                    <p id="cargo_type_text" class="font-bold text-sm text-slate-800">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dynamic Customer Requirements -->
+        <div id="dynamic_fields_container" class="mb-8 flex gap-3 border-b border-slate-100 pb-8">
+            <i data-lucide="clipboard-list" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-1"></i>
+            <div class="w-full">
+                <h4 id="container_title" class="font-medium mb-3 text-slate-800">Customer Requirements & Notes</h4>
+                <div id="fields_list" class="space-y-3 bg-slate-50 rounded-xl p-4"></div>
+            </div>
+        </div>
+
+        <!-- YOUR QUOTE SECTION -->
+        <div class="mb-6 flex gap-3 mt-4">
+            <i data-lucide="bar-chart-2" class="text-blue-500 w-6 h-6 flex-shrink-0"></i>
+            <div>
+                <h3 class="font-bold text-lg text-slate-800">Your Quote</h3>
+                <p class="text-slate-500 text-sm">Please provide your best offer and all relevant details.</p>
             </div>
         </div>
 
         <!-- Quote Form -->
-        <form id="quote_form" class="space-y-4">
+        <form id="quote_form" class="space-y-6 pl-0 md:pl-9">
            
-            <!-- DAŞIYICI ŞİRKƏT ADI -->
-            <div id="carrierCompanyField" style="display: none;">
-                <label class="block text-sm font-medium text-slate-300 mb-1">Carrier Company Name<span class="text-red-400">*</span></label>
-                <input type="text" id="carrierCompanyInput" name="carrier_company" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500" placeholder="Enter your company name...">
+            <!-- Carrier Company Name -->
+            <div id="carrierCompanyField" style="display: none;" class="flex gap-3">
+                <i data-lucide="building" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
+                <div class="w-full">
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Carrier Company Name<span class="text-red-500">*</span></label>
+                    <input type="text" id="carrierCompanyInput" name="carrier_company" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" placeholder="Enter your company name...">
+                </div>
             </div>
             
-            <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">Offered Price</label>
-                <div class="flex gap-2">
-                    <input type="number" step="0.01" id="price" class="flex-1 min-w-0 bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500" placeholder="0.00">
-                    <select id="currency" class="w-28 bg-slate-950 border border-slate-700 rounded-lg px-2 py-2.5 text-white focus:outline-none focus:border-indigo-500">
-                        <option value="AZN">AZN</option>
-                        <option value="USD">USD</option>
-                        <option value="EUR">EUR</option>
-                        <option value="TRY">TRY</option>
-                        <option value="RUB">RUB</option>
-                        <option value="GBP">GBP</option>
-                    </select>
+            <!-- Offered Price -->
+            <div class="flex gap-3">
+                <i data-lucide="coins" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
+                <div class="w-full">
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Offered Price</label>
+                    <div class="flex gap-2">
+                        <input type="number" step="0.01" id="price" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" placeholder="0.00">
+                        <select id="currency" class="border border-slate-200 rounded-lg p-2.5 text-sm bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none w-28 text-slate-700">
+                            <option value="USD">USD</option>
+                            <option value="AZN">AZN</option>
+                            <option value="EUR">EUR</option>
+                            <option value="TRY">TRY</option>
+                            <option value="RUB">RUB</option>
+                            <option value="GBP">GBP</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">Transit Time (Days)</label>
-                <input type="number" id="transit_time_days" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500" placeholder="e.g.: 5">
+            <!-- Transit Time -->
+            <div class="flex gap-3">
+                <i data-lucide="timer" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
+                <div class="w-full">
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Transit Time (Days)</label>
+                    <input type="number" id="transit_time_days" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" placeholder="e.g.: 5">
+                </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">Additional Notes or Terms (From Carrier)</label>
-                <textarea id="carrier_note" rows="3" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-indigo-500" placeholder="Payment terms, special notes or offer details..."></textarea>
+            <!-- Additional Notes -->
+            <div class="flex gap-3">
+                <i data-lucide="file-edit" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
+                <div class="w-full">
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Additional Notes or Terms (From Carrier)</label>
+                    <textarea id="carrier_note" rows="3" class="w-full border border-slate-200 rounded-lg p-3 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition resize-y" placeholder="Payment terms, special notes or offer details..."></textarea>
+                </div>
             </div>
 
-            <div>
-                <label class="block text-sm font-medium text-slate-300 mb-1">Additional Document / File (From Carrier)</label>
-                <input type="file" id="carrier_file" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700">
+            <!-- File Upload -->
+            <div class="flex gap-3">
+                <i data-lucide="paperclip" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
+                <div class="w-full">
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Additional Document / File (From Carrier)</label>
+                    <input type="file" id="carrier_file" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
+                </div>
             </div>
 
-            <div class="flex flex-col gap-3 mt-4 pt-2">
-                <button type="button" id="submit_btn" onclick="setSubmitTypeAndSend(false)" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-3 rounded-lg transition duration-200">
-                    🚀 Submit Quote
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-slate-100">
+                <button type="button" id="submit_alt_btn" onclick="setSubmitTypeAndSend(true)" class="hidden w-full sm:w-1/2 py-3 rounded-lg flex items-center justify-center gap-2 font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition">
+                    <i data-lucide="plus" class="w-5 h-5"></i>
+                    Submit Alternative Option
                 </button>
-                <button type="button" id="submit_alt_btn" onclick="setSubmitTypeAndSend(true)" class="hidden w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 rounded-lg transition duration-200 shadow-lg shadow-emerald-900/20 border border-emerald-500/50">
-                    ➕ Submit as New Alternative Option
+                <button type="button" id="submit_btn" onclick="setSubmitTypeAndSend(false)" class="w-full py-3 rounded-lg flex items-center justify-center gap-2 font-medium text-white bg-blue-500 hover:bg-blue-600 transition shadow-sm flex-1">
+                    <i data-lucide="send" class="w-5 h-5"></i>
+                    Submit Quote
                 </button>
             </div>
         </form>
     </div>
 
+    <!-- Sizin Orijinal JavaScript Məntiqiniz -->
     <script>
+        // İkonları render etmək
+        lucide.createIcons();
+
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
 
@@ -148,7 +223,6 @@
         let currentEditingToken = token;
         window.isPublicLink = false;
 
-        // XSS QORUNMASI
         function escapeHTML(str) {
             if (str === null || str === undefined) return '';
             return String(str)
@@ -159,7 +233,6 @@
                 .replace(/'/g, "&#039;");
         }
 
-        // Tarix formatlama
         function formatDateTime(str) {
             if (!str) return "-";
             let s = String(str);
@@ -185,22 +258,17 @@
 
         function renderOptionsTabs() {
             let container = document.getElementById("options_tabs_container");
-            if (!container) {
-                container = document.createElement("div");
-                container.id = "options_tabs_container";
-                const formEl = document.getElementById("quote_form");
-                formEl.parentNode.insertBefore(container, formEl);
-            }
+            if (!container) return;
 
-            let tabsHtml = `<div class="flex gap-2 overflow-x-auto mb-5 pb-2" style="scrollbar-width: thin; scrollbar-color: #4f46e5 transparent;">`;
+            let tabsHtml = `<div class="flex gap-2 overflow-x-auto mb-5 pb-2" style="scrollbar-width: thin;">`;
             allCarrierQuotes.forEach((q, index) => {
                 let isSub = q.price !== null || (q.extra_details && q.extra_details.submitted_at);
                 let label = isSub ? `Option ${index + 1}` : `Draft Option`;
                 let priceLabel = q.price ? `${q.price} ${q.currency}` : '';
                 
-                tabsHtml += `<button type="button" id="tab_${q.token}" onclick="selectQuoteOption('${q.token}')" class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-700 bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white transition-all whitespace-nowrap quote-tab-btn flex flex-col items-center min-w-[100px]">
+                tabsHtml += `<button type="button" id="tab_${q.token}" onclick="selectQuoteOption('${q.token}')" class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all whitespace-nowrap quote-tab-btn flex flex-col items-center min-w-[100px]">
                     <span class="block">${label}</span>
-                    ${priceLabel ? `<span class="text-xs text-emerald-400 font-bold mt-1">${priceLabel}</span>` : ''}
+                    ${priceLabel ? `<span class="text-xs text-blue-600 font-bold mt-1">${priceLabel}</span>` : ''}
                 </button>`;
             });
             tabsHtml += `</div>`;
@@ -213,13 +281,13 @@
             if (!q) return;
 
             document.querySelectorAll(".quote-tab-btn").forEach(btn => {
-                btn.classList.remove("bg-indigo-600", "text-white", "border-indigo-500");
-                btn.classList.add("bg-slate-800", "text-slate-400", "border-slate-700");
+                btn.classList.remove("bg-blue-500", "text-white", "border-blue-500");
+                btn.classList.add("bg-white", "text-slate-500", "border-slate-200");
             });
             const activeTab = document.getElementById(`tab_${selectedToken}`);
             if (activeTab) {
-                activeTab.classList.remove("bg-slate-800", "text-slate-400", "border-slate-700");
-                activeTab.classList.add("bg-indigo-600", "text-white", "border-indigo-500");
+                activeTab.classList.remove("bg-white", "text-slate-500", "border-slate-200");
+                activeTab.classList.add("bg-blue-500", "text-white", "border-blue-500");
             }
 
             document.getElementById("price").value = q.price !== null ? q.price : "";
@@ -234,10 +302,11 @@
 
             let isSub = q.price !== null || (q.extra_details && q.extra_details.submitted_at);
             if (isSub) {
-                document.getElementById("submit_btn").innerHTML = "🔄 Update Selected Quote";
+                document.getElementById("submit_btn").innerHTML = `<i data-lucide="refresh-cw" class="w-5 h-5 mr-2"></i> Update Selected Quote`;
             } else {
-                document.getElementById("submit_btn").innerHTML = "🚀 Submit Quote";
+                document.getElementById("submit_btn").innerHTML = `<i data-lucide="send" class="w-5 h-5 mr-2"></i> Submit Quote`;
             }
+            lucide.createIcons();
         }
 
         async function loadRequestDetails() {
@@ -252,28 +321,22 @@
 
                 const req = data.request;
 
-                // 1. PUBLIC LİNKİN DƏQİQ AŞKARLANMASI
                 if (window.location.href.includes('public=1')) window.isPublicLink = true;
                 if (data.is_public === true) window.isPublicLink = true;
                 if (data.quote && data.quote.carriers && data.quote.carriers.email && String(data.quote.carriers.email).includes("public_link")) window.isPublicLink = true;
                 if (data.quote && data.quote.token && String(data.quote.token).includes("public_link")) window.isPublicLink = true;
 
                 if (window.isPublicLink) {
-                    // ==============================================================
-                    // NÜVƏ HƏLLİ: BÜTÜN KÖHNƏ MƏLUMATLARI DOM-DAN ZORLA SİLİRİK!
-                    // ==============================================================
-                    
                     const field = document.getElementById('carrierCompanyField');
-                    if (field) field.style.display = 'block';
+                    if (field) field.style.display = 'flex';
                     const input = document.getElementById('carrierCompanyInput');
                     if (input) input.required = true;
 
                     document.getElementById("price").value = "";
-                    document.getElementById("currency").value = "AZN";
+                    document.getElementById("currency").value = "USD";
                     document.getElementById("transit_time_days").value = "";
                     if (document.getElementById("carrier_note")) document.getElementById("carrier_note").value = "";
                     
-                    // Tabları kökündən məhv edirik
                     const elementsToNuke = ["options_tabs_container", "update_notice", "submit_alt_btn"];
                     elementsToNuke.forEach(id => {
                         const el = document.getElementById(id);
@@ -283,13 +346,9 @@
                         }
                     });
                     
-                    const submitBtn = document.getElementById("submit_btn");
-                    if (submitBtn) submitBtn.innerHTML = "🚀 Submit Quote";
-                    
                     currentEditingToken = token;
 
                 } else {
-                    // YALNIZ NORMAL (E-POÇT) LİNKLƏRİ ÜÇÜN TABLARI GÖSTƏRİRİK
                     if (data.all_quotes && data.all_quotes.length > 0) {
                         allCarrierQuotes = data.all_quotes;
                         const submittedQuotes = allCarrierQuotes.filter(q => q.price !== null || (q.extra_details && q.extra_details.submitted_at));
@@ -299,7 +358,7 @@
                             if (notice) { notice.classList.remove("hidden"); notice.style.display = "block"; }
                             
                             const altBtn = document.getElementById("submit_alt_btn");
-                            if (altBtn) { altBtn.classList.remove("hidden"); altBtn.style.display = "block"; }
+                            if (altBtn) { altBtn.classList.remove("hidden"); altBtn.style.display = "flex"; }
                             
                             if (typeof renderOptionsTabs === "function") renderOptionsTabs();
                             
@@ -307,7 +366,7 @@
                             if (typeof selectQuoteOption === "function") selectQuoteOption(defaultQuote.token);
                         } else {
                             document.getElementById("price").value = data.quote.price || "";
-                            document.getElementById("currency").value = data.quote.currency || "AZN";
+                            document.getElementById("currency").value = data.quote.currency || "USD";
                             document.getElementById("transit_time_days").value = data.quote.transit_time_days || "";
                             if (data.quote.extra_details && data.quote.extra_details["Carrier Note"]) {
                                 document.getElementById("carrier_note").value = data.quote.extra_details["Carrier Note"];
@@ -316,13 +375,10 @@
                     }
                 }
 
-                // Ekrana Yük Məlumatlarının Çıxarılması
                 const routeEl = document.getElementById("route_text");
                 if (routeEl) routeEl.innerText = `${escapeHTML(req.origin)} ➔ ${escapeHTML(req.destination)}`;
                 
                 let volumeText = req.volume_m3;
-                
-                // ALT NOTLARDAN PALET/CBM YAZISINI ÇEKİP YUKARI ALIYORUZ
                 let extractedVolumeStr = null;
                 if (req.required_fields && req.required_fields.length > 0) {
                     const volField = req.required_fields.find(f => typeof f === 'string' && f.includes("Həcm / Palet:"));
@@ -381,7 +437,6 @@
                     finalDeadlineStr = formatDateTime(deadlineVal);
                 }
                 
-                // Eğer ekranda görünecek Loading Date ve Deadline yazıları birebir aynıysa Deadline kutusunu gizle
                 if (finalDeadlineStr && finalDeadlineStr !== finalLoadingStr) {
                     if (deadlineText) deadlineText.innerText = finalDeadlineStr;
                     if (deadlineBox) deadlineBox.classList.remove("hidden");
@@ -400,7 +455,7 @@
                     if (finalCleanNote !== "") {
                         hasItems = true;
                         const noteDiv = document.createElement("div");
-                        noteDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer Note:</span><div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed whitespace-pre-line">${escapeHTML(finalCleanNote)}</div>`;
+                        noteDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-1">Customer Note:</span><div class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">${escapeHTML(finalCleanNote)}</div>`;
                         fieldsList.appendChild(noteDiv);
                     }
 
@@ -408,12 +463,12 @@
                         req.required_fields.forEach(field => {
                             if (typeof field === 'string') {
                             const lowField = field.toLowerCase();
-                            // Hacim ve tekrarlanan ek bilgi notlarını gizliyoruz
                             if (lowField.includes("loading") || lowField.includes("deadline") || lowField.includes("deadl") || lowField.includes("fayl") || lowField.includes("attachment") || field.includes("http") || field.includes("Fayl:") || lowField.includes("həcm / palet") || lowField.includes("additional information") || lowField.includes("əlavə məlumat")) return;
                         }
                             hasItems = true;
                             const noteDiv = document.createElement("div");
-                            noteDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer Note / Requirement:</span><div class="w-full p-3 rounded-lg bg-slate-950 border border-slate-800 text-sm text-slate-200 leading-relaxed">${escapeHTML(field)}</div>`;
+                            noteDiv.className = "pt-3 mt-3 border-t border-slate-200";
+                            noteDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-1">Customer Requirement:</span><div class="text-sm text-slate-700 leading-relaxed">${escapeHTML(field)}</div>`;
                             fieldsList.appendChild(noteDiv);
                         });
                     }
@@ -435,8 +490,10 @@
                         let realHref = fileUrl.includes("http") ? fileUrl.match(/https?:\/\/[^\s]+/)[0] : `/uploads/${fileName}`;
 
                         const fileDiv = document.createElement("div");
-                        fileDiv.innerHTML = `<span class="block text-xs text-slate-400 mb-1">Customer File:</span><div class="flex justify-between items-center bg-slate-950 px-3 py-2.5 rounded-lg border border-slate-800 text-sm"><span class="text-slate-300 truncate">Document / Specification</span><a href="${escapeHTML(realHref)}" target="_blank" class="text-indigo-400 hover:text-indigo-300 underline font-medium flex items-center gap-1 text-xs">📎 <span>${escapeHTML(fileName)}</span></a></div>`;
+                        fileDiv.className = "pt-3 mt-3 border-t border-slate-200";
+                        fileDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-2">Customer File:</span><div class="flex justify-between items-center bg-white px-4 py-3 rounded-lg border border-slate-200 text-sm"><span class="text-slate-600 truncate mr-2">Attached Document</span><a href="${escapeHTML(realHref)}" target="_blank" class="text-blue-600 hover:text-blue-700 underline font-medium flex items-center gap-1.5 text-xs whitespace-nowrap"><i data-lucide="download" class="w-4 h-4"></i><span>${escapeHTML(fileName)}</span></a></div>`;
                         fieldsList.appendChild(fileDiv);
+                        lucide.createIcons();
                     }
 
                     if (!hasItems) {
@@ -449,7 +506,6 @@
             }
         }
 
-        // BU FUNKSİYA ARTIQ YALNIZ 1 DƏFƏ YAZILIB
         async function setSubmitTypeAndSend(isAlternative) {
             const formData = new FormData();
             const priceEl = document.getElementById("price");
@@ -458,7 +514,7 @@
             
             if (priceEl && priceEl.value.trim() !== "") {
                 formData.append("price", priceEl.value);
-                formData.append("currency", currencyEl ? currencyEl.value : "AZN");
+                formData.append("currency", currencyEl ? currencyEl.value : "USD");
             }
             if (transitEl && transitEl.value.trim() !== "") {
                 formData.append("transit_time_days", transitEl.value);
@@ -470,13 +526,7 @@
             const extraDetails = {};
             const carrierNoteEl = document.getElementById("carrier_note");
             if (carrierNoteEl && carrierNoteEl.value.trim()) { extraDetails["Carrier Note"] = carrierNoteEl.value.trim(); }
-
-            document.querySelectorAll("#fields_list input[type='text']").forEach(input => {
-                const key = input.previousElementSibling ? input.previousElementSibling.innerText : "field";
-                extraDetails[key] = input.value;
-            });
             
-            // Daşıyıcı Şirkət Adı
             const carrierCompanyInput = document.getElementById("carrierCompanyInput");
             if (carrierCompanyInput && carrierCompanyInput.value.trim() !== "") {
                 formData.append("carrier_company", carrierCompanyInput.value.trim());
@@ -491,26 +541,25 @@
                 try { result = await response.json(); } catch (e) {}
 
                 if (response.ok) {
-                    // Dəqiq Public Link yoxlanışı
                     const isPublicLink = window.location.href.includes('public=1') || 
                                          window.location.href.includes('public_link') || 
                                          String(currentEditingToken).includes('public_link');
                     
-                    // Public-dirsə düymənin HTML-i BOMBОŞ olacaq, yəni heç yaranmayacaq
                     const backButtonHTML = isPublicLink 
                         ? "" 
-                        : `<button onclick="window.location.reload()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-lg font-medium mt-6 transition duration-200">⬅ Go Back / Submit Another Option</button>`;
+                        : `<button onclick="window.location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium mt-6 transition duration-200">⬅ Go Back / Submit Another Option</button>`;
                     
                     document.body.innerHTML = `
-                    <div class="min-h-screen bg-slate-950 flex items-center justify-center p-4 w-full h-full absolute top-0 left-0 z-50">
-                        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 max-w-md text-center shadow-2xl mx-auto">
-                            <div class="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">✓</div>
-                            <h2 class="text-xl font-bold text-white mb-2">Your quote has been successfully submitted!</h2>
-                            <p class="text-slate-400 text-sm mb-6">Your details have been recorded in the system. Thank you!</p>
+                    <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4 w-full h-full absolute top-0 left-0 z-50 font-sans">
+                        <div class="bg-white border border-slate-200 rounded-2xl p-8 max-w-md text-center shadow-lg mx-auto">
+                            <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i data-lucide="check" class="w-8 h-8"></i></div>
+                            <h2 class="text-xl font-bold text-slate-800 mb-2">Your quote has been successfully submitted!</h2>
+                            <p class="text-slate-500 text-sm mb-6">Your details have been recorded in the system. Thank you!</p>
                             ${backButtonHTML}
                         </div>
                     </div>
                     `;
+                    lucide.createIcons();
                 } else {
                     alert("Error: " + (result.detail || "An unknown error occurred."));
                 }
@@ -522,12 +571,9 @@
         loadRequestDetails();
     </script>
     
-    <!-- PUBLIC LİNK MÜHAFİZƏSİ (Zorla Təmizləyici Kəş üçün) -->
     <script>
         if (window.location.href.includes('public=1') || window.location.href.includes('public_link')) {
             const style = document.createElement('style');
-            
-            // ƏN GÜCLÜ HƏLL: O inadkar "Go Back" düyməsini (onclick parametrindən) tapıb kökündən yox edirik!
             style.innerHTML = `
                 #options_tabs_container, 
                 #options_tabs,
@@ -554,7 +600,7 @@
                 if (transitEl && transitEl.value) transitEl.value = "";
                 
                 const btn = document.getElementById("submit_btn");
-                if (btn && btn.innerText.includes("Update")) btn.innerText = "🚀 Submit Quote";
+                if (btn && btn.innerText.includes("Update")) btn.innerHTML = `<i data-lucide="send" class="w-5 h-5 mr-2"></i> Submit Quote`;
                 
                 clearAttempts++;
                 if (clearAttempts > 15) clearInterval(forceClear);
