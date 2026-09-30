@@ -202,8 +202,8 @@
             background-color: #ffffff !important;
             color: var(--primary-blue) !important;
             border: 1px solid #e2e8f0 !important;
-            font-size: 13.5px !important;
-            font-weight: 700 !important;
+            font-size: 13.5px !important; /* 1-ci düymə ilə eyni ölçü */
+            font-weight: 700 !important; /* 1-ci düymə ilə eyni qalınlıq */
             letter-spacing: 0.3px !important;
             border-radius: var(--radius-md) !important;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -483,30 +483,19 @@
         <div class="container-fluid px-3 px-md-4">
             <a class="navbar-brand fw-bold text-truncate d-flex align-items-center" href="#">
                 <img src="/static/arachi-logo.png" alt="Arachi" style="height: 26px; width: auto;" class="me-1">
-                <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;" data-i18n="nav_panel">Müştəri paneli</span>
+                <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">Müştəri paneli/Customer Panel</span>
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
-                
-                <!-- DİL SEÇİMİ -->
-        <div class="d-inline-flex align-items-center bg-white border border-secondary border-opacity-50 rounded-pill px-2 py-1 shadow-sm position-relative" style="height: 33px; min-width: 60px;">
-            <i class="bi bi-globe2 text-secondary ms-1 me-1" style="font-size: 13px;"></i>
-          <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm border-0 bg-transparent p-0 fw-bold text-dark pe-3" style="font-size: 12.5px; width: auto; cursor: pointer; box-shadow: none; outline: none; appearance: none; -webkit-appearance: none;">
-          <option value="az">AZ</option>
-          <option value="en">EN</option>
-        </select>
-           <i class="bi bi-chevron-down position-absolute text-dark" style="right: 8px; font-size: 10px; pointer-events: none;"></i>
-        </div>
-
-                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;" data-i18n="nav_company">Şirkət</span>
+                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət/Company</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-envelope me-1"></i> <span data-i18n="nav_email">E-poçtu Dəyiş</span>
+                    <i class="bi bi-envelope me-1"></i> E-poçtu Dəyiş/Change Email
                 </button>
                 <button onclick="openChangePasswordModal()" class="btn btn-outline-primary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-key me-1"></i> <span data-i18n="nav_pass">Şifrəni Dəyiş</span>
+                    <i class="bi bi-key me-1"></i> Şifrəni Dəyiş/Change Password
                 </button>
                 <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-box-arrow-right me-1"></i> <span data-i18n="nav_exit">Çıxış</span>
+                    <i class="bi bi-box-arrow-right me-1"></i> Çıxış/Exit
                 </button>
             </div>
         </div>
@@ -518,22 +507,22 @@
         <ul class="nav nav-tabs main-app-tabs mb-4 flex-nowrap overflow-auto" id="mainAppTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tab-dashboard-btn" data-bs-toggle="tab" data-bs-target="#tab-dashboard" type="button" role="tab" aria-controls="tab-dashboard" aria-selected="true">
-                    <i class="bi bi-speedometer2 me-1"></i> <span data-i18n="tab_dash">Analitika və Panel</span>
+                    <i class="bi bi-speedometer2 me-1"></i> Analitika və Panel/Analytics and Dashboard
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-vendors-btn" data-bs-toggle="tab" data-bs-target="#tab-vendors" type="button" role="tab" aria-controls="tab-vendors" aria-selected="false">
-                    <i class="bi bi-people-fill me-1"></i> <span data-i18n="tab_carrier">Daşıyıcı Bazası</span>
+                    <i class="bi bi-people-fill me-1"></i> Daşıyıcı Bazası/Carrier Base
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-builder-btn" data-bs-toggle="tab" data-bs-target="#tab-builder" type="button" role="tab" aria-controls="tab-builder" aria-selected="false">
-                    <i class="bi bi-box-seam-fill me-1"></i> <span data-i18n="tab_new_rfq">Yeni RFQ Yarat</span>
+                    <i class="bi bi-box-seam-fill me-1"></i> Yeni RFQ Yarat/Create New RFQ
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-tracking-btn" data-bs-toggle="tab" data-bs-target="#tab-tracking" type="button" role="tab" aria-controls="tab-tracking" aria-selected="false">
-                    <i class="bi bi-ui-checks-grid me-1"></i> <span data-i18n="tab_tracking">Sorğular və Müqayisə</span>
+                    <i class="bi bi-ui-checks-grid me-1"></i> Sorğular və Müqayisə/Inquiries and Comparison
                 </button>
             </li>
         </ul>
@@ -547,19 +536,19 @@
         <div class="row g-2 g-md-3 mb-4">
             <div class="col-12 col-sm-4">
                 <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider" data-i18n="stat_active">Aktiv RFQ Sorğuları</span>
+                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Aktiv RFQ Sorğuları/Active RFQ Requests</span>
                     <h3 id="statActiveRfqs">0</h3>
                 </div>
             </div>
             <div class="col-12 col-sm-4">
                 <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider" data-i18n="stat_completed">Tamamlanmış Daşımalar</span>
+                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Tamamlanmış Daşımalar/Completed Shipments</span>
                     <h3 id="statCompleted">0</h3>
                 </div>
             </div>
             <div class="col-12 col-sm-4">
                 <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider" data-i18n="stat_carriers">Daşıyıcı Bazası</span>
+                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Daşıyıcı Bazası/Carrier Base</span>
                     <h3 id="statCarriersCount">0</h3>
                 </div>
             </div>
@@ -572,12 +561,12 @@
                     <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
                         <div>
                             <div class="section-title mb-1">
-                                <i class="bi bi-clock-history text-primary me-2"></i> <span data-i18n="latest_offers">Son Gələn Təkliflər</span>
+                                <i class="bi bi-clock-history text-primary me-2"></i> Son Gələn Təkliflər/Latest Offers
                             </div>
-                            <div class="section-desc" style="font-size: 13px;" data-i18n="latest_offers_desc">Daşıyıcılardan gələn son 10 qiymət təklifi.</div>
+                            <div class="section-desc" style="font-size: 13px;">Daşıyıcılardan gələn son 10 qiymət təklifi/The last 10 offers from carriers.</div>
                         </div>
                         <button onclick="loadRecentQuotes()" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm d-flex align-items-center text-nowrap flex-shrink-0" style="font-size: 12px; font-weight: 500; transition: all 0.2s;">
-                            <i class="bi bi-arrow-clockwise me-1" style="font-size: 14px;"></i> <span data-i18n="btn_refresh">Yenilə</span>
+                            <i class="bi bi-arrow-clockwise me-1" style="font-size: 14px;"></i> Yenilə/Refresh
                         </button>
                     </div>
                     
@@ -585,14 +574,14 @@
                         <table class="table table-hover align-middle mb-0 text-sm">
                             <thead class="bg-light text-muted text-nowrap" style="font-size: 12.5px;">
                                 <tr>
-                                    <th class="py-3 px-3" data-i18n="th_inquiry">Sorğu (RFQ)</th>
-                                    <th class="py-3 px-3" data-i18n="th_carrier">Daşıyıcı</th>
-                                    <th class="py-3 px-3 text-success" data-i18n="th_price">Qiymət</th>
-                                    <th class="py-3 px-3 text-end" data-i18n="th_operation">Əməliyyat</th>
+                                    <th class="py-3 px-3">Sorğu/Inquiries (RFQ)</th>
+                                    <th class="py-3 px-3">Daşıyıcı/Carrier</th>
+                                    <th class="py-3 px-3 text-success">Qiymət/Price</th>
+                                    <th class="py-3 px-3 text-end">Əməliyyat/Operation</th>
                                 </tr>
                             </thead>
                             <tbody id="recentQuotesContainer">
-                                <tr><td colspan="4" class="text-center text-muted py-4 small" data-i18n="loading_offers">Təkliflər yüklənir...</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-4 small">Təkliflər yüklənir.../Loading offers...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -603,47 +592,47 @@
             <div class="col-12 col-lg-4">
                 <div class="card h-100 mb-0 shadow-sm border-0 bg-light">
                     <div class="section-title mb-1">
-                        <i class="bi bi-file-earmark-bar-graph text-success"></i> <span data-i18n="reporting_center">Hesabat Mərkəzi</span>
+                        <i class="bi bi-file-earmark-bar-graph text-success"></i> Hesabat Mərkəzi/Reporting Center
                     </div>
-                    <div class="section-desc mb-3" data-i18n="reporting_desc">Sistemdən RFQ və ya Təklif məlumatlarını endirin.</div>
+                    <div class="section-desc mb-3">Sistemdən RFQ və ya Təklif məlumatlarını endirin/Download RFQ or proposal data from the system.</div>
                     
                     <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm">
-                        <label class="form-label text-muted small fw-bold mb-2 d-block" data-i18n="report_content">Hesabatın Məzmunu</label>
+                        <label class="form-label text-muted small fw-bold mb-2 d-block">Hesabatın Məzmunu/Report Contents</label>
                         <div class="form-check mb-2">
                             <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catRfq" value="rfq" checked>
-                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catRfq" data-i18n="report_all_rfq">📦 Bütün RFQ Detalları</label>
+                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catRfq">📦 Bütün RFQ Detalları/All RFQ Details</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catQuote" value="quote">
-                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catQuote" data-i18n="report_quotes">💬 Gələn Təkliflər</label>
+                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catQuote">💬 Gələn Təkliflər/Quotes</label>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold" data-i18n="query_interval">Sorğu aralığı</label>
+                        <label class="form-label text-muted small fw-bold">Sorğu aralığı/Query interval</label>
                         <select class="form-select shadow-sm" id="reportTypeSelect" onchange="toggleReportOptions()" style="font-size: 13px;">
-                            <option value="all" data-i18n="opt_all_queries">Bütün Sorğular (Ümumi)</option>
-                            <option value="today" data-i18n="opt_today">Bugünün sorğuları</option>
-                            <option value="date_range" data-i18n="opt_date_range">İstənilən tarix aralığı</option>
-                            <option value="selected" data-i18n="opt_selected_rfq">Seçilmiş RFQ-lər</option>
+                            <option value="all">Bütün Sorğular (Ümumi)/All Inquiries (General)</option>
+                            <option value="today">Bugünün sorğuları/Today's inquiries</option>
+                            <option value="date_range">İstənilən tarix aralığı/Any date range</option>
+                            <option value="selected">Seçilmiş RFQ-lər/Selected RFQs</option>
                         </select>
                     </div>
 
                     <div id="reportDateRangeOptions" class="d-none mb-3 p-3 bg-white border rounded-3 shadow-sm">
                         <div class="mb-2">
-                            <label class="form-label text-muted" style="font-size: 11px;" data-i18n="start_date">Başlanğıc Tarixi</label>
+                            <label class="form-label text-muted" style="font-size: 11px;">Başlanğıc Tarixi/Start Date</label>
                             <input type="date" class="form-control form-control-sm" id="reportStartDate">
                         </div>
                         <div>
-                            <label class="form-label text-muted" style="font-size: 11px;" data-i18n="end_date">Bitiş Tarixi</label>
+                            <label class="form-label text-muted" style="font-size: 11px;">Bitiş Tarixi/End Date</label>
                             <input type="date" class="form-control form-control-sm" id="reportEndDate">
                         </div>
                     </div>
 
                     <div id="reportSelectedOptions" class="d-none mb-3 p-2 bg-white border rounded-3 shadow-sm" style="max-height: 150px; overflow-y: auto;">
-                        <small class="text-muted fw-bold d-block mb-2 ps-1" style="font-size: 11px;" data-i18n="select_queries_below">Aşağıdan sorğuları seçin:</small>
+                        <small class="text-muted fw-bold d-block mb-2 ps-1" style="font-size: 11px;">Aşağıdan sorğuları seçin/Select queries from below:</small>
                         <div id="reportRfqCheckboxes">
-                            <span class="text-muted small" data-i18n="loading">Yüklənir...</span>
+                            <span class="text-muted small">Yüklənir.../Loading...</span>
                         </div>
                     </div>
 
@@ -659,7 +648,7 @@
                     </div>
 
                     <button class="btn btn-success w-100 fw-bold shadow-sm" onclick="downloadReport()">
-                        <i class="bi bi-cloud-arrow-down-fill me-1"></i> <span data-i18n="btn_download_report">Hesabatı Endir</span>
+                        <i class="bi bi-cloud-arrow-down-fill me-1"></i> Hesabatı Endir/Download the Report
                     </button>
                 </div>
             </div>
@@ -673,62 +662,69 @@
 
         <div class="card shadow-sm border-0 mb-4 bg-light">
             <div class="section-title mb-1">
-                <i class="bi bi-tags-fill text-primary"></i> <span data-i18n="carrier_categories">Daşıyıcı Kateqoriyaları</span>
+                <i class="bi bi-tags-fill text-primary"></i> Daşıyıcı Kateqoriyaları
             </div>
-            <div class="section-desc mb-3" data-i18n="carrier_cat_desc">Daşıyıcılarınızı qruplaşdırmaq üçün kateqoriyalar yaradın.</div>
+            <div class="section-desc mb-3">Daşıyıcılarınızı qruplaşdırmaq üçün kateqoriyalar yaradın.</div>
             
             <!-- ƏSAS KATEQORİYA YARATMAQ -->
             <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                <input type="text" id="newCategoryName" class="form-control form-control-sm" data-i18n-placeholder="ph_new_main_cat" placeholder="Yeni əsas kateqoriya adı daxil edin..." style="max-width: 300px; width: 100%;">
-                <button class="btn btn-primary btn-sm px-4 fw-bold" style="width: max-content;" onclick="createCategory()" data-i18n="btn_create">Yarat</button>
+                <input type="text" id="newCategoryName" class="form-control form-control-sm" placeholder="Yeni əsas kateqoriya adı daxil edin..." style="max-width: 300px; width: 100%;">
+                <button class="btn btn-primary btn-sm px-4 fw-bold" style="width: max-content;" onclick="createCategory()">Yarat</button>
             </div>
             
             <div id="categoryListContainer" class="d-flex flex-wrap gap-2">
-                <span class="text-muted small" data-i18n="loading_cats">Kateqoriyalar yüklənir...</span>
+                <span class="text-muted small">Kateqoriyalar yüklənir...</span>
             </div>
 
             <hr class="my-4 text-muted opacity-25">
 
-            <!-- ALT KATEQORİYA YARATMAQ -->
+
+            <div id="categoryListContainer" class="d-flex flex-wrap gap-2">
+                <span class="text-muted small">Kateqoriyalar yüklənir...</span>
+            </div>
+
+            <hr class="my-4 text-muted opacity-25">
+
+            <!-- ALT KATEQORİYA YARATMAQ VƏ SİLMƏK (Sizin verdiyiniz kod bura gəlir) -->
             <div class="section-desc mb-2 fw-bold text-dark">
-                <i class="bi bi-diagram-3-fill text-secondary me-1"></i> <span data-i18n="manage_subcat">Alt Kateqoriya Yarat və İdarə Et</span>
+                <i class="bi bi-diagram-3-fill text-secondary me-1"></i> Alt Kateqoriya Yarat və İdarə Et
             </div>
             
             <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
                 <select id="parentCategoryForSub" class="form-select form-select-sm" style="width: 230px; max-width: 100%;" onchange="loadSubCategoriesList(this.value)">
-                    <option value="" data-i18n="opt_main_cat">-- Əsas Kateqoriya --</option>
+                    <option value="">-- Əsas Kateqoriya --</option>
                 </select>
-                <input type="text" id="newSubCategoryName" class="form-control form-control-sm" data-i18n-placeholder="ph_new_sub_cat" placeholder="Yeni alt kateqoriya adı daxil edin..." style="max-width: 300px; width: 100%;">
-                <button class="btn btn-primary btn-sm px-4 fw-bold" style="width: max-content;" onclick="createSubCategory()" data-i18n="btn_create">Yarat</button>
+                <input type="text" id="newSubCategoryName" class="form-control form-control-sm" placeholder="Yeni alt kateqoriya adı daxil edin..." style="max-width: 300px; width: 100%;">
+                <button class="btn btn-primary btn-sm px-4 fw-bold" style="width: max-content;" onclick="createSubCategory()">Yarat</button>
             </div>
 
             <!-- Seçilən ana kateqoriyanın alt kateqoriyalarının görünəcəyi yer -->
             <div id="subCategoryListContainer" class="d-flex flex-wrap gap-2">
-                <span class="text-muted small" data-i18n="msg_select_main_cat">Alt kateqoriyaları görmək və silmək üçün soldan əsas kateqoriya seçin...</span>
+                <span class="text-muted small">Alt kateqoriyaları görmək və silmək üçün soldan əsas kateqoriya seçin...</span>
             </div>
-        </div> 
+        </div> <!-- Bu bağlanış div-i Daşıyıcı Kateqoriyaları kartının sonudur -->
             
 
         <div class="card shadow-sm border-0 mb-4">
             <div class="section-title mb-1">
-                <i class="bi bi-people-fill text-primary"></i> <span data-i18n="manage_carrier_base">Daşıyıcı Bazasını İdarə Etmək</span>
+                <i class="bi bi-people-fill text-primary"></i> Daşıyıcı Bazasını İdarə Etmək
             </div>
-            <div class="section-desc mb-3" data-i18n="manage_carrier_desc">Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.</div>
+            <div class="section-desc mb-3">Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.</div>
 
             <ul class="nav nav-pills mb-3 gap-2 flex-column flex-sm-row" id="carrierTabs" role="tablist">
                 <li class="nav-item flex-fill text-center" role="presentation">
                     <button class="nav-link active px-3 py-2 fw-semibold w-100" id="file-tab" data-bs-toggle="pill" data-bs-target="#file-content" type="button" role="tab" style="font-size: 13px;">
-                        <i class="bi bi-file-earmark-excel me-1"></i> <span data-i18n="tab_upload_file">Fayl Yüklə</span>
+                        <i class="bi bi-file-earmark-excel me-1"></i> Fayl Yüklə
                     </button>
                 </li>
                 <li class="nav-item flex-fill text-center" role="presentation">
                     <button class="nav-link px-3 py-2 fw-semibold w-100" id="manual-tab" data-bs-toggle="pill" data-bs-target="#manual-content" type="button" role="tab" style="font-size: 13px;">
-                        <i class="bi bi-person-plus me-1"></i> <span data-i18n="tab_manual_entry">Əllə Daxil Et</span>
+                        <i class="bi bi-person-plus me-1"></i> Əllə Daxil Et
                     </button>
                 </li>
                 <li class="nav-item flex-fill text-center" role="presentation">
                     <button class="nav-link px-3 py-2 fw-semibold w-100" id="paste-tab" data-bs-toggle="pill" data-bs-target="#paste-content" type="button" role="tab" style="font-size: 13px;">
-                        <i class="bi bi-clipboard-text me-1"></i> <span data-i18n="tab_paste_table">Cədvəldən Yapışdır</span>
+                        <i class="bi bi-clipboard-text me-1"></i> Cədvəldən Yapışdır
                     </button>
                 </li>
             </ul>
@@ -738,12 +734,12 @@
                     <form onsubmit="uploadCarriers(event)" class="p-3 border rounded bg-light">
                         <div class="row align-items-end g-3">
                             <div class="col-12 col-md-8">
-                                <label class="form-label text-muted" data-i18n="label_upload_excel">Excel / CSV Faylı Yüklə</label>
+                                <label class="form-label text-muted">Excel / CSV Faylı Yüklə</label>
                                 <input type="file" class="form-control" name="file" accept=".csv, .xlsx, .xls" required>
                             </div>
                             <div class="col-12 col-md-4">
                                 <button type="submit" class="btn btn-primary w-100">
-                                    <i class="bi bi-cloud-arrow-up-fill me-2"></i> <span data-i18n="btn_add">Əlavə Et</span>
+                                    <i class="bi bi-cloud-arrow-up-fill me-2"></i> Əlavə Et
                                 </button>
                             </div>
                         </div>
@@ -752,26 +748,26 @@
                 <div class="tab-pane fade" id="manual-content" role="tabpanel">
                     <form onsubmit="addManualCarrier(event)" class="p-3 border rounded bg-light">
                         <div class="mb-3">
-                            <label class="form-label text-muted" data-i18n="label_company_name">Şirkət / Daşıyıcı Adı</label>
+                            <label class="form-label text-muted">Şirkət / Daşıyıcı Adı</label>
                             <input type="text" class="form-control" id="manual_company_name" placeholder="Məsələn: LogiTrans MMC" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label text-muted" data-i18n="label_email">E-poçt Ünvanı</label>
+                            <label class="form-label text-muted">E-poçt Ünvanı</label>
                             <input type="email" class="form-control" id="manual_email" placeholder="info@logitrans.az" required>
                         </div>
                         <button type="submit" class="btn btn-primary w-100" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
-                            <i class="bi bi-person-plus-fill me-2"></i> <span data-i18n="btn_add_carrier">Daşıyıcıyı Əlavə Et</span>
+                            <i class="bi bi-person-plus-fill me-2"></i> Daşıyıcıyı Əlavə Et
                         </button>
                     </form>
                 </div>
                 <div class="tab-pane fade" id="paste-content" role="tabpanel">
                     <form onsubmit="addPasteCarrier(event)" class="p-3 border rounded bg-light">
                         <div class="mb-3">
-                            <label class="form-label text-muted" data-i18n="label_paste_cols">Excel-dən sütunları kopyalayıb bura yapışdırın:</label>
+                            <label class="form-label text-muted">Excel-dən sütunları kopyalayıb bura yapışdırın:</label>
                             <textarea class="form-control" id="paste_raw_text" rows="3" placeholder="Şirkət A&#10;a@example.com&#10;Şirkət B&#10;b@example.com" required></textarea>
                         </div>
                         <button type="submit" class="btn btn-primary w-100" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
-                            <i class="bi bi-file-earmark-text-fill me-2"></i> <span data-i18n="btn_add_from_table">Cədvəldən Əlavə Et</span>
+                            <i class="bi bi-file-earmark-text-fill me-2"></i> Cədvəldən Əlavə Et
                         </button>
                     </form>
                 </div>
@@ -782,12 +778,12 @@
             <!-- BAŞLIQ VƏ AXTARIŞ/YENİLƏ PANELLƏRİ -->
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
                 <span class="fw-bold text-dark small text-uppercase tracking-wider w-100 w-sm-auto">
-                    <i class="bi bi-list-ul text-primary me-1"></i> <span data-i18n="existing_carriers">Bazadakı Mövcud Daşıyıcılar</span>
+                    <i class="bi bi-list-ul text-primary me-1"></i> Bazadakı Mövcud Daşıyıcılar
                 </span>
                 <div class="d-flex align-items-center flex-wrap gap-2 w-100 justify-content-sm-end">
                     <div class="input-group input-group-sm shadow-sm flex-grow-1" style="width: auto; min-width: 150px; max-width: 100%;">
                         <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                        <input type="text" id="carrierSearchInput" class="form-control border-start-0" data-i18n-placeholder="ph_search_carrier" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="font-size: 12px;">
+                        <input type="text" id="carrierSearchInput" class="form-control border-start-0" placeholder="Daşıyıcı axtar..." onkeyup="filterManageCarriers()" style="font-size: 12px;">
                     </div>
                     <button type="button" class="btn btn-sm btn-light border shadow-sm px-3 flex-shrink-0" onclick="loadManageCarriersList()" title="Yenilə">
                         <i class="bi bi-arrow-clockwise"></i>
@@ -799,11 +795,11 @@
             <div class="bg-light border rounded-3 p-2 mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm">
                 <div class="form-check mb-0 ms-2">
                     <input type="checkbox" id="selectAllManageCarriers" class="form-check-input border-secondary shadow-sm" style="width: 1.1em; height: 1.1em; cursor: pointer; margin-top: 0.15em;" onchange="toggleAllManageCarriers(this)">
-                    <label for="selectAllManageCarriers" class="form-check-label fw-bold text-dark ms-1" style="font-size: 13px; cursor: pointer;" data-i18n="select_all">Hamısını seç</label>
+                    <label for="selectAllManageCarriers" class="form-check-label fw-bold text-dark ms-1" style="font-size: 13px; cursor: pointer;">Hamısını seç</label>
                 </div>
                 <div class="d-flex align-items-center gap-2">
                     <button id="bulkDeleteBtn" type="button" class="btn btn-sm btn-danger px-3 shadow-sm fw-bold d-none text-nowrap" style="font-size: 12px; width: max-content;" onclick="bulkDeleteCarriers()">
-                     <i class="bi bi-trash"></i> <span data-i18n="btn_delete_selected">Seçilmişləri Sil</span> (<span id="selectedCount">0</span>)
+                     <i class="bi bi-trash"></i> Seçilmişləri Sil (<span id="selectedCount">0</span>)
                   </button>
 
               <select id="bulkCategorySelect" onchange="loadBulkSubCategories(this.value)" class="form-select form-select-sm shadow-sm" style="min-width: 180px; font-size: 12px;">
@@ -815,12 +811,12 @@
             <option value="">-- Alt Kateqoriya --</option>
            </select>
 
-          <button type="button" class="btn btn-sm btn-primary px-3 shadow-sm fw-bold" style="font-size: 12px;" onclick="applyBulkCategory()" data-i18n="btn_apply">Tətbiq et</button>
+          <button type="button" class="btn btn-sm btn-primary px-3 shadow-sm fw-bold" style="font-size: 12px;" onclick="applyBulkCategory()">Tətbiq et</button>
                 </div>
             </div>
 
             <div class="carrier-select-box p-0" id="manageCarriersContainer">
-                <span class="text-muted small p-3 d-block" data-i18n="loading_carriers">Daşıyıcılar yüklənir...</span>
+                <span class="text-muted small p-3 d-block">Daşıyıcılar yüklənir...</span>
             </div>
         </div>
 
@@ -832,26 +828,26 @@
 
         <div class="card">
             <div class="section-title">
-                <i class="bi bi-box-seam-fill"></i> <span data-i18n="create_new_rfq_title">Yeni Yük Sorğusu (RFQ) Yarat</span>
+                <i class="bi bi-box-seam-fill"></i> Yeni Yük Sorğusu (RFQ) Yarat
             </div>
-            <div class="section-desc" data-i18n="create_rfq_desc">Logistika parametrlərini ətraflı daxil edin və sorğunuzu göndərin.</div>
+            <div class="section-desc">Logistika parametrlərini ətraflı daxil edin və sorğunuzu göndərin.</div>
 
             <!-- AI PARSER CARD (Fayl və ya Mətn) -->
             <div class="mb-4 p-4 rounded-xl border border-indigo-200" style="background: linear-gradient(145deg, #eef2ff 0%, #f8fafc 100%);">
                 <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
                     <div>
-                        <h6 class="fw-bold text-indigo-600 mb-1"><i class="bi bi-magic me-1"></i> <span data-i18n="ai_autofill">Aİ ilə Avtomatik Doldur (Beta)</span></h6>
-                        <span class="text-muted small" data-i18n="ai_desc">Müştəridən aldığınız faylı yükləyin və ya mətni birbaşa kopyalayıb yapışdırın.</span>
+                        <h6 class="fw-bold text-indigo-600 mb-1"><i class="bi bi-magic me-1"></i> Aİ ilə Avtomatik Doldur (Beta)</h6>
+                        <span class="text-muted small">Müştəridən aldığınız faylı yükləyin və ya mətni birbaşa kopyalayıb yapışdırın.</span>
                     </div>
                 </div>
 
                 <!-- Seçim düymələri (Tabs) -->
                 <ul class="nav nav-pills nav-sm mb-3 gap-2" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active py-1 px-3 fw-semibold" id="ai-file-tab" data-bs-toggle="pill" data-bs-target="#ai-file-content" type="button" role="tab" style="font-size: 12px;"><span data-i18n="ai_tab_file">📁 Fayl Yüklə</span></button>
+                        <button class="nav-link active py-1 px-3 fw-semibold" id="ai-file-tab" data-bs-toggle="pill" data-bs-target="#ai-file-content" type="button" role="tab" style="font-size: 12px;">📁 Fayl Yüklə</button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link py-1 px-3 fw-semibold" id="ai-text-tab" data-bs-toggle="pill" data-bs-target="#ai-text-content" type="button" role="tab" style="font-size: 12px;"><span data-i18n="ai_tab_text">📋 Mətn Yapışdır (Copy-Paste)</span></button>
+                        <button class="nav-link py-1 px-3 fw-semibold" id="ai-text-tab" data-bs-toggle="pill" data-bs-target="#ai-text-content" type="button" role="tab" style="font-size: 12px;">📋 Mətn Yapışdır (Copy-Paste)</button>
                     </li>
                 </ul>
 
@@ -861,7 +857,7 @@
                         <div class="d-flex align-items-center gap-2">
                             <input type="file" class="form-control form-control-sm border-indigo-200 shadow-sm" id="aiDocumentInput" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.txt">
                             <button type="button" class="btn btn-sm btn-primary fw-bold text-nowrap shadow-sm" id="aiParseBtn" onclick="parseDocumentWithAI()">
-                                <i class="bi bi-robot me-1"></i> <span data-i18n="btn_analyze">Analiz Et</span>
+                                <i class="bi bi-robot me-1"></i> Analiz Et
                             </button>
                         </div>
                     </div>
@@ -869,49 +865,49 @@
                     <!-- Mətn (Copy-Paste) bölməsi -->
                     <div class="tab-pane fade" id="ai-text-content" role="tabpanel">
                         <div class="mb-2">
-                            <textarea class="form-control form-control-sm border-indigo-200 shadow-sm" id="aiRawTextInput" rows="3" data-i18n-placeholder="ph_ai_paste" placeholder="Müştərinin mətnini buraya kopyalayıb yapışdırın..."></textarea>
+                            <textarea class="form-control form-control-sm border-indigo-200 shadow-sm" id="aiRawTextInput" rows="3" placeholder="Müştərinin mətnini buraya kopyalayıb yapışdırın... (Məs: Salam, Bakıdan Berl ilə 1500 kq yük göndərmək istəyirik...)"></textarea>
                         </div>
                         <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm" id="aiParseTextBtn" onclick="parseTextWithAI()">
-                            <i class="bi bi-robot me-1"></i> <span data-i18n="btn_analyze_text">Mətni Analiz Et</span>
+                            <i class="bi bi-robot me-1"></i> Mətni Analiz Et
                         </button>
                     </div>
                 </div>
 
                 <div id="aiLoadingStatus" class="d-none mt-2 small text-primary fw-bold">
-                    <span class="spinner-border spinner-border-sm me-1"></span> <span data-i18n="ai_loading">Aİ mətni oxuyur və analiz edir, lütfən gözləyin...</span>
+                    <span class="spinner-border spinner-border-sm me-1"></span> Aİ mətni oxuyur və analiz edir, lütfən gözləyin...
                 </div>
             </div>
             
             <form id="rfqForm" onsubmit="createRfq(event)">
                 <div class="row g-2 g-md-3 mb-2">
                     <div class="col-12 col-md-6">
-                        <label class="form-label" data-i18n="lbl_origin">Loading Location (Yükləmə yeri) <span class="text-danger">*</span></label>
+                        <label class="form-label">Loading Location (Yükləmə yeri) <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="origin" required placeholder="məs: Bakı, Azərbaycan">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label" data-i18n="lbl_dest">Delivery Location (Boşaltma yeri) <span class="text-danger">*</span></label>
+                        <label class="form-label">Delivery Location (Boşaltma yeri) <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="destination" required placeholder="məs: İstanbul, Türkiyə">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label" data-i18n="lbl_cargo_type">Cargo Type (Yükün növü) <span class="text-danger">*</span></label>
+                        <label class="form-label">Cargo Type (Yükün növü) <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="cargo_type" required placeholder="məs: Quru yük / Tekstil">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label" data-i18n="lbl_weight">Weight (Çəki - kq) <span class="text-danger">*</span></label>
+                        <label class="form-label">Weight (Çəki - kq) <span class="text-danger">*</span></label>
                         <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label" data-i18n="lbl_volume">Həcm / Palet (Volume / Pallet) <span class="text-danger">*</span></label>
+                        <label class="form-label">Həcm / Palet (Volume / Pallet) <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <select class="form-select border-end-0 bg-white shadow-sm" id="volume_type" style="max-width: 110px; cursor: pointer; font-weight: 600;">
                                 <option value="CBM">CBM</option>
                                 <option value="Palet">Palet</option>
                             </select>
-                            <input type="number" step="any" class="form-control shadow-sm" id="volume_cbm" required placeholder="Miqdarı yazın">
+                            <input type="number" step="any" class="form-control shadow-sm" id="volume_cbm" required placeholder="Miqdarı yazın (məs: 15)">
                         </div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label" data-i18n="lbl_trans_mode">Transportation Mode (Daşınma Növü) <span class="text-danger">*</span></label>
+                        <label class="form-label">Transportation Mode (Daşınma Növü) <span class="text-danger">*</span></label>
                         <select class="form-select" id="transportation_mode" required>
                             <option value="">Daşınma növünü seçin...</option>
                             <option value="Quru (Road)">Quru (Road)</option>
@@ -923,121 +919,126 @@
                 </div>
 
                 <div class="optional-box">
-    <label class="form-label fw-bold mb-3 text-dark fs-6 d-flex align-items-center">
-        <i class="bi bi-sliders text-primary me-2 fs-5"></i> <span data-i18n="lbl_optional_params">İxtiyari (Optional) Parametrlər</span>
-    </label>
+                    <label class="form-label fw-bold mb-3 text-dark fs-6 d-flex align-items-center">
+                        <i class="bi bi-sliders text-primary me-2 fs-5"></i> İxtiyari (Optional) Parametrlər
+                    </label>
 
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_loading_date" onchange="toggleOptField('loading_date')">
-            <label class="form-check-label fw-bold text-dark" for="chk_loading_date" data-i18n="lbl_load_date">Loading Date (Yükləmə tarixi)</label>
-        </div>
-        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_loading_date">
-    </div>
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_loading_date" onchange="toggleOptField('loading_date')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_loading_date">Loading Date (Yükləmə tarixi)</label>
+                        </div>
+                        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_loading_date">
+                    </div>
 
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_truck_type" onchange="toggleOptField('truck_type')">
-            <label class="form-check-label fw-bold text-dark" for="chk_truck_type" data-i18n="lbl_truck_type">Truck Type</label>
-        </div>
-        <input type="text" class="form-control opt-input d-none mt-2" id="inp_truck_type" data-i18n-placeholder="ph_truck_type" placeholder="məs: Tentli / Refrijerator">
-    </div>
-    
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_hs_code" onchange="toggleOptField('hs_code')">
-            <label class="form-check-label fw-bold text-dark" for="chk_hs_code">HS Code</label>
-        </div>
-        <input type="text" class="form-control opt-input d-none mt-2" id="inp_hs_code" placeholder="məs: 1234.56">
-    </div>
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_truck_type" onchange="toggleOptField('truck_type')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_truck_type">Truck Type (Maşın növü)</label>
+                        </div>
+                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_truck_type" placeholder="məs: Tentli / Refrijerator">
+                    </div>
+                    
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_hs_code" onchange="toggleOptField('hs_code')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_hs_code">HS Code</label>
+                        </div>
+                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_hs_code" placeholder="məs: 1234.56">
+                    </div>
 
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_stackable" onchange="toggleOptField('stackable')">
-            <label class="form-check-label fw-bold text-dark" for="chk_stackable" data-i18n="lbl_stackable_full">Stackable / Non-stackable</label>
-        </div>
-        <select class="form-select opt-input d-none mt-2" id="inp_stackable">
-            <option value="" data-i18n="opt_select">Seçin...</option>
-            <option value="Stackable">Stackable</option>
-            <option value="Non-stackable">Non-stackable</option>
-        </select>
-    </div>
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_stackable" onchange="toggleOptField('stackable')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_stackable">Stackable / Non-stackable</label>
+                        </div>
+                        <select class="form-select opt-input d-none mt-2" id="inp_stackable">
+                            <option value="">Seçin...</option>
+                            <option value="Stackable">Stackable</option>
+                            <option value="Non-stackable">Non-stackable</option>
+                        </select>
+                    </div>
 
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_shipment_type" onchange="toggleOptField('shipment_type')">
-            <label class="form-check-label fw-bold text-dark" for="chk_shipment_type" data-i18n="lbl_shipment_type_full">Shipment Type (FTL / LTL / LCL / FCL)</label>
-        </div>
-        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_shipment_type">
-            <option value="" data-i18n="opt_shipment_select">Daşınma tipini seçin...</option>
-            <option value="FTL">FTL (Full Truck Load)</option>
-            <option value="LTL">LTL (Less than Truck Load)</option>
-            <option value="FCL">FCL (Full Container Load)</option>
-            <option value="LCL">LCL (Less than Container Load)</option>
-        </select>
-    </div>
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_shipment_type" onchange="toggleOptField('shipment_type')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_shipment_type">Shipment Type (FTL / LTL / LCL / FCL)</label>
+                        </div>
+                        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_shipment_type">
+                            <option value="">Daşınma tipini seçin...</option>
+                            <option value="FTL">FTL (Full Truck Load)</option>
+                            <option value="LTL">LTL (Less than Truck Load)</option>
+                            <option value="FCL">FCL (Full Container Load)</option>
+                            <option value="LCL">LCL (Less than Container Load)</option>
+                        </select>
+                    </div>
 
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_incoterm" onchange="toggleOptField('incoterm')">
-            <label class="form-check-label fw-bold text-dark" for="chk_incoterm">Incoterm</label>
-        </div>
-        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_incoterm">
-            <option value="" data-i18n="opt_incoterm_select">Incoterm şərtini seçin...</option>
-            <option value="EXW">EXW</option>
-            <option value="FCA">FCA</option>
-            <option value="FOB">FOB</option>
-            <option value="CIF">CIF</option>
-            <option value="DAP">DAP</option>
-            <option value="DDP">DDP</option>
-        </select>
-    </div>
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_incoterm" onchange="toggleOptField('incoterm')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_incoterm">Incoterm</label>
+                        </div>
+                        <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_incoterm">
+                            <option value="">Incoterm şərtini seçin...</option>
+                            <option value="EXW">EXW (Ex Works)</option>
+                            <option value="FCA">FCA (Free Carrier)</option>
+                            <option value="FAS">FAS (Free Alongside Ship)</option>
+                            <option value="FOB">FOB (Free On Board)</option>
+                            <option value="CFR">CFR (Cost and Freight)</option>
+                            <option value="CIF">CIF (Cost, Insurance and Freight)</option>
+                            <option value="CPT">CPT (Carriage Paid To)</option>
+                            <option value="CIP">CIP (Carriage and Insurance Paid To)</option>
+                            <option value="DAP">DAP (Delivered at Place)</option>
+                            <option value="DPU">DPU (Delivered at Place Unloaded)</option>
+                            <option value="DDP">DDP (Delivered Duty Paid)</option>
+                        </select>
+                    </div>
 
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_adr" onchange="toggleOptField('adr')">
-            <label class="form-check-label fw-bold text-dark" for="chk_adr">Dangerous Goods (ADR)</label>
-        </div>
-        <input type="text" class="form-control opt-input d-none mt-2" id="inp_adr" placeholder="məs: Klass 3">
-    </div>
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_adr" onchange="toggleOptField('adr')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_adr">Dangerous Goods (ADR)</label>
+                        </div>
+                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_adr" placeholder="məs: Klass 3">
+                    </div>
 
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_temp" onchange="toggleOptField('temp')">
-            <label class="form-check-label fw-bold text-dark" for="chk_temp">Temperature Requirement (Reefer)</label>
-        </div>
-        <input type="text" class="form-control opt-input d-none mt-2" id="inp_temp" placeholder="məs: +2 to +8 °C">
-    </div>
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_temp" onchange="toggleOptField('temp')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_temp">Temperature Requirement (Reefer)</label>
+                        </div>
+                        <input type="text" class="form-control opt-input d-none mt-2" id="inp_temp" placeholder="məs: +2 to +8 °C">
+                    </div>
 
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_deliv_date" onchange="toggleOptField('deliv_date')">
-            <label class="form-check-label fw-bold text-dark" for="chk_deliv_date" data-i18n="lbl_deliv_date">Delivery Deadline</label>
-        </div>
-        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_deliv_date">
-    </div>
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_deliv_date" onchange="toggleOptField('deliv_date')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_deliv_date">Delivery Deadline</label>
+                        </div>
+                        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_deliv_date">
+                    </div>
 
-    <div class="opt-row">
-        <div class="form-check mb-1">
-            <input class="form-check-input opt-check" type="checkbox" id="chk_info" onchange="toggleOptField('info')">
-            <label class="form-check-label fw-bold text-dark" for="chk_info" data-i18n="lbl_add_info">Additional Information (Qeyd və ya sənəd əlavəsi)</label>
-        </div>
-        <div id="inp_info_container" class="d-none mt-2">
-            <textarea class="form-control mb-2" id="inp_info_text" rows="2" data-i18n-placeholder="ph_info_text" placeholder="Əlavə xüsusi şərtlər və təlimatlar..."></textarea>
-            <label class="form-label text-muted small mb-1" data-i18n="lbl_upload_extra">Əlavə fayl yüklə (istəyə bağlı):</label>
-            <input type="file" class="form-control" id="inp_info_file">
-        </div>
-    </div>
-</div>
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_info" onchange="toggleOptField('info')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_info">Additional Information (Qeyd və ya sənəd əlavəsi)</label>
+                        </div>
+                        <div id="inp_info_container" class="d-none mt-2">
+                            <textarea class="form-control mb-2" id="inp_info_text" rows="2" placeholder="Əlavə xüsusi şərtlər və təlimatlar..."></textarea>
+                            <label class="form-label text-muted small mb-1">Əlavə fayl yüklə (istəyə bağlı):</label>
+                            <input type="file" class="form-control" id="inp_info_file">
+                        </div>
+                    </div>
+                </div>
 
                 <div class="p-3 mt-3 mb-3 bg-white border rounded-4">
                     <label class="form-label fw-bold text-dark fs-6 mb-3 d-flex align-items-center">
-                        <i class="bi bi-envelope-paper-fill text-primary me-2 fs-5"></i> <span data-i18n="email_content_title">Daşıyıcılara Göndəriləcək Email Məzmunu</span>
+                        <i class="bi bi-envelope-paper-fill text-primary me-2 fs-5"></i> Daşıyıcılara Göndəriləcək Email Məzmunu
                     </label>
                     
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="radio" name="emailTemplateOption" id="standardTemplateRadio" checked onchange="toggleEmailTemplateFields()">
-                        <label class="form-check-label fw-bold text-dark" for="standardTemplateRadio" data-i18n="lbl_std_template">
+                        <label class="form-check-label fw-bold text-dark" for="standardTemplateRadio">
                             Standart Şablon
                         </label>
                     </div>
@@ -1053,27 +1054,30 @@ Best regards,
 
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="radio" name="emailTemplateOption" id="customTemplateRadio" onchange="toggleEmailTemplateFields()">
-                        <label class="form-check-label fw-bold text-dark" for="customTemplateRadio" data-i18n="lbl_cust_template">
+                        <label class="form-check-label fw-bold text-dark" for="customTemplateRadio">
                             Öz Şablonumu Daxil Et (Custom)
                         </label>
                     </div>
 
                     <div id="customEmailContainer" class="d-none mt-3 p-3 bg-light border rounded-3 shadow-sm">
-                        <!-- E-poçt Mövzusu (Subject) Bölməsi -->
-                        <div class="mb-3">
-                            <label for="custom_email_subject" class="form-label fw-bold text-dark small mb-1">
-                                <i class="bi bi-envelope-paper me-1"></i> <span data-i18n="lbl_email_subj">E-poçt Mövzusu (Subject)</span>
-                            </label>
-                            <input type="text" class="form-control text-muted" id="custom_email_subject" name="custom_email_subject" 
-                                value="📦 Submit a Proposal: {{origin}} - {{destination}}" style="font-size: 13px;">
-                        </div>
+    <!-- E-poçt Mövzusu (Subject) Bölməsi -->
+    <div class="mb-3">
+        <label for="custom_email_subject" class="form-label fw-bold text-dark small mb-1">
+            <i class="bi bi-envelope-paper me-1"></i> E-poçt Mövzusu (Subject)
+        </label>
+        <input type="text" class="form-control text-muted" id="custom_email_subject" name="custom_email_subject" 
+               value="📦 Submit a Proposal: {{origin}} - {{destination}}" style="font-size: 13px;">
+        <div class="form-text" style="font-size: 11px;">
+            Dinamik dəyişənlər: <code>{{origin}}</code>, <code>{{destination}}</code>
+        </div>
+    </div>
 
-                        <!-- E-poçt Mətni (Body) Bölməsi -->
-                        <div>
-                            <label for="custom_email_body" class="form-label fw-bold text-dark small mb-1">
-                                <i class="bi bi-card-text me-1"></i> <span data-i18n="lbl_email_body">Əsas Mətn (Body)</span>
-                            </label>
-                            <textarea class="form-control text-muted" id="custom_email_body" name="custom_email_body" rows="6" style="font-size: 13px; font-family: monospace;">Dear {{company_name}},
+    <!-- E-poçt Mətni (Body) Bölməsi -->
+    <div>
+        <label for="custom_email_body" class="form-label fw-bold text-dark small mb-1">
+            <i class="bi bi-card-text me-1"></i> Əsas Mətn (Body)
+        </label>
+        <textarea class="form-control text-muted" id="custom_email_body" name="custom_email_body" rows="6" style="font-size: 13px; font-family: monospace;">Dear {{company_name}},
 
 Please review the shipment details below and kindly complete the quotation form using the link provided.
 
@@ -1081,36 +1085,40 @@ Thank you.
 
 Best regards,
 {{sender_company}}</textarea>
-                        </div>
-                    </div>
+        <div class="form-text" style="font-size: 11px;">
+            Dinamik dəyişənlər: <code>{{company_name}}</code>, <code>{{sender_company}}</code>
+        </div>
+    </div>
+</div>
 
+<!-- YENİ ƏLAVƏ EDİLƏN QEYD -->
                     <div class="alert alert-light border rounded-3 p-2 small mb-3 text-muted shadow-sm">
-                        <i class="bi bi-info-circle me-1 text-primary"></i> <b data-i18n="note_bold">Qeyd:</b> <span data-i18n="note_desc">"Link yarat və göndər" düyməsindən istifadə etdikdə aşağıdakı daşıyıcı seçimləri əhəmiyyət daşımır.</span>
+                        <i class="bi bi-info-circle me-1 text-primary"></i> <b>Qeyd:</b> "Link yarat və göndər" düyməsindən istifadə etdikdə aşağıdakı daşıyıcı seçimləri əhəmiyyət daşımır.
                     </div>
 
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="radio" name="carrierOption" id="sendToAllRadio" value="all" checked onchange="toggleCarrierSelection()">
-                        <label class="form-check-label fw-bold text-dark" for="sendToAllRadio" data-i18n="opt_send_all">
+                        <label class="form-check-label fw-bold text-dark" for="sendToAllRadio">
                             Sorğunu BÜTÜN daşıyıcılara göndər
                         </label>
                     </div>
 
                     <div class="form-check mb-2">
                         <input class="form-check-input" type="radio" name="carrierOption" id="sendToCategoryRadio" value="category" onchange="toggleCarrierSelection()">
-                        <label class="form-check-label fw-bold text-dark" for="sendToCategoryRadio" data-i18n="opt_send_cat">
+                        <label class="form-check-label fw-bold text-dark" for="sendToCategoryRadio">
                             Seçilmiş KATEQORİYALARA göndər
                         </label>
                     </div>
 
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="radio" name="carrierOption" id="sendToSelectedRadio" value="selected" onchange="toggleCarrierSelection()">
-                        <label class="form-check-label fw-bold text-dark" for="sendToSelectedRadio" data-i18n="opt_send_sel">
+                        <label class="form-check-label fw-bold text-dark" for="sendToSelectedRadio">
                             Seçilmiş daşıyıcılara göndər
                         </label>
                     </div>
 
                     <div id="categorySelectionContainer" class="d-none mt-2 p-2 p-sm-3 bg-light rounded-4 border mb-3">
-                        <small class="text-muted fw-bold text-uppercase tracking-wider d-block mb-2" style="font-size: 11px;" data-i18n="sel_cat_below">Aşağıdan göndəriləcək kateqoriyaları seçin:</small>
+                        <small class="text-muted fw-bold text-uppercase tracking-wider d-block mb-2" style="font-size: 11px;">Aşağıdan göndəriləcək kateqoriyaları seçin:</small>
                         <div class="carrier-select-box p-2" id="categoryCheckboxList">
                             <span class="text-muted small">Kateqoriyalar yüklənir...</span>
                         </div>
@@ -1118,10 +1126,10 @@ Best regards,
 
                     <div id="carrierSelectionContainer" class="d-none mt-2 p-2 p-sm-3 bg-light rounded-4 border">
                         <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-                            <small class="text-muted fw-bold text-uppercase tracking-wider" style="font-size: 11px;" data-i18n="sel_car_below">Daşıyıcıları seçin:</small>
+                            <small class="text-muted fw-bold text-uppercase tracking-wider" style="font-size: 11px;">Daşıyıcıları seçin:</small>
                             <div>
-                                <button type="button" class="btn btn-sm btn-light border fw-bold me-1 px-2 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(true)" data-i18n="btn_sel_all">Hamısını Seç</button>
-                                <button type="button" class="btn btn-sm btn-link text-muted fw-semibold text-decoration-none px-1 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(false)" data-i18n="btn_clear">Təmizlə</button>
+                                <button type="button" class="btn btn-sm btn-light border fw-bold me-1 px-2 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(true)">Hamısını Seç</button>
+                                <button type="button" class="btn btn-sm btn-link text-muted fw-semibold text-decoration-none px-1 py-1" style="font-size: 11.5px;" onclick="selectAllCarriers(false)">Təmizlə</button>
                             </div>
                         </div>
                         <div class="carrier-select-box p-2" id="carrierCheckboxList">
@@ -1132,10 +1140,10 @@ Best regards,
 
                 <div class="mt-4 d-flex flex-column flex-sm-row gap-2">
                     <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold" onclick="window.isPublicLinkMode = false;" id="submitRfqBtn">
-                        <i class="bi bi-rocket-takeoff-fill me-2"></i> <span data-i18n="btn_send_direct">Birbaşa Daşıyıcılara Göndər</span>
+                        <i class="bi bi-rocket-takeoff-fill me-2"></i> Birbaşa Daşıyıcılara Göndər
                     </button>
                     <button type="submit" class="btn btn-white-animated btn-lg w-100 py-3 fw-bold" onclick="window.isPublicLinkMode = true;" id="generateLinkBtn">
-                       <i class="bi bi-link-45deg me-2 fs-4" style="vertical-align: middle;"></i> <span data-i18n="btn_gen_link">Link Yarat və Kopyala</span>
+                       <i class="bi bi-link-45deg me-2 fs-4" style="vertical-align: middle;"></i> Link Yarat və Kopyala
                     </button>
                 </div>
             </form>
@@ -1147,29 +1155,30 @@ Best regards,
         <!-- ================= TAB 4: SORĞULARIN İZLƏNMƏSİ VƏ QİYMƏT MÜQAYİSƏSİ ================= -->
         <div class="tab-pane fade" id="tab-tracking" role="tabpanel" aria-labelledby="tab-tracking-btn">
 
+        <!-- AKTİV VƏ KEÇMİŞ SORĞULAR -->
         <div class="card">
             <div class="section-title">
-                <i class="bi bi-ui-checks-grid"></i> <span data-i18n="rfq_inq_offers">RFQ Sorğuları və Təkliflər</span>
+                <i class="bi bi-ui-checks-grid"></i> RFQ Sorğuları və Təkliflər
             </div>
-            <div class="section-desc" data-i18n="rfq_inq_desc">Yaratdığınız sorğuların statusunu izləyin və təklifləri analiz edin.</div>
+            <div class="section-desc">Yaratdığınız sorğuların statusunu izləyin və təklifləri analiz edin.</div>
             
             <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider w-100 w-sm-auto" data-i18n="req_list">Sorğu Siyahısı</h5>
+                <h5 class="fw-bold mb-0 text-dark small text-uppercase tracking-wider w-100 w-sm-auto">Sorğu Siyahısı</h5>
                 <div class="d-flex align-items-center flex-wrap gap-2 w-100 justify-content-sm-end">
                     <div class="btn-group flex-shrink-0" role="group">
                         <input type="radio" class="btn-check" name="statusFilter" id="filterAll" value="all" checked onchange="filterRequests()">
-                        <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterAll" data-i18n="flt_all">Hamısı</label>
+                        <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterAll">Hamısı</label>
 
                         <input type="radio" class="btn-check" name="statusFilter" id="filterOpen" value="open" onchange="filterRequests()">
-                        <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterOpen" data-i18n="flt_open">Açıq</label>
+                        <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterOpen">Açıq</label>
 
                         <input type="radio" class="btn-check" name="statusFilter" id="filterClosed" value="closed" onchange="filterRequests()">
-                        <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterClosed" data-i18n="flt_closed">Bağlı</label>
+                        <label class="btn btn-outline-primary btn-sm fw-semibold" for="filterClosed">Bağlı</label>
                     </div>
 
-                    <input type="text" id="requestSearchInput" class="form-control form-control-sm flex-grow-1" data-i18n-placeholder="ph_search_req" placeholder="Sorğularda axtar..." onkeyup="filterRequests()" style="min-width: 120px; width: auto; font-size: 12px;">
+                    <input type="text" id="requestSearchInput" class="form-control form-control-sm flex-grow-1" placeholder="Sorğularda axtar..." onkeyup="filterRequests()" style="min-width: 120px; width: auto; font-size: 12px;">
                     <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 d-flex align-items-center gap-1 text-nowrap flex-shrink-0" onclick="loadRequests()" style="font-size: 12px;">
-                        <i class="bi bi-arrow-clockwise"></i> <span data-i18n="btn_refresh">Yenilə</span>
+                        <i class="bi bi-arrow-clockwise"></i> Yenilə
                     </button>
                 </div>
             </div>
@@ -1183,6 +1192,8 @@ Best regards,
         <!-- ================= /TAB 4 ================= -->
 
         </div>
+        <!-- /mainAppTabsContent -->
+
     </div>
 
     <!-- DETALLI BAXIŞ MODALI -->
@@ -1258,6 +1269,7 @@ Best regards,
                     </div>
                     <div class="section-desc mb-2">Sorğunun daşıyıcılara çatdırılma və reaksiya statistikası.</div>
 
+                    <!-- YENİ ƏLAVƏ EDİLƏN XƏBƏRDARLIQ (Gizli olaraq gözləyir) -->
                     <div id="publicLinkNotice" class="alert alert-primary bg-opacity-10 border-primary border-opacity-25 small d-none mb-3">
                         <i class="bi bi-info-circle-fill text-primary me-1"></i> Bu RFQ sorğusu <b>"Link Yarat"</b> funksiyası ilə kənarda paylaşıldığı üçün "Göndərildi", "Çatdırıldı" və "Çatdırılmadı" statusları izlənilmir. Yalnız təklif verənləri görə bilərsiniz.
                     </div>
@@ -1561,82 +1573,9 @@ Best regards,
         </p>
     </div>
 
-    <!-- TƏRCÜMƏ SİSTEMİ VƏ MÖVCUD JS KODLARI -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        // --- DİL LÜĞƏTİ ---
-        // --- DİL LÜĞƏTİ ---
-        const translations = {
-            az: {
-                nav_panel: "Müştəri paneli", nav_company: "Şirkət", nav_email: "E-poçtu Dəyiş", nav_pass: "Şifrəni Dəyiş", nav_exit: "Çıxış",
-                tab_dash: "Analitika və Panel", tab_carrier: "Daşıyıcı Bazası", tab_new_rfq: "Yeni RFQ Yarat", tab_tracking: "Sorğular və Müqayisə",
-                // ... (Önceki tüm az çevirileriniz) ...
-                ph_origin: "məs: Bakı, Azərbaycan", ph_dest: "məs: İstanbul, Türkiyə", ph_cargo_type: "məs: Quru yük / Tekstil", ph_volume: "Miqdarı yazın",
-                opt_pallet: "Palet", opt_trans_select: "Daşınma növünü seçin...", opt_road: "Quru (Road)", opt_air: "Hava (Air)", opt_sea: "Su / Dəniz (Sea)", opt_rail: "Dəmiryolu (Rail)",
-                ph_truck_type: "məs: Tentli / Refrijerator", opt_select: "Seçin...", opt_shipment_select: "Daşınma tipini seçin...", opt_incoterm_select: "Incoterm şərtini seçin...", ph_info_text: "Əlavə xüsusi şərtlər və təlimatlar...",
-                lbl_cargo_type_short: "Növ:", lbl_weight_vol: "Çəki / Həcm:", lbl_loading_date_short: "Yükləmə tarixi:", lbl_created_short: "Yaradılıb:", btn_more_details: "Daha ətraflı məlumat",
-                th_carrier_company: "Daşıyıcı Şirkət", th_transit: "Müddət", th_notes: "Qeydlər", th_action: "Əməliyyat", no_quotes_yet: "Hələ bu sorğuya təklif göndərilməyib.",
-                select_winner: "Qalib Seç", winner: "Qalib", send_to_customer: "Müştəriyə Göndər", more_details: "Daha Ətraflı", carrier_status_quoted: "Təklif alındı", carrier_status_no_quote: "Təklif yoxdur",
-                carrier_resend: "Yenidən göndər", carrier_send_reminder: "Reminder göndər", carrier_status_delivered: "Çatdırıldı", carrier_status_failed: "Çatdırılmadı", carrier_status_sending: "Göndərilir...",
-                not_specified: "Qeyd edilməyib", status_open: "AÇIQ", status_closed: "BAĞLI", lbl_truck_type_full: "Daşınma növü / Truck type", lbl_shipment_type_full: "Yük tipi (Shipment type)",
-                lbl_hs_code: "HS Kodu", lbl_stackable_full: "Stiflənə bilər (Stackable)", lbl_additional_notes: "Əlavə qeydlər", lbl_attached_doc: "Qoşulmuş sənəd", btn_download: "Yüklə", lbl_no_extra_detail: "Əlavə detal qeyd olunmayıb.", val_yes: "Bəli", val_no: "Xeyr"
-            },
-            en: {
-                nav_panel: "Customer Panel", nav_company: "Company", nav_email: "Change Email", nav_pass: "Change Password", nav_exit: "Exit",
-                tab_dash: "Analytics & Dashboard", tab_carrier: "Carrier Base", tab_new_rfq: "Create New RFQ", tab_tracking: "Inquiries & Comparison",
-                // ... (Önceki tüm en çevirileriniz) ...
-                ph_origin: "e.g.: Baku, Azerbaijan", ph_dest: "e.g.: Istanbul, Turkey", ph_cargo_type: "e.g.: Dry Cargo / Textiles", ph_volume: "Enter quantity",
-                opt_pallet: "Pallet", opt_trans_select: "Select transportation mode...", opt_road: "Road", opt_air: "Air", opt_sea: "Sea", opt_rail: "Rail",
-                ph_truck_type: "e.g.: Tilt / Reefer", opt_select: "Select...", opt_shipment_select: "Select shipment type...", opt_incoterm_select: "Select Incoterm...", ph_info_text: "Additional special terms and instructions...",
-                lbl_cargo_type_short: "Type:", lbl_weight_vol: "Weight / Vol:", lbl_loading_date_short: "Loading date:", lbl_created_short: "Created:", btn_more_details: "More details",
-                th_carrier_company: "Carrier Company", th_transit: "Transit Time", th_notes: "Notes", th_action: "Action", no_quotes_yet: "No quotes have been submitted for this request yet.",
-                select_winner: "Select Winner", winner: "Winner", send_to_customer: "Send to Customer", more_details: "More Details", carrier_status_quoted: "Quoted", carrier_status_no_quote: "No quote",
-                carrier_resend: "Resend", carrier_send_reminder: "Send reminder", carrier_status_delivered: "Delivered", carrier_status_failed: "Failed", carrier_status_sending: "Sending...",
-                not_specified: "Not specified", status_open: "OPEN", status_closed: "CLOSED", lbl_truck_type_full: "Truck type", lbl_shipment_type_full: "Shipment type",
-                lbl_hs_code: "HS Code", lbl_stackable_full: "Stackable", lbl_additional_notes: "Additional notes", lbl_attached_doc: "Attached document", btn_download: "Download", lbl_no_extra_detail: "No additional details specified.", val_yes: "Yes", val_no: "No"
-            }
-        };
-
-        let currentLang = localStorage.getItem("customer_lang") || 'az';
-
-        function changeLanguage(lang) {
-            currentLang = lang;
-            localStorage.setItem("customer_lang", lang);
-            
-            const sel = document.getElementById("langSelector");
-            if (sel) sel.value = lang;
-
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                const key = el.getAttribute('data-i18n');
-                if (translations[lang][key]) { el.innerHTML = translations[lang][key]; }
-            });
-
-            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-                const key = el.getAttribute('data-i18n-placeholder');
-                if (translations[lang][key]) { el.placeholder = translations[lang][key]; }
-            });
-
-            const palletOpt = document.getElementById("opt_pallet_item");
-            if (palletOpt) palletOpt.textContent = translations[lang].opt_pallet;
-
-            // ƏGƏR RFQ DETAL SƏHİFƏSİ AÇIQDIRSA, DİL DƏYİŞƏNDƏ DİNAMİK MƏLUMATLARI YENİLƏ!
-            if (typeof currentDetailRequestId !== 'undefined' && currentDetailRequestId && currentDetailRequestObj) {
-                renderDetailHeader(currentDetailRequestObj);
-                renderCarrierPanel();
-                const container = document.getElementById("detailQuotesContainer");
-                if (window.currentQuotesCache && window.currentQuotesCache[currentDetailRequestId]) {
-                    container.innerHTML = buildQuotesTableHtml(window.currentQuotesCache[currentDetailRequestId], currentDetailRequestId);
-                }
-            }
-
-            try { filterRequests(); } catch(e){}
-            try { loadRecentQuotes(); } catch(e){}
-        }
-        // ========================================================
-        // Mövcud JavaScript kodlarınız
-        // ========================================================
-        
         let activeUser = null;
         try { activeUser = JSON.parse(localStorage.getItem("user")); } catch (e) {}
 
@@ -1922,8 +1861,9 @@ async function parseTextWithAI() {
                 
                 if (res.ok && result.status === "success") {
                     const d = result.data;
-                    resetFormForAI(); 
+                    resetFormForAI(); // <--- Yeni məlumatları yazmazdan əvvəl bütün formu təmizlə!
                     
+                    // Standart xanaları doldururuq
                     if(d.origin) document.getElementById("origin").value = d.origin;
                     if(d.destination) document.getElementById("destination").value = d.destination;
                     if(d.cargo_type) document.getElementById("cargo_type").value = d.cargo_type;
@@ -1939,6 +1879,7 @@ async function parseTextWithAI() {
                         }
                     }
                     
+                    // İxtiyari (Optional) xanaları doldururuq
                     const optMap = {
                         'truck_type': 'truck_type',
                         'hs_code': 'hs_code',
@@ -2006,8 +1947,9 @@ async function parseTextWithAI() {
                 
                 if (res.ok && result.status === "success") {
                     const d = result.data;
-                    resetFormForAI(); 
+                    resetFormForAI(); // <--- Yeni məlumatları yazmazdan əvvəl bütün formu təmizlə!
                     
+                    // Standart xanaları doldururuq
                     if(d.origin) document.getElementById("origin").value = d.origin;
                     if(d.destination) document.getElementById("destination").value = d.destination;
                     if(d.cargo_type) document.getElementById("cargo_type").value = d.cargo_type;
@@ -2023,6 +1965,7 @@ async function parseTextWithAI() {
                         }
                     }
                     
+                    // İxtiyari (Optional) xanaları doldururuq
                     const optMap = {
                         'truck_type': 'truck_type',
                         'hs_code': 'hs_code',
@@ -2064,15 +2007,18 @@ async function parseTextWithAI() {
 
 
 function resetFormForAI() {
+            // 1. Əsas xanaları təmizləyirik
             const mainFields = ["origin", "destination", "cargo_type", "weight_kg", "volume_cbm"];
             mainFields.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = "";
             });
 
+            // 2. Nəqliyyat növünü sıfırlayırıq (ilk seçimə qaytarırıq)
             const transportSelect = document.getElementById("transportation_mode");
             if (transportSelect) transportSelect.selectedIndex = 0;
 
+            // 3. İxtiyari (Optional) xanaları təmizləyib gizlədirik
             const optFields = ['truck_type', 'hs_code', 'stackable', 'shipment_type', 'incoterm', 'adr', 'temp', 'loading_date'];
             optFields.forEach(key => {
                 const chk = document.getElementById(`chk_${key}`);
@@ -2081,9 +2027,10 @@ function resetFormForAI() {
                 
                 if (chk) chk.checked = false;
                 if (inp) inp.value = "";
-                if (div) div.classList.add("d-none"); 
+                if (div) div.classList.add("d-none"); // Qutunu bağlayırıq
             });
 
+            // 4. "Əlavə Qeydlər" xanasını təmizləyirik
             const chkInfo = document.getElementById("chk_info");
             const inpInfo = document.getElementById("inp_info_text");
             const divInfo = document.getElementById("div_info");
@@ -2228,10 +2175,14 @@ function resetFormForAI() {
                     const fileNamePrefix = `Arachi_${category === 'rfq' ? 'RFQ' : 'Teklif'}_Hesabati_${dateStr}`;
 
                     if (format === 'xlsx' || format === 'csv') {
+                        // SheetJS ilə əsl Excel (XLSX) faylı yaradırıq
                         const worksheet = XLSX.utils.json_to_sheet(data);
                         const workbook = XLSX.utils.book_new();
                         XLSX.utils.book_append_sheet(workbook, worksheet, "Hesabat");
+                        
+                        // Faylı brauzer üzərindən birbaşa endiririk
                         XLSX.writeFile(workbook, `${fileNamePrefix}.xlsx`);
+                        
                     } else if (format === 'pdf') {
                         let tableHtml = `
                         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; width: 2400px; background-color: #ffffff; color: #000000; box-sizing: border-box;">
@@ -2299,20 +2250,20 @@ function resetFormForAI() {
         
   function updateBulkCategoryDropdown() {
     const bulkSelect = document.getElementById("bulkCategorySelect");
-    const parentForSubSelect = document.getElementById("parentCategoryForSub");
+    const parentForSubSelect = document.getElementById("parentCategoryForSub"); // YENİ
     
     let options = `<option value="">-- Kateqoriya Seçin --</option>`;
-    let subParentOptions = `<option value="">-- Əsas Kateqoriya --</option>`;
+    let subParentOptions = `<option value="">-- Əsas Kateqoriya --</option>`; // YENİ
     
     options += `<option value="remove">❌ Kateqoriyadan çıxar</option>`;
     
     for(let cat of globalCategoriesCache) {
         options += `<option value="${cat.id}">📁 ${escapeHTML(cat.name)}</option>`;
-        subParentOptions += `<option value="${cat.id}">${escapeHTML(cat.name)}</option>`;
+        subParentOptions += `<option value="${cat.id}">${escapeHTML(cat.name)}</option>`; // YENİ
     }
     
     if(bulkSelect) bulkSelect.innerHTML = options;
-    if(parentForSubSelect) parentForSubSelect.innerHTML = subParentOptions;
+    if(parentForSubSelect) parentForSubSelect.innerHTML = subParentOptions; // YENİ
 }
 
         function renderCategoriesManage() {
@@ -2364,6 +2315,7 @@ function resetFormForAI() {
     }
 
     try {
+        // Backend API rotanıza göre fetch işlemi
         const res = await fetch("/carrier-sub-categories", {
             method: "POST",
             headers: getAuthHeaders(),
@@ -2373,8 +2325,12 @@ function resetFormForAI() {
         if (res.status === 401 || res.status === 403) { logout(); return; }
 
         if (res.ok) {
+            // 1. Input kutusunu temizle
             subNameInput.value = "";
+            
+            // 2. YENİ EKLENEN SATIR: Listeyi sayfa yenilenmeden anında güncelle
             loadSubCategoriesList(parentId);
+            
             alert("Alt kateqoriya uğurla yaradıldı!");
         } else {
             alert("Alt kateqoriya yaradılarkən xəta baş verdi.");
@@ -2399,6 +2355,8 @@ function resetFormForAI() {
             } catch(err) {}
         }
 
+
+// Alt kategorileri ekrana rozet olarak çizer
 async function loadSubCategoriesList(categoryId) {
     const container = document.getElementById("subCategoryListContainer");
     if (!categoryId) {
@@ -2435,10 +2393,12 @@ async function loadSubCategoriesList(categoryId) {
     }
 }
 
+// Alt kategoriyi siler
   async function deleteSubCategory(subId, parentId) {
        if(!confirm("Bu alt kateqoriyanı silmək istədiyinizə əminsiniz?")) return;
     
       try {
+         // Backend API rotanız farklıysa (örneğin POST ile çalışıyorsa) burayı ona göre ayarlayın
          const res = await fetch(`/carrier-sub-categories/${subId}`, {
             method: "DELETE", 
             headers: getAuthHeaders()
@@ -2447,7 +2407,7 @@ async function loadSubCategoriesList(categoryId) {
         
         if(res.ok) {
             alert("Alt kateqoriya uğurla silindi!");
-            loadSubCategoriesList(parentId); 
+            loadSubCategoriesList(parentId); // Listeyi anında güncelle
         } else {
             alert("Silinərkən xəta baş verdi.");
         }
@@ -2458,8 +2418,8 @@ async function loadSubCategoriesList(categoryId) {
         
         async function setCarrierCategory(carrierId, categoryId) {
          let catId = categoryId ? parseInt(categoryId) : null;
-         let subCatSelect = document.getElementById(`sub_cat_${carrierId}`); 
-         let subCatId = (subCatSelect && subCatSelect.value) ? parseInt(subCatSelect.value) : null; 
+         let subCatSelect = document.getElementById(`sub_cat_${carrierId}`); // YENİ
+         let subCatId = (subCatSelect && subCatSelect.value) ? parseInt(subCatSelect.value) : null; // YENİ
 
         try {
           const res = await fetch("/carriers/set-category", {
@@ -2468,7 +2428,7 @@ async function loadSubCategoriesList(categoryId) {
                 customer_id: getCustomerId(), 
                 carrier_id: carrierId, 
                 category_id: catId,
-                sub_category_id: subCatId 
+                sub_category_id: subCatId // YENİ ƏLAVƏ EDİLDİ
              })
          });
          if (res.status === 401 || res.status === 403) { logout(); return; }
@@ -2482,6 +2442,7 @@ async function loadSubCategoriesList(categoryId) {
       } catch(err) { console.error(err); }
    }
 
+        // Kateqoriya və alt kateqoriya ağacını ekrana çəkən funksiya
 async function renderCategoryCheckboxList() {
     const box = document.getElementById("categoryCheckboxList");
     if(globalCategoriesCache.length === 0) {
@@ -2491,6 +2452,7 @@ async function renderCategoryCheckboxList() {
     
     let html = "";
     for (let cat of globalCategoriesCache) {
+        // Hər əsas kateqoriya üçün HTML strukturu
         html += `
             <div class="carrier-item-row mb-1 p-2 border-bottom" style="background-color: #ffffff;">
                 <div class="form-check mb-0 w-100 d-flex align-items-center justify-content-between">
@@ -2501,6 +2463,7 @@ async function renderCategoryCheckboxList() {
                     <i class="bi bi-chevron-down text-muted" style="cursor:pointer; font-size:12px;" onclick="document.getElementById('cat_${cat.id}').click()"></i>
                 </div>
                 
+                <!-- Alt kateqoriyaların açılacağı gizli konteyner -->
                 <div id="sub_cat_container_${cat.id}" class="ms-4 mt-2 d-none flex-column gap-1 border-start ps-3 border-primary border-opacity-25">
                     <span class="text-muted small" style="font-size:11px;">Yüklənir...</span>
                 </div>
@@ -2509,6 +2472,7 @@ async function renderCategoryCheckboxList() {
     box.innerHTML = html;
 }
 
+// Əsas kateqoriya işarələndikdə (checked) alt kateqoriyaları API-dən çəkib göstərən və ya gizlədən funksiya
 async function toggleSubCategoriesDisplay(parentId, isChecked) {
     const container = document.getElementById(`sub_cat_container_${parentId}`);
     if (!container) return;
@@ -2517,7 +2481,9 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
         container.classList.remove('d-none');
         container.classList.add('d-flex');
         
+        // Əgər artıq yüklənibsə, yenidən APİ-yə sorğu atmağa ehtiyac yoxdur
         if (!container.innerHTML.includes("Yüklənir")) {
+            // Seçildiyi üçün bütün alt kateqoriyaları da avtomatik seçili et
             const subChecks = container.querySelectorAll('.sub-cat-item-check');
             subChecks.forEach(cb => cb.checked = true);
             return;
@@ -2539,6 +2505,7 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
             
             let subHtml = "";
             subCats.forEach(sub => {
+                // Əsas kateqoriya seçildiyi üçün alt kateqoriyaları da (checked) edirik
                 subHtml += `
                     <div class="form-check mb-0">
                         <input class="form-check-input sub-cat-item-check border-secondary shadow-sm" type="checkbox" value="${sub.id}" id="sub_cat_${sub.id}" data-parent-id="${parentId}" checked style="cursor: pointer; width:1em; height:1em;">
@@ -2551,6 +2518,7 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
             container.innerHTML = `<span class="text-danger small">Xəta baş verdi.</span>`;
         }
     } else {
+        // Əsas kateqoriya işarədən çıxarıldısa, alt kateqoriyaları gizlət və seçimlərini ləğv et
         container.classList.add('d-none');
         container.classList.remove('d-flex');
         const subChecks = container.querySelectorAll('.sub-cat-item-check');
@@ -2585,10 +2553,10 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
 
         async function applyBulkCategory() {
     const bulkSelect = document.getElementById("bulkCategorySelect");
-    const bulkSubSelect = document.getElementById("bulk_sub_category"); 
+    const bulkSubSelect = document.getElementById("bulk_sub_category"); // YENİ
     
     const val = bulkSelect.value;
-    const subVal = bulkSubSelect.value; 
+    const subVal = bulkSubSelect.value; // YENİ
     
     if(!val) {
         alert("Zəhmət olmasa tətbiq etmək üçün kateqoriya seçin!");
@@ -2606,8 +2574,8 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
     let categoryId = null;
     if(val !== "remove") { categoryId = parseInt(val); }
 
-    let subCategoryId = null; 
-    if(subVal) { subCategoryId = parseInt(subVal); } 
+    let subCategoryId = null; // YENİ
+    if(subVal) { subCategoryId = parseInt(subVal); } // YENİ
 
     try {
         const res = await fetch("/carriers/bulk-set-category", {
@@ -2617,7 +2585,7 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
                 customer_id: getCustomerId(), 
                 carrier_ids: carrierIds, 
                 category_id: categoryId,
-                sub_category_id: subCategoryId 
+                sub_category_id: subCategoryId // YENİ ƏLAVƏ EDİLDİ
             })
         });
 
@@ -2692,6 +2660,7 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
                 container.classList.remove("d-none");
             } else {
                 container.classList.add("d-none");
+                // Qutunun içini silən kodu sildik ki, mətn itməsin.
             }
         }
 
@@ -2825,13 +2794,16 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
         `;
     }
     
+    // HTML-i ekrana basırıq
     box.innerHTML = html;
     document.getElementById("selectAllManageCarriers").checked = false; 
     updateBulkDeleteBtn();
 
+    // YENİ ƏLAVƏ: Cədvəl yükləndikdən sonra, əsas kateqoriyası olan sətirlərin alt kateqoriyalarını avtomatik çək
     for (let c of carriers) {
         if (c.category_id) {
             let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
+            // Səhifə açılarkən alt kateqoriyanı yükləyir və əgər əvvəlcədən seçilibsə onu seçili edir
             loadSubCategoriesForSelect(c.category_id, `sub_cat_${carrierId}`, c.sub_category_id);
         }
     }
@@ -2924,18 +2896,23 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
             } catch (err) {}
         }
 
+
+   // Alt kateqoriyaları API-dən çəkib hədəf select elementinə doldurur
    async function loadSubCategoriesForSelect(categoryId, targetSelectId, selectedSubId = null) {
     const targetSelect = document.getElementById(targetSelectId);
     if (!targetSelect) return;
 
+    // İçeriği temizle ve varsayılan seçeneği ekle
     targetSelect.innerHTML = '<option value="">-- Alt Kat. --</option>';
 
+    // Eğer kategori seçilmemişse veya "remove" seçilmişse alt kategoriyi kapat
     if (!categoryId || categoryId === "remove") {
         targetSelect.disabled = true;
         return;
     }
 
     try {
+        // Sizin sisteminize uygun fetch isteği (BASE_URL kullanmadan, getAuthHeaders ile)
         const res = await fetch(`/carrier-sub-categories/${categoryId}`, {
             headers: getAuthHeaders()
         });
@@ -2945,6 +2922,7 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
         const data = await res.json();
         
         let subCategories = [];
+        // API'den gelen verinin yapısına göre listeyi alıyoruz
         if (data && data.status === "success" && data.data) {
             subCategories = data.data;
         } else if (Array.isArray(data)) {
@@ -2952,12 +2930,13 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
         }
 
         if (subCategories.length > 0) {
-            targetSelect.disabled = false;
+            targetSelect.disabled = false; // Kutuyu aktif hale getir
             subCategories.forEach(sub => {
                 const isSelected = (selectedSubId == sub.id) ? "selected" : "";
                 targetSelect.innerHTML += `<option value="${sub.id}" ${isSelected}>${escapeHTML(sub.name)}</option>`;
             });
         } else {
+            // Eğer bu kategorinin hiç alt kategorisi yoksa kutu kapalı kalsın
             targetSelect.disabled = true;
         }
     } catch (error) {
@@ -2966,9 +2945,13 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
     }
 }
 
+// Bulk panel üçün OnChange funksiyası
 function loadBulkSubCategories(categoryId) {
     loadSubCategoriesForSelect(categoryId, 'bulk_sub_category');
 }
+        
+
+
         
         async function loadStats() {
             try {
@@ -2988,7 +2971,7 @@ function loadBulkSubCategories(categoryId) {
 
             let sendOpt = 'all';
             if (window.isPublicLinkMode) {
-                sendOpt = 'public_link'; 
+                sendOpt = 'public_link'; // Əgər link düyməsinə basıbsa rejimi dəyişirik
             } else {
                 const sendOptElement = document.querySelector('input[name="carrierOption"]:checked');
                 sendOpt = sendOptElement ? sendOptElement.value : 'all';
@@ -3002,6 +2985,7 @@ function loadBulkSubCategories(categoryId) {
                 checkboxes.forEach(cb => selectedCarriers.push(parseInt(cb.value)));
                 if (selectedCarriers.length === 0) { alert("Zəhmət olmasa siyahıdan ən azı bir daşıyıcı seçin!"); return; }
             } else if (sendOpt === 'category' && !window.isPublicLinkMode) {
+                // Əsas və alt kateqoriyaları yığırıq
                 document.querySelectorAll(".cat-item-check:checked").forEach(cb => selectedCategories.push(parseInt(cb.value)));
                 
                 let selectedSubCategories = [];
@@ -3012,17 +2996,21 @@ function loadBulkSubCategories(categoryId) {
                     return; 
                 }
 
+                // Backend-in qarışdırmaması üçün daşıyıcıları birbaşa burada (frontend-də) dəqiq filtrləyirik
                 selectedCarriers = [];
                 globalCarriersCache.forEach(c => {
                     let carrierId = c.id !== undefined ? c.id : (c.carrier_id !== undefined ? c.carrier_id : c._id);
                     
                     if (c.sub_category_id && selectedSubCategories.includes(c.sub_category_id)) {
+                        // Əgər daşıyıcının alt kateqoriyası varsa və o alt kateqoriya seçilibsə əlavə et
                         selectedCarriers.push(carrierId);
                     } else if (c.category_id && selectedCategories.includes(c.category_id) && !c.sub_category_id) {
+                        // Əgər daşıyıcının heç bir alt kateqoriyası yoxdursa, amma aid olduğu əsas kateqoriya seçilibsə əlavə et
                         selectedCarriers.push(carrierId);
                     }
                 });
 
+                // Ehtimala qarşı təkrar ID-ləri silirik
                 selectedCarriers = [...new Set(selectedCarriers)];
 
                 if (selectedCarriers.length === 0) {
@@ -3030,6 +3018,8 @@ function loadBulkSubCategories(categoryId) {
                     return;
                 }
 
+                // Arxa planın (backend) bütün "A" kateqoriyasına göndərməsinin qarşısını almaq üçün 
+                // əməliyyat rejimini məcburi şəkildə "Seçilmiş daşıyıcılar (selected)" olaraq dəyişirik.
                 sendOpt = 'selected';
             }
 
@@ -3118,9 +3108,12 @@ function loadBulkSubCategories(categoryId) {
             const useCustomTemplate = document.getElementById("customTemplateRadio").checked;
             const customEmailSubjectVal = useCustomTemplate ? (document.getElementById("custom_email_subject")?.value.trim() || "") : "";
             const customEmailBodyVal = useCustomTemplate ? (document.getElementById("custom_email_body")?.value.trim() || "") : "";
+            // CBM veya Palet növünü alırıq
             const volTypeSelected = document.getElementById("volume_type")?.value || "CBM";
+           // Arka plan hata vermesin diye sadece rakamı alıyoruz
             const parsedVolume = parseFloat(volumeVal) || 0;
 
+          // Tür bilgisinin kaybolmaması için zorunlu alanlara (notlara) ekliyoruz
           if(parsedVolume > 0) {
           requiredFieldsList.push(`Həcm / Palet: ${parsedVolume} ${volTypeSelected}`);
           }
@@ -3128,7 +3121,8 @@ function loadBulkSubCategories(categoryId) {
            const payload = {
                 customer_id: getCustomerId(), origin: originVal, loading_location: originVal, destination: destinationVal, delivery_location: destinationVal,
                 cargo_type: cargoTypeVal, cargo: cargoTypeVal, weight_kg: parseFloat(weightVal) || 0, weight: parseFloat(weightVal) || 0,
-                volume_m3: parsedVolume, volume: parsedVolume, 
+                volume_m3: parsedVolume, volume: parsedVolume, // Artık API'ye sadece rakam gidiyor
+                // ... alt kısımlar eskisi gibi kalacak
                 deadline: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
                 loading_date: document.getElementById("chk_loading_date")?.checked ? (document.getElementById("inp_loading_date")?.value || "") : "",
                 truck_type: document.getElementById("chk_truck_type")?.checked ? (document.getElementById("inp_truck_type")?.value || "") : "",
@@ -3149,15 +3143,19 @@ function loadBulkSubCategories(categoryId) {
                 const data = await res.json();
                 if (res.ok) {
                     if (data.public_link) {
+                        // Şirkət adını təyin edirik
                         let senderName = "Arachi";
                         if (activeUser && activeUser.company_name) senderName = activeUser.company_name;
                         else if (activeUser && activeUser.name) senderName = activeUser.name;
                         
+                        // Şablonun mətni
                         let templateText = `Dear Carrier,\n\nPlease review the shipment details below and kindly complete the quotation form using the link provided.\n\nQuotation Link:\n${data.public_link}\n\nThank you.\n\nBest regards,\n${senderName}`;
                         
+                        // Mətni modaldakı xanaya yazırıq ve modalı açırıq
                         document.getElementById("publicLinkTextarea").value = templateText;
                         new bootstrap.Modal(document.getElementById("publicLinkModal")).show();
                     } else {
+                        // Normal email göndərilibsə köhnə qaydada bildiriş verir
                         let msg = typeof data.message === 'object' ? JSON.stringify(data.message) : (data.message || "Sorğu uğurla yaradıldı!");
                         alert(msg);
                     }
@@ -3267,17 +3265,17 @@ function loadBulkSubCategories(categoryId) {
 
         function buildQuotesTableHtml(quotesList, requestId) {
             if (!quotesList || quotesList.length === 0) {
-                return `<div class="alert alert-light mt-2 border rounded-3 p-2.5 w-100"><p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> ${translations[currentLang].no_quotes_yet}</p></div>`;
+                return `<div class="alert alert-light mt-2 border rounded-3 p-2.5 w-100"><p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> Hələ bu sorğuya təklif göndərilməyib.</p></div>`;
             }
 
             let html = `<div class="table-container-responsive rounded-4 overflow-hidden border shadow-sm w-100"><table class="table table-hover bg-white align-middle small mb-0">
                 <thead style="background: #f8fafc;">
                     <tr>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">${translations[currentLang].th_carrier_company}</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">${translations[currentLang].th_price}</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">${translations[currentLang].th_transit}</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">${translations[currentLang].th_notes}</th>
-                        <th class="py-2.5 px-3 text-muted fw-bold text-center text-nowrap">${translations[currentLang].th_action}</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Daşıyıcı Şirkət</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Qiymət</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Müddət</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-nowrap">Qeydlər</th>
+                        <th class="py-2.5 px-3 text-muted fw-bold text-center text-nowrap">Əməliyyat</th>
                     </tr>
                 </thead>
                 <tbody>`;
@@ -3286,12 +3284,12 @@ function loadBulkSubCategories(categoryId) {
                 let extraStr = "";
                 if (q.extra_details) {
                     for (let [k, v] of Object.entries(q.extra_details)) {
-                        if (k === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
+                        if (k === 'submitted' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
                         if (v !== null && v !== undefined && v !== "") {
                             if (k === 'carrier_attachment_url') {
-                                extraStr += `<div><strong class="text-dark">${currentLang === 'az' ? 'Sənəd:' : 'Doc:'}</strong> <a href="${escapeHTML(v)}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> ${translations[currentLang].more_details}</a></div>`;
+                                extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${escapeHTML(v)}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
                             } else if (k === 'submitted_at') {
-                                extraStr += `<div><strong class="text-dark">${currentLang === 'az' ? 'Tarix:' : 'Date:'}</strong> ${escapeHTML(formatDateTime(v, true, false))}</div>`;
+                                extraStr += `<div><strong class="text-dark">Tarix:</strong> ${escapeHTML(formatDateTime(v, true, false))}</div>`;
                             } else {
                                 extraStr += `<div><strong class="text-dark">${escapeHTML(k)}:</strong> ${escapeHTML(v)}</div>`;
                             }
@@ -3299,11 +3297,10 @@ function loadBulkSubCategories(categoryId) {
                     }
                 }
 
-                let daysWord = currentLang === 'az' ? 'gün' : 'days';
-                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") ? `${escapeHTML(q.transit_time_days)} ${daysWord}` : `<span class="text-muted fst-italic">${translations[currentLang].not_specified}</span>`;
+                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") ? `${escapeHTML(q.transit_time_days)} gün` : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
                 let isRevised = q.quote_history && q.quote_history.length > 0;
-                let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">${currentLang === 'az' ? 'Yenilənib' : 'Revised'} (v${q.quote_history.length + 1})</span>` : "";
-                let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") ? `${escapeHTML(q.price)} <span class="text-muted small">${escapeHTML(q.currency || 'AZN')}</span>${revisedBadge}` : `<span class="text-muted fst-italic">${translations[currentLang].not_specified}</span>`;
+                let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">Yenilənib (v${q.quote_history.length + 1})</span>` : "";
+                let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") ? `${escapeHTML(q.price)} <span class="text-muted small">${escapeHTML(q.currency || 'AZN')}</span>${revisedBadge}` : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
 
                 html += `
                     <tr class="${q.is_winner ? 'table-success' : ''}">
@@ -3311,9 +3308,9 @@ function loadBulkSubCategories(categoryId) {
                         <td class="px-3 text-success fw-bold py-2.5 text-nowrap" style="min-width: 100px;">${priceDisplay}</td>
                         <td class="px-3 fw-medium text-dark py-2.5 text-nowrap" style="min-width: 90px;">${transitDisplay}</td>
                         <td class="px-3 py-2.5 text-nowrap" style="min-width: 160px;">
-                            <div class="text-muted mb-1 text-truncate" style="max-width: 180px;">${extraStr || translations[currentLang].not_specified}</div>
+                            <div class="text-muted mb-1 text-truncate" style="max-width: 180px;">${extraStr || 'Məlumat yoxdur'}</div>
                             <button class="btn btn-link btn-sm p-0 text-primary fw-bold text-decoration-none text-nowrap" style="font-size: 11.5px;" onclick="openQuoteModal(${requestId}, ${q.id})">
-                                ${translations[currentLang].more_details} <i class="bi bi-arrow-right-short"></i>
+                                Daha Ətraflı <i class="bi bi-arrow-right-short"></i>
                             </button>
                         </td>
                         <td class="px-3 text-center py-2.5 text-nowrap" style="min-width: 100px;">
@@ -3321,17 +3318,17 @@ function loadBulkSubCategories(categoryId) {
                                 <div class="d-flex flex-column gap-2 align-items-center">
                                     <div class="d-flex align-items-center justify-content-center gap-2">
                                         <span class="badge bg-success rounded-pill px-3 py-2" style="font-size: 13px;">
-                                            <i class="bi bi-trophy me-1"></i> ${translations[currentLang].winner}
+                                            <i class="bi bi-trophy me-1"></i> Qalib
                                         </span>
-                                        <button onclick="cancelWinner(${q.id},${requestId})" class="btn btn-sm btn-outline-danger rounded-circle d-flex align-items-center justify-content-center shadow-sm" title="Cancel" style="width: 32px; height: 32px; border-width: 2px; padding: 0;">
+                                        <button onclick="cancelWinner(${q.id}, ${requestId})" class="btn btn-sm btn-outline-danger rounded-circle d-flex align-items-center justify-content-center shadow-sm" title="Qalibi ləğv et" style="width: 32px; height: 32px; border-width: 2px; padding: 0;">
                                             <i class="bi bi-x-lg" style="font-size: 14px; stroke-width: 2;"></i>
                                         </button>
                                     </div>
-                                    <button onclick="openCustomerQuoteModal(${requestId},${q.id}, '${q.price}', '${escapeHTML(q.currency || 'AZN')}')" class="btn btn-sm btn-success w-100 fw-bold rounded-pill shadow-sm" style="font-size: 11px;">
-                                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> ${translations[currentLang].send_to_customer}
+                                    <button onclick="openCustomerQuoteModal(${requestId}, ${q.id}, '${q.price}', '${escapeHTML(q.currency || 'AZN')}')" class="btn btn-sm btn-success w-100 fw-bold rounded-pill shadow-sm" style="font-size: 11px;">
+                                        <i class="bi bi-file-earmark-pdf-fill me-1"></i> Müştəriyə Göndər
                                     </button>
                                 </div>
-                            ` : `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">${translations[currentLang].select_winner}</button>`}
+                            ` : `<button class="btn btn-sm btn-outline-success fw-bold rounded-pill px-2.5 py-1" style="font-size: 11.5px;" onclick="selectWinner(${requestId}, ${q.id})">Qalib Seç</button>`}
                         </td>
                     </tr>
                 `;
@@ -3373,6 +3370,7 @@ function loadBulkSubCategories(categoryId) {
             if (countEl) countEl.textContent = quotesList.length;
         }
 
+        // KLİKLƏNƏ BİLƏN (İnteraktiv) MODAL
         function openQuoteModal(requestId, quoteId) {
             const quotes = window.currentQuotesCache[requestId] || [];
             const q = quotes.find(item => item.id === quoteId);
@@ -3517,6 +3515,9 @@ function loadBulkSubCategories(categoryId) {
             } catch (err) { alert("Server xətası!"); }
         }
 
+        /* ================================================================
+           RFQ DETAIL SƏHİFƏSİ
+           ================================================================ */
         let currentDetailRequestId = null; let currentDetailRequestObj = null; let detailCarriersCache = []; let carrierPanelFilter = 'all'; let selectedReminderIds = new Set();
         const AVATAR_PALETTE = ['#4f46e5', '#0ea5e9', '#10b981', '#f59e0b', '#ec4899', '#8b5cf6', '#ef4444', '#14b8a6'];
 
@@ -3558,16 +3559,14 @@ function loadBulkSubCategories(categoryId) {
 
         function renderDetailHeader(req) {
             document.getElementById("detailBreadcrumbId").textContent = `RFQ #${req.display_id || req.id}`;
-            document.getElementById("detailIdBadge").textContent = `ID: RFQ #${req.display_id || req.id}`;
+            document.getElementById("detailIdBadge").textContent = `RFQ #${req.display_id || req.id}`;
             document.getElementById("detailOrigin").textContent = escapeHTML(req.origin || req.loading_location || "—");
             document.getElementById("detailDestination").textContent = escapeHTML(req.destination || req.delivery_location || "—");
-            
-            let notSpec = translations[currentLang].not_specified;
-            document.getElementById("detailCargoType").textContent = escapeHTML(req.cargo_type || req.cargo || notSpec);
+            document.getElementById("detailCargoType").textContent = escapeHTML(req.cargo_type || req.cargo || "—");
 
             const weight = req.weight_kg || req.weight;
-            let weightStr = weight ? `${escapeHTML(weight)} ${currentLang === 'az' ? 'kq' : 'kg'}` : notSpec;
-            if (req.volume_m3 && req.volume_m3 !== "Qeyd edilməyib" && req.volume_m3 !== notSpec && req.volume_m3 != 0) {
+            let weightStr = weight ? `${escapeHTML(weight)} kq` : "Qeyd edilməyib";
+            if (req.volume_m3 && req.volume_m3 !== "Qeyd edilməyib" && req.volume_m3 != 0) {
                 weightStr += ` / ${escapeHTML(req.volume_m3)} m³`;
             }
             document.getElementById("detailWeight").textContent = weightStr;
@@ -3577,39 +3576,32 @@ function loadBulkSubCategories(categoryId) {
 
             const statusBadge = document.getElementById("detailStatusBadge");
             const isOpen = (req.status || "open") === "open";
-            statusBadge.textContent = isOpen ? translations[currentLang].status_open : translations[currentLang].status_closed; 
-            statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
+            statusBadge.textContent = isOpen ? "OPEN" : "CLOSED"; statusBadge.className = `badge shadow-sm ${isOpen ? 'bg-primary' : 'bg-success'}`;
 
             document.getElementById("detailSenderCompany").textContent = escapeHTML((activeUser && (activeUser.company_name || activeUser.name)) || "—");
             document.getElementById("detailSenderEmail").textContent = escapeHTML((activeUser && activeUser.email) || "—");
             document.getElementById("detailReplyTo").textContent = escapeHTML((activeUser && activeUser.email) || "—");
-            
-            let templateName = req.email_template_type === 'custom' ? (translations[currentLang].custom_template || "Fərdi şablon") : (translations[currentLang].standard_template || "Standart şablon");
-            document.getElementById("detailEmailTemplate").textContent = templateName;
+            document.getElementById("detailEmailTemplate").textContent = req.email_template_type === 'custom' ? "Fərdi şablon" : "Standart şablon";
 
             renderRequestExtraModal(req);
         }
 
         function renderRequestExtraModal(req) {
             const box = document.getElementById("requestExtraModalContent");
-            let valYes = translations[currentLang].val_yes;
-            let valNo = translations[currentLang].val_no;
-            let notSpec = translations[currentLang].not_specified;
-
             try {
                 const rows = [
-                    [translations[currentLang].lbl_truck_type_full, req.truck_type],
-                    [translations[currentLang].lbl_shipment_type_full, req.shipment_type],
-                    [translations[currentLang].lbl_hs_code, req.hs_code],
-                    [translations[currentLang].lbl_stackable_full, req.stackable === true ? valYes : (req.stackable === false ? valNo : null)],
-                    [translations[currentLang].lbl_additional_notes, req.additional_notes || req.note]
+                    ["Daşınma növü / Truck type", req.truck_type],
+                    ["Yük tipi (Shipment type)", req.shipment_type],
+                    ["HS Kodu", req.hs_code],
+                    ["Stiflənə bilər (Stackable)", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
+                    ["Əlavə qeydlər", req.additional_notes || req.note]
                 ];
 
                 let html = `<div class="d-flex flex-column gap-2">`;
                 let hasAny = false;
                 
                 for (let [label, value] of rows) {
-                    if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib" || value === notSpec) continue;
+                    if (value === null || value === undefined || value === "" || value === "Qeyd edilməyib") continue;
                     hasAny = true;
                     html += `<div class="p-2.5 rounded-3 border bg-light"><strong class="text-primary small d-block mb-1">${escapeHTML(label)}</strong><span class="text-dark small">${escapeHTML(value)}</span></div>`;
                 }
@@ -3626,18 +3618,19 @@ function loadBulkSubCategories(categoryId) {
                         }
                         return `<div class="mb-2 pb-1 border-bottom border-secondary border-opacity-10 last-child-border-0"><i class="bi bi-check2 text-success me-1"></i> <span class="text-dark fw-medium">${escapeHTML(fStr)}</span></div>`;
                     }).join("");
-                    html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1"><strong class="text-primary small d-flex align-items-center mb-3 border-bottom pb-2"><i class="bi bi-card-checklist fs-5 me-2"></i> ${translations[currentLang].lbl_optional_params}</strong><div class="text-dark small">${fieldsHtml}</div></div>`;
+                    
+                    html += `<div class="p-3 rounded-3 border bg-white shadow-sm mt-1"><strong class="text-primary small d-flex align-items-center mb-3 border-bottom pb-2"><i class="bi bi-card-checklist fs-5 me-2"></i> İxtiyari Parametrlər</strong><div class="text-dark small">${fieldsHtml}</div></div>`;
                 }
 
                 if (req.attachment_url) {
                     hasAny = true;
-                    html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">${translations[currentLang].lbl_attached_doc}</strong><a href="${escapeHTML(req.attachment_url)}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> ${translations[currentLang].btn_download}</a></div>`;
+                    html += `<div class="p-2.5 rounded-3 border bg-light d-flex justify-content-between align-items-center flex-wrap gap-2 mt-1"><strong class="text-primary small">Qoşulmuş sənəd</strong><a href="${escapeHTML(req.attachment_url)}" target="_blank" class="btn btn-sm btn-primary rounded-pill px-3"><i class="bi bi-cloud-download me-1"></i> Yüklə</a></div>`;
                 }
 
-                if (!hasAny) { html += `<div class="text-muted small text-center p-3">${translations[currentLang].lbl_no_extra_detail}</div>`; }
+                if (!hasAny) { html += `<div class="text-muted small text-center p-3">Əlavə detal qeyd olunmayıb.</div>`; }
                 html += `</div><style>.last-child-border-0:last-child { border-bottom: none !important; margin-bottom: 0 !important; padding-bottom: 0 !important; }</style>`;
                 box.innerHTML = html;
-            } catch (e) { box.innerHTML = `<div class="text-danger small p-3">Məlumat xətası</div>`; }
+            } catch (e) { box.innerHTML = `<div class="text-danger small p-3">Məlumatları göstərərkən xəta baş verdi.</div>`; }
         }
 
         async function loadDetailCarriersStatus(requestId) {
@@ -3669,7 +3662,7 @@ function loadBulkSubCategories(categoryId) {
                 document.getElementById("mobileCarriersCount").textContent = total;
                 document.getElementById("statBtnCarriersCount").textContent = total;
                 document.getElementById("panelCarriersCount").textContent = total;
-                
+                // GENEL LİNK (PUBLIC LINK) KONTROLÜ VE ARAYÜZ GÜNCELLEMESİ
                 const isPublicLink = detailCarriersCache.some(c => c.email && c.email.includes("public_link_"));
                 const noticeEl = document.getElementById("publicLinkNotice");
                 
@@ -3678,11 +3671,13 @@ function loadBulkSubCategories(categoryId) {
                 const boxFailed = document.getElementById("statFailed").parentElement;
 
                 if (isPublicLink) {
+                    // Link ile oluşturulmuşsa uyarıyı göster ve gereksiz kutuları gizle
                     if (noticeEl) noticeEl.classList.remove("d-none");
                     boxSent.style.display = "none";
                     boxDelivered.style.display = "none";
                     boxFailed.style.display = "none";
                 } else {
+                    // Normal e-posta gönderimiyse uyarıyı gizle ve tüm kutuları görünür yap
                     if (noticeEl) noticeEl.classList.add("d-none");
                     boxSent.style.display = "";
                     boxDelivered.style.display = "";
@@ -3833,6 +3828,9 @@ function loadBulkSubCategories(categoryId) {
             } catch (err) { alert("Server xətası!"); }
         }
 
+        // ==========================================
+        // MÜŞTƏRİ ÜÇÜN PDF TƏKLİF (QUOTE) YARATMAQ
+        // ==========================================
         let currentQuoteForCustomer = null;
 
         function openCustomerQuoteModal(requestId, quoteId, basePrice, currency) {
@@ -3928,6 +3926,7 @@ function loadBulkSubCategories(categoryId) {
                 let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
+                // Yeni gizli iframe yaradırıq
                 const iframe = document.createElement('iframe');
                 iframe.style.position = 'fixed';
                 iframe.style.right = '0';
@@ -4003,6 +4002,7 @@ function loadBulkSubCategories(categoryId) {
                 `);
                 doc.close();
 
+                // Modalı bağlayırıq
                 const modalEl = document.getElementById("customerQuoteModal");
                 if (modalEl) {
                     const modalInst = bootstrap.Modal.getInstance(modalEl);
@@ -4012,15 +4012,16 @@ function loadBulkSubCategories(categoryId) {
                 setTimeout(() => {
                     iframe.contentWindow.focus();
                     iframe.contentWindow.print();
+                    // Çap pəncərəsi bağlanandan sonra iframe-i təmizləyirik
                     setTimeout(() => { document.body.removeChild(iframe); resolve(); }, 1000);
                 }, 500);
             });
         }
 
-        function copyPublicLinkText() {
+function copyPublicLinkText() {
             const copyText = document.getElementById("publicLinkTextarea");
             copyText.select();
-            copyText.setSelectionRange(0, 99999); 
+            copyText.setSelectionRange(0, 99999); // Mobil cihazlar üçün
             
             navigator.clipboard.writeText(copyText.value).then(() => {
                 alert("✅ Şablon və link uğurla kopyalandı! İndi istədiyiniz yerə yapışdıra bilərsiniz.");
