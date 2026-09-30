@@ -1607,8 +1607,11 @@ Best regards,
             currentLang = lang;
             localStorage.setItem("customer_lang", lang);
             
-            const sel = document.getElementById("langSelector");
-            if (sel) sel.value = lang;
+            // Dropdown butonundaki yazıyı güncelleyen kod eklendi
+            const langText = document.getElementById("currentLangText");
+            if (langText) {
+                langText.innerText = lang.toUpperCase();
+            }
 
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
@@ -1623,7 +1626,6 @@ Best regards,
             const palletOpt = document.getElementById("opt_pallet_item");
             if (palletOpt) palletOpt.textContent = translations[lang].opt_pallet;
 
-            // ƏGƏR RFQ DETAL SƏHİFƏSİ AÇIQDIRSA, DİL DƏYİŞƏNDƏ DİNAMİK MƏLUMATLARI YENİLƏ!
             if (typeof currentDetailRequestId !== 'undefined' && currentDetailRequestId && currentDetailRequestObj) {
                 renderDetailHeader(currentDetailRequestObj);
                 renderCarrierPanel();
@@ -1636,32 +1638,6 @@ Best regards,
             try { filterRequests(); } catch(e){}
             try { loadRecentQuotes(); } catch(e){}
         }
-        // ========================================================
-        // Mövcud JavaScript kodlarınız
-        // ========================================================
-        
-        let activeUser = null;
-        try { activeUser = JSON.parse(localStorage.getItem("user")); } catch (e) {}
-
-        function getCustomerId() {
-            if (!currentUserId) { window.location.replace("/login"); return null; }
-            return parseInt(String(currentUserId).replace(/[^0-9]/g, ''));
-        }
-
-        const currentUserId = activeUser ? activeUser.id : null;
-        
-        if (activeUser && activeUser.company_name) {
-            document.getElementById("userCompanyName").innerText = activeUser.company_name;
-        } else if (activeUser && activeUser.email) {
-            document.getElementById("userCompanyName").innerText = activeUser.email;
-        } else {
-            const companyNameEl = document.getElementById("userCompanyName");
-            if (companyNameEl) companyNameEl.innerText = "Müştəri";
-        }
-
-        let globalRequestsCache = [];
-        let globalCarriersCache = [];
-        let globalCategoriesCache = [];
 
         function escapeHTML(str) {
             if (str === null || str === undefined) return '';
