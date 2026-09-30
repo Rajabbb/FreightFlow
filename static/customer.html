@@ -487,14 +487,17 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 
-                <!-- DİL SEÇİMİ -->
-<div class="d-inline-flex align-items-center bg-white border border-secondary border-opacity-50 rounded-pill px-2 py-1 shadow-sm position-relative" style="height: 33px; min-width: 60px;">
-    <i class="bi bi-globe2 text-secondary ms-1 me-1" style="font-size: 13px;"></i>
-    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm border-0 bg-transparent p-0 fw-bold text-dark pe-3" style="font-size: 12.5px; width: auto; cursor: pointer; box-shadow: none; outline: none; appearance: none; -webkit-appearance: none;">
-        <option value="az">AZ</option>
-        <option value="en">EN</option>
-    </select>
-    <i class="bi bi-chevron-down position-absolute text-dark" style="right: 8px; font-size: 10px; pointer-events: none;"></i>
+                <!-- DİL SEÇİMİ (YENİ GÖRÜNÜM) -->
+<div class="dropdown d-inline-flex">
+    <button class="btn btn-sm btn-white border border-secondary border-opacity-50 rounded-pill shadow-sm d-flex align-items-center bg-white" type="button" id="langDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="height: 33px;">
+        <i class="bi bi-globe2 text-secondary me-2" style="font-size: 13px;"></i>
+        <span id="currentLangText" class="fw-bold text-dark" style="font-size: 12.5px;">AZ</span>
+        <i class="bi bi-chevron-down ms-2 text-dark" style="font-size: 10px;"></i>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-1 p-1" aria-labelledby="langDropdown" style="min-width: 80px; border-radius: 12px;">
+        <li><a class="dropdown-item fw-bold text-dark rounded" href="#" onclick="changeLanguage('az'); return false;">AZ</a></li>
+        <li><a class="dropdown-item fw-bold text-dark rounded" href="#" onclick="changeLanguage('en'); return false;">EN</a></li>
+    </ul>
 </div>
 
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;" data-i18n="nav_company">Şirkət</span>
