@@ -48,10 +48,17 @@
             <img src="/static/arachi-logo.png" alt="Arachi" class="h-8 w-auto">
             <span class="text-2xl font-bold text-slate-900">Arachi</span>
         </div>
-        <button class="flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-full text-sm hover:bg-slate-50 transition shadow-sm">
-            <i data-lucide="globe" class="w-4 h-4"></i>
-            <span>EN</span>
-        </button>
+        
+        <!-- DİL SEÇİMİ (Language Selector) -->
+        <div class="relative inline-flex items-center">
+            <i data-lucide="globe" class="w-4 h-4 absolute left-3 text-slate-500 pointer-events-none"></i>
+            <select id="langSelector" onchange="changeLanguage(this.value)" class="bg-white border border-slate-200 pl-9 pr-8 py-1.5 rounded-full text-sm font-medium text-slate-700 hover:bg-slate-50 transition shadow-sm appearance-none cursor-pointer focus:outline-none focus:border-blue-300">
+                <option value="en">EN</option>
+                <option value="az">AZ</option>
+            </select>
+            <!-- Dropdown arrow -->
+            <i data-lucide="chevron-down" class="w-4 h-4 absolute right-2.5 text-slate-500 pointer-events-none"></i>
+        </div>
     </div>
 
     <!-- Main Container -->
@@ -59,8 +66,8 @@
         
         <!-- Re-submission Notice -->
         <div id="update_notice" class="hidden bg-blue-50 border border-blue-200 text-blue-800 p-4 rounded-xl mb-6 text-sm">
-            <span class="block font-semibold mb-1">ℹ️ You have previously submitted a quote.</span>
-            You can select an option below to update it OR submit a completely new alternative option.
+            <span class="block font-semibold mb-1" data-i18n="update_notice_title">ℹ️ You have previously submitted a quote.</span>
+            <span data-i18n="update_notice_desc">You can select an option below to update it OR submit a completely new alternative option.</span>
         </div>
         
         <!-- Options Tabs Container -->
@@ -70,11 +77,11 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div class="flex items-center gap-3">
                 <span class="bg-blue-100 text-blue-700 font-semibold px-3 py-1 rounded-full text-sm">RFQ</span>
-                <span class="text-slate-500 font-medium tracking-wide">REQUEST DETAILS</span>
+                <span class="text-slate-500 font-medium tracking-wide" data-i18n="request_details">REQUEST DETAILS</span>
             </div>
             <div class="flex items-center gap-2 text-blue-600 bg-blue-50 px-4 py-2 rounded-lg text-sm font-medium">
                 <i data-lucide="file-text" class="w-4 h-4"></i>
-                Please submit your quote
+                <span data-i18n="please_submit">Please submit your quote</span>
             </div>
         </div>
 
@@ -91,7 +98,7 @@
             <div class="border border-slate-200 rounded-xl p-4 flex gap-3 bg-white">
                 <i data-lucide="package" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
                 <div>
-                    <p class="text-xs text-slate-500 mb-1">Total Cargo (Weight / Vol)</p>
+                    <p class="text-xs text-slate-500 mb-1" data-i18n="total_cargo">Total Cargo (Weight / Vol)</p>
                     <p id="weight_volume_text" class="font-bold text-sm text-slate-800">-</p>
                 </div>
             </div>
@@ -99,7 +106,7 @@
             <div id="loading_date_box" class="border border-slate-200 rounded-xl p-4 flex gap-3 bg-white hidden">
                 <i data-lucide="calendar" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
                 <div>
-                    <p class="text-xs text-slate-500 mb-1">Loading Date</p>
+                    <p class="text-xs text-slate-500 mb-1" data-i18n="loading_date">Loading Date</p>
                     <p id="loading_date_text" class="font-bold text-sm text-slate-800">-</p>
                 </div>
             </div>
@@ -107,7 +114,7 @@
             <div id="deadline_box" class="border border-slate-200 rounded-xl p-4 flex gap-3 bg-white hidden">
                 <i data-lucide="clock" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
                 <div>
-                    <p class="text-xs text-slate-500 mb-1">Deadline</p>
+                    <p class="text-xs text-slate-500 mb-1" data-i18n="deadline">Deadline</p>
                     <p id="deadline_text" class="font-bold text-sm text-slate-800">-</p>
                 </div>
             </div>
@@ -115,7 +122,7 @@
             <div class="border border-slate-200 rounded-xl p-4 flex gap-3 bg-white">
                 <i data-lucide="layers" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
                 <div>
-                    <p class="text-xs text-slate-500 mb-1">Cargo Type</p>
+                    <p class="text-xs text-slate-500 mb-1" data-i18n="cargo_type">Cargo Type</p>
                     <p id="cargo_type_text" class="font-bold text-sm text-slate-800">-</p>
                 </div>
             </div>
@@ -125,7 +132,7 @@
         <div id="dynamic_fields_container" class="mb-8 flex gap-3 border-b border-slate-100 pb-8">
             <i data-lucide="clipboard-list" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-1"></i>
             <div class="w-full">
-                <h4 id="container_title" class="font-medium mb-3 text-slate-800">Customer Requirements & Notes</h4>
+                <h4 id="container_title" class="font-medium mb-3 text-slate-800" data-i18n="customer_reqs">Customer Requirements & Notes</h4>
                 <div id="fields_list" class="space-y-3 bg-slate-50 rounded-xl p-4"></div>
             </div>
         </div>
@@ -134,8 +141,8 @@
         <div class="mb-6 flex gap-3 mt-4">
             <i data-lucide="bar-chart-2" class="text-blue-500 w-6 h-6 flex-shrink-0"></i>
             <div>
-                <h3 class="font-bold text-lg text-slate-800">Your Quote</h3>
-                <p class="text-slate-500 text-sm">Please provide your best offer and all relevant details.</p>
+                <h3 class="font-bold text-lg text-slate-800" data-i18n="your_quote">Your Quote</h3>
+                <p class="text-slate-500 text-sm" data-i18n="quote_desc">Please provide your best offer and all relevant details.</p>
             </div>
         </div>
 
@@ -146,8 +153,8 @@
             <div id="carrierCompanyField" style="display: none;" class="flex gap-3">
                 <i data-lucide="building" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
                 <div class="w-full">
-                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Carrier Company Name<span class="text-red-500">*</span></label>
-                    <input type="text" id="carrierCompanyInput" name="carrier_company" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" placeholder="Enter your company name...">
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700"><span data-i18n="carrier_company">Carrier Company Name</span><span class="text-red-500">*</span></label>
+                    <input type="text" id="carrierCompanyInput" name="carrier_company" class="w-full bg-white border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" data-i18n-placeholder="enter_company" placeholder="Enter your company name...">
                 </div>
             </div>
             
@@ -155,7 +162,7 @@
             <div class="flex gap-3">
                 <i data-lucide="coins" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
                 <div class="w-full">
-                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Offered Price</label>
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700" data-i18n="offered_price">Offered Price</label>
                     <div class="flex gap-2">
                         <input type="number" step="0.01" id="price" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" placeholder="0.00">
                         <select id="currency" class="border border-slate-200 rounded-lg p-2.5 text-sm bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none w-28 text-slate-700">
@@ -174,8 +181,8 @@
             <div class="flex gap-3">
                 <i data-lucide="timer" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
                 <div class="w-full">
-                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Transit Time (Days)</label>
-                    <input type="number" id="transit_time_days" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" placeholder="e.g.: 5">
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700" data-i18n="transit_time">Transit Time (Days)</label>
+                    <input type="number" id="transit_time_days" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" data-i18n-placeholder="eg_days" placeholder="e.g.: 5">
                 </div>
             </div>
 
@@ -183,8 +190,8 @@
             <div class="flex gap-3">
                 <i data-lucide="file-edit" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
                 <div class="w-full">
-                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Additional Notes or Terms (From Carrier)</label>
-                    <textarea id="carrier_note" rows="3" class="w-full border border-slate-200 rounded-lg p-3 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition resize-y" placeholder="Payment terms, special notes or offer details..."></textarea>
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700" data-i18n="additional_notes">Additional Notes or Terms (From Carrier)</label>
+                    <textarea id="carrier_note" rows="3" class="w-full border border-slate-200 rounded-lg p-3 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition resize-y" data-i18n-placeholder="notes_placeholder" placeholder="Payment terms, special notes or offer details..."></textarea>
                 </div>
             </div>
 
@@ -192,7 +199,7 @@
             <div class="flex gap-3">
                 <i data-lucide="paperclip" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
                 <div class="w-full">
-                    <label class="block font-medium mb-1.5 text-sm text-slate-700">Additional Document / File (From Carrier)</label>
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700" data-i18n="additional_doc">Additional Document / File (From Carrier)</label>
                     <input type="file" id="carrier_file" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer">
                 </div>
             </div>
@@ -201,21 +208,122 @@
             <div class="flex flex-col sm:flex-row gap-4 mt-8 pt-6 border-t border-slate-100">
                 <button type="button" id="submit_alt_btn" onclick="setSubmitTypeAndSend(true)" class="hidden w-full sm:w-1/2 py-3 rounded-lg flex items-center justify-center gap-2 font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition">
                     <i data-lucide="plus" class="w-5 h-5"></i>
-                    Submit Alternative Option
+                    <span data-i18n="submit_alt">Submit Alternative Option</span>
                 </button>
                 <button type="button" id="submit_btn" onclick="setSubmitTypeAndSend(false)" class="w-full py-3 rounded-lg flex items-center justify-center gap-2 font-medium text-white bg-blue-500 hover:bg-blue-600 transition shadow-sm flex-1">
                     <i data-lucide="send" class="w-5 h-5"></i>
-                    Submit Quote
+                    <span data-i18n="submit_quote">Submit Quote</span>
                 </button>
             </div>
         </form>
     </div>
 
-    <!-- Sizin Orijinal JavaScript Məntiqiniz -->
+    <!-- Sizin Orijinal JavaScript Məntiqiniz + TƏRCÜMƏ SİSTEMİ -->
     <script>
         // İkonları render etmək
         lucide.createIcons();
 
+        // --- DİL LÜĞƏTİ ---
+        const translations = {
+            en: {
+                update_notice_title: "ℹ️ You have previously submitted a quote.",
+                update_notice_desc: "You can select an option below to update it OR submit a completely new alternative option.",
+                request_details: "REQUEST DETAILS",
+                please_submit: "Please submit your quote",
+                total_cargo: "Total Cargo (Weight / Vol)",
+                loading_date: "Loading Date",
+                deadline: "Deadline",
+                cargo_type: "Cargo Type",
+                customer_reqs: "Customer Requirements & Notes",
+                your_quote: "Your Quote",
+                quote_desc: "Please provide your best offer and all relevant details.",
+                carrier_company: "Carrier Company Name",
+                enter_company: "Enter your company name...",
+                offered_price: "Offered Price",
+                transit_time: "Transit Time (Days)",
+                eg_days: "e.g.: 5",
+                additional_notes: "Additional Notes or Terms (From Carrier)",
+                notes_placeholder: "Payment terms, special notes or offer details...",
+                additional_doc: "Additional Document / File (From Carrier)",
+                submit_alt: "Submit Alternative Option",
+                submit_quote: "Submit Quote",
+                update_quote: "Update Selected Quote",
+                customer_note: "Customer Note:",
+                customer_req: "Customer Requirement:",
+                customer_file: "Customer File:",
+                attached_doc: "Attached Document",
+                success_title: "Your quote has been successfully submitted!",
+                success_desc: "Your details have been recorded in the system. Thank you!",
+                go_back: "⬅ Go Back / Submit Another Option",
+                option_label: "Option",
+                draft_label: "Draft Option"
+            },
+            az: {
+                update_notice_title: "ℹ️ Siz artıq təklif göndərmisiniz.",
+                update_notice_desc: "Aşağıdakı seçimlərdən birini yeniləyə və ya tamamilə yeni alternativ təklif göndərə bilərsiniz.",
+                request_details: "SORĞU DETALLARI",
+                please_submit: "Zəhmət olmasa təklifinizi göndərin",
+                total_cargo: "Ümumi Yük (Çəki / Həcm)",
+                loading_date: "Yüklənmə Tarixi",
+                deadline: "Son Tarix",
+                cargo_type: "Yükün Növü",
+                customer_reqs: "Müştəri Tələbləri və Qeydləri",
+                your_quote: "Sizin Təklifiniz",
+                quote_desc: "Zəhmət olmasa ən yaxşı təklifinizi və müvafiq detalları qeyd edin.",
+                carrier_company: "Daşıyıcı Şirkətin Adı",
+                enter_company: "Şirkətinizin adını daxil edin...",
+                offered_price: "Təklif Edilən Qiymət",
+                transit_time: "Tranzit Müddəti (Gün)",
+                eg_days: "məsələn: 5",
+                additional_notes: "Əlavə Qeydlər və ya Şərtlər (Daşıyıcıdan)",
+                notes_placeholder: "Ödəniş şərtləri, xüsusi qeydlər və ya təklif detalları...",
+                additional_doc: "Əlavə Sənəd / Fayl (Daşıyıcıdan)",
+                submit_alt: "Alternativ Təklif Göndər",
+                submit_quote: "Təklifi Göndər",
+                update_quote: "Seçilmiş Təklifi Yenilə",
+                customer_note: "Müştəri Qeydi:",
+                customer_req: "Müştəri Tələbi:",
+                customer_file: "Müştəri Faylı:",
+                attached_doc: "Əlavə edilmiş sənəd",
+                success_title: "Təklifiniz uğurla göndərildi!",
+                success_desc: "Məlumatlarınız sistemə qeyd olundu. Təşəkkür edirik!",
+                go_back: "⬅ Geri Qayıt / Başqa Seçim Göndər",
+                option_label: "Seçim",
+                draft_label: "Qaralama"
+            }
+        };
+
+        let currentLang = 'en';
+
+        // --- TƏRCÜMƏ FUNKSİYASI ---
+        function changeLanguage(lang) {
+            currentLang = lang;
+            
+            // 1. Statik mətnləri tərcümə et
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    el.innerText = translations[lang][key];
+                }
+            });
+
+            // 2. Placeholder-ları tərcümə et
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                if (translations[lang][key]) {
+                    el.placeholder = translations[lang][key];
+                }
+            });
+
+            // 3. Əgər tab-lar render olubsa dili dəyişəndə yenilənsin
+            if (allCarrierQuotes.length > 0) {
+                renderOptionsTabs();
+                // Mövcud aktiv butonu yeniləmək
+                if (currentEditingToken) selectQuoteOption(currentEditingToken);
+            }
+        }
+
+        // --- MÖVCUD MƏNTİQ ---
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
 
@@ -263,12 +371,14 @@
             let tabsHtml = `<div class="flex gap-2 overflow-x-auto mb-5 pb-2" style="scrollbar-width: thin;">`;
             allCarrierQuotes.forEach((q, index) => {
                 let isSub = q.price !== null || (q.extra_details && q.extra_details.submitted_at);
-                let label = isSub ? `Option ${index + 1}` : `Draft Option`;
+                let label = isSub ? `${translations[currentLang].option_label} ${index + 1}` : translations[currentLang].draft_label;
                 let priceLabel = q.price ? `${q.price} ${q.currency}` : '';
                 
-                tabsHtml += `<button type="button" id="tab_${q.token}" onclick="selectQuoteOption('${q.token}')" class="px-4 py-2 text-sm font-medium rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all whitespace-nowrap quote-tab-btn flex flex-col items-center min-w-[100px]">
+                let activeClasses = q.token === currentEditingToken ? "bg-blue-500 text-white border-blue-500" : "bg-white text-slate-500 border-slate-200";
+                
+                tabsHtml += `<button type="button" id="tab_${q.token}" onclick="selectQuoteOption('${q.token}')" class="px-4 py-2 text-sm font-medium rounded-lg border hover:bg-slate-50 hover:text-slate-800 transition-all whitespace-nowrap quote-tab-btn flex flex-col items-center min-w-[100px] ${activeClasses}">
                     <span class="block">${label}</span>
-                    ${priceLabel ? `<span class="text-xs text-blue-600 font-bold mt-1">${priceLabel}</span>` : ''}
+                    ${priceLabel ? `<span class="text-xs ${q.token === currentEditingToken ? 'text-blue-100' : 'text-blue-600'} font-bold mt-1">${priceLabel}</span>` : ''}
                 </button>`;
             });
             tabsHtml += `</div>`;
@@ -280,15 +390,7 @@
             const q = allCarrierQuotes.find(x => x.token === selectedToken);
             if (!q) return;
 
-            document.querySelectorAll(".quote-tab-btn").forEach(btn => {
-                btn.classList.remove("bg-blue-500", "text-white", "border-blue-500");
-                btn.classList.add("bg-white", "text-slate-500", "border-slate-200");
-            });
-            const activeTab = document.getElementById(`tab_${selectedToken}`);
-            if (activeTab) {
-                activeTab.classList.remove("bg-white", "text-slate-500", "border-slate-200");
-                activeTab.classList.add("bg-blue-500", "text-white", "border-blue-500");
-            }
+            renderOptionsTabs(); // active statusu təzələmək üçün 
 
             document.getElementById("price").value = q.price !== null ? q.price : "";
             document.getElementById("currency").value = q.currency || "AZN";
@@ -302,9 +404,9 @@
 
             let isSub = q.price !== null || (q.extra_details && q.extra_details.submitted_at);
             if (isSub) {
-                document.getElementById("submit_btn").innerHTML = `<i data-lucide="refresh-cw" class="w-5 h-5 mr-2"></i> Update Selected Quote`;
+                document.getElementById("submit_btn").innerHTML = `<i data-lucide="refresh-cw" class="w-5 h-5 mr-2"></i> <span data-i18n="update_quote">${translations[currentLang].update_quote}</span>`;
             } else {
-                document.getElementById("submit_btn").innerHTML = `<i data-lucide="send" class="w-5 h-5 mr-2"></i> Submit Quote`;
+                document.getElementById("submit_btn").innerHTML = `<i data-lucide="send" class="w-5 h-5 mr-2"></i> <span data-i18n="submit_quote">${translations[currentLang].submit_quote}</span>`;
             }
             lucide.createIcons();
         }
@@ -452,10 +554,11 @@
                     if (customerNote) { customerNote.split('\n').forEach(line => cleanNoteLines.push(line)); }
                     let finalCleanNote = cleanNoteLines.join('\n').trim();
 
+                    // DİNAMİK YARANAN ELEMENTLƏRƏ DATA-I18N ƏLAVƏ EDİLİR Kİ, DİL DƏYİŞƏNDƏ YENİLƏNSİN
                     if (finalCleanNote !== "") {
                         hasItems = true;
                         const noteDiv = document.createElement("div");
-                        noteDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-1">Customer Note:</span><div class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">${escapeHTML(finalCleanNote)}</div>`;
+                        noteDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="customer_note">${translations[currentLang].customer_note}</span><div class="text-sm text-slate-700 leading-relaxed whitespace-pre-line">${escapeHTML(finalCleanNote)}</div>`;
                         fieldsList.appendChild(noteDiv);
                     }
 
@@ -468,7 +571,7 @@
                             hasItems = true;
                             const noteDiv = document.createElement("div");
                             noteDiv.className = "pt-3 mt-3 border-t border-slate-200";
-                            noteDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-1">Customer Requirement:</span><div class="text-sm text-slate-700 leading-relaxed">${escapeHTML(field)}</div>`;
+                            noteDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="customer_req">${translations[currentLang].customer_req}</span><div class="text-sm text-slate-700 leading-relaxed">${escapeHTML(field)}</div>`;
                             fieldsList.appendChild(noteDiv);
                         });
                     }
@@ -491,7 +594,7 @@
 
                         const fileDiv = document.createElement("div");
                         fileDiv.className = "pt-3 mt-3 border-t border-slate-200";
-                        fileDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-2">Customer File:</span><div class="flex justify-between items-center bg-white px-4 py-3 rounded-lg border border-slate-200 text-sm"><span class="text-slate-600 truncate mr-2">Attached Document</span><a href="${escapeHTML(realHref)}" target="_blank" class="text-blue-600 hover:text-blue-700 underline font-medium flex items-center gap-1.5 text-xs whitespace-nowrap"><i data-lucide="download" class="w-4 h-4"></i><span>${escapeHTML(fileName)}</span></a></div>`;
+                        fileDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-2" data-i18n="customer_file">${translations[currentLang].customer_file}</span><div class="flex justify-between items-center bg-white px-4 py-3 rounded-lg border border-slate-200 text-sm"><span class="text-slate-600 truncate mr-2" data-i18n="attached_doc">${translations[currentLang].attached_doc}</span><a href="${escapeHTML(realHref)}" target="_blank" class="text-blue-600 hover:text-blue-700 underline font-medium flex items-center gap-1.5 text-xs whitespace-nowrap"><i data-lucide="download" class="w-4 h-4"></i><span>${escapeHTML(fileName)}</span></a></div>`;
                         fieldsList.appendChild(fileDiv);
                         lucide.createIcons();
                     }
@@ -547,15 +650,22 @@
                     
                     const backButtonHTML = isPublicLink 
                         ? "" 
-                        : `<button onclick="window.location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium mt-6 transition duration-200">⬅ Go Back / Submit Another Option</button>`;
+                        : `<button onclick="window.location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium mt-6 transition duration-200">${translations[currentLang].go_back}</button>`;
                     
                     document.body.innerHTML = `
                     <div class="min-h-screen bg-slate-50 flex items-center justify-center p-4 w-full h-full absolute top-0 left-0 z-50 font-sans">
+                        <!-- Uğur mesajı üçün kiçik dil dəyişdiricisi -->
+                        <div class="absolute top-6 right-6">
+                            <select onchange="changeLanguage(this.value); document.getElementById('successTitle').innerText = translations[this.value].success_title; document.getElementById('successDesc').innerText = translations[this.value].success_desc; if(document.getElementById('backBtn')) document.getElementById('backBtn').innerText = translations[this.value].go_back;" class="bg-white border border-slate-200 pl-3 pr-8 py-1.5 rounded-full text-sm font-medium text-slate-700 shadow-sm cursor-pointer outline-none">
+                                <option value="en" ${currentLang === 'en' ? 'selected' : ''}>EN</option>
+                                <option value="az" ${currentLang === 'az' ? 'selected' : ''}>AZ</option>
+                            </select>
+                        </div>
                         <div class="bg-white border border-slate-200 rounded-2xl p-8 max-w-md text-center shadow-lg mx-auto">
                             <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl"><i data-lucide="check" class="w-8 h-8"></i></div>
-                            <h2 class="text-xl font-bold text-slate-800 mb-2">Your quote has been successfully submitted!</h2>
-                            <p class="text-slate-500 text-sm mb-6">Your details have been recorded in the system. Thank you!</p>
-                            ${backButtonHTML}
+                            <h2 id="successTitle" class="text-xl font-bold text-slate-800 mb-2">${translations[currentLang].success_title}</h2>
+                            <p id="successDesc" class="text-slate-500 text-sm mb-6">${translations[currentLang].success_desc}</p>
+                            ${isPublicLink ? "" : `<button id="backBtn" onclick="window.location.reload()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-medium mt-6 transition duration-200">${translations[currentLang].go_back}</button>`}
                         </div>
                     </div>
                     `;
@@ -568,6 +678,8 @@
                 alert("Could not connect to the server. Please check your internet connection.");
             }
         }
+        
+        // Səhifə yüklənəndə çağırılır
         loadRequestDetails();
     </script>
     
@@ -600,7 +712,7 @@
                 if (transitEl && transitEl.value) transitEl.value = "";
                 
                 const btn = document.getElementById("submit_btn");
-                if (btn && btn.innerText.includes("Update")) btn.innerHTML = `<i data-lucide="send" class="w-5 h-5 mr-2"></i> Submit Quote`;
+                if (btn && btn.innerText.includes("Update")) btn.innerHTML = `<i data-lucide="send" class="w-5 h-5 mr-2"></i> <span data-i18n="submit_quote">${translations[currentLang].submit_quote}</span>`;
                 
                 clearAttempts++;
                 if (clearAttempts > 15) clearInterval(forceClear);
