@@ -609,7 +609,22 @@
             }
         }
 
+        // Təkrar kliklərin qarşısı: təklif göndərilərkən düymələr bloklanır, ikinci klik nəzərə alınmır
+        let quoteSubmitting = false;
+        function setQuoteButtonsLocked(locked) {
+            ["submit_btn", "submit_alt_btn"].forEach(id => {
+                const b = document.getElementById(id);
+                if (!b) return;
+                b.disabled = locked;
+                b.style.pointerEvents = locked ? "none" : "";
+                b.style.opacity = locked ? "0.7" : "";
+            });
+        }
+
         async function setSubmitTypeAndSend(isAlternative) {
+            if (quoteSubmitting) return;
+            quoteSubmitting = true;
+            setQuoteButtonsLocked(true);
             const formData = new FormData();
             const priceEl = document.getElementById("price");
             const currencyEl = document.getElementById("currency");
@@ -671,10 +686,12 @@
                     `;
                     lucide.createIcons();
                 } else {
+                    quoteSubmitting = false; setQuoteButtonsLocked(false);
                     alert("Error: " + (result.detail || "An unknown error occurred."));
                 }
             } catch (err) {
                 console.error("Submission error:", err);
+                quoteSubmitting = false; setQuoteButtonsLocked(false);
                 alert("Could not connect to the server. Please check your internet connection.");
             }
         }
