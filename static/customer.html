@@ -487,13 +487,13 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-     <div class="position-relative d-inline-flex align-items-center">
-         <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-           <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-          <option value="az">AZ</option>
-          <option value="en">EN</option>
-        </select>
-    </div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
@@ -970,7 +970,7 @@
                     <div class="opt-row">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_shipment_type" onchange="toggleOptField('shipment_type')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_shipment_type">Shipment Type (FTL / LTL / LCL / FCL)</label>
+                            <label class="form-check-label fw-bold text-dark" for="chk_shipment_type">Daşınma tipi (FTL / LTL / LCL / FCL)</label>
                         </div>
                         <select class="form-select opt-input d-none mt-2 shadow-sm" id="inp_shipment_type">
                             <option value="">Daşınma tipini seçin...</option>
@@ -1005,7 +1005,7 @@
                     <div class="opt-row">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_adr" onchange="toggleOptField('adr')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_adr">Dangerous Goods (ADR)</label>
+                            <label class="form-check-label fw-bold text-dark" for="chk_adr">Təhlükəli yük (ADR)</label>
                         </div>
                         <input type="text" class="form-control opt-input d-none mt-2" id="inp_adr" placeholder="məs: Klass 3">
                     </div>
@@ -1013,7 +1013,7 @@
                     <div class="opt-row">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_temp" onchange="toggleOptField('temp')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_temp">Temperature Requirement (Reefer)</label>
+                            <label class="form-check-label fw-bold text-dark" for="chk_temp">Temperatur tələbi (Reefer)</label>
                         </div>
                         <input type="text" class="form-control opt-input d-none mt-2" id="inp_temp" placeholder="məs: +2 to +8 °C">
                     </div>
@@ -1021,7 +1021,7 @@
                     <div class="opt-row">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_deliv_date" onchange="toggleOptField('deliv_date')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_deliv_date">Delivery Deadline</label>
+                            <label class="form-check-label fw-bold text-dark" for="chk_deliv_date">Çatdırılma müddəti</label>
                         </div>
                         <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_deliv_date">
                     </div>
@@ -1562,7 +1562,8 @@ Best regards,
                 <div class="modal-body p-4">
                     <p class="text-muted small mb-3">Aşağıdakı mətni kopyalayaraq daşıyıcılarınıza WhatsApp, Telegram və ya e-poçt vasitəsilə birbaşa göndərə bilərsiniz:</p>
                     
-                    <textarea id="publicLinkTextarea" class="form-control mb-3 p-3 bg-light border-secondary shadow-sm" rows="10" style="font-family: monospace; font-size: 13px;" readonly></textarea>
+                    <div id="publicLinkEditor" class="form-control mb-2 p-3 bg-white border-secondary shadow-sm" contenteditable="true" spellcheck="false" data-no-i18n style="font-family: monospace; font-size: 13px; min-height: 250px; max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; height: auto;"></div>
+                    <div class="text-muted mb-3" style="font-size: 12px;"><i class="bi bi-pencil me-1"></i>Mətni redaktə edə bilərsiniz. Link dəyişdirilmir, yalnız yerini dəyişə bilərsiniz.</div>
                     
                     <button class="btn btn-primary btn-lg w-100 fw-bold shadow-sm" onclick="copyPublicLinkText()">
                         <i class="bi bi-clipboard me-2"></i> Mətni və Linki Kopyala
@@ -3175,7 +3176,7 @@ function loadBulkSubCategories(categoryId) {
                         let templateText = `Dear Carrier,\n\nPlease review the shipment details below and kindly complete the quotation form using the link provided.\n\nQuotation Link:\n${data.public_link}\n\nThank you.\n\nBest regards,\n${senderName}`;
                         
                         // Mətni modaldakı xanaya yazırıq ve modalı açırıq
-                        document.getElementById("publicLinkTextarea").value = templateText;
+                        setPublicLinkEditor(templateText, data.public_link);
                         new bootstrap.Modal(document.getElementById("publicLinkModal")).show();
                     } else {
                         // Normal email göndərilibsə köhnə qaydada bildiriş verir
@@ -4041,12 +4042,101 @@ function loadBulkSubCategories(categoryId) {
             });
         }
 
+// ===== Link pəncərəsi: mətn redaktə olunur, link isə dəyişməz blok kimi qalır (yalnız yeri dəyişdirilə bilər) =====
+        let publicLinkValue = "";
+        function makePublicLinkChip() {
+            const chip = document.createElement("span");
+            chip.setAttribute("data-arachi-link", "1");
+            chip.setAttribute("contenteditable", "false");
+            chip.setAttribute("draggable", "true");
+            chip.title = "Linki sürüşdürərək yerini dəyişə bilərsiniz";
+            chip.style.cssText = "display:inline-block; background:#e0e7ff; color:#3730a3; border:1px solid #c7d2fe; border-radius:6px; padding:1px 6px; cursor:grab; user-select:all; -webkit-user-select:all;";
+            chip.textContent = publicLinkValue;
+            return chip;
+        }
+        // Redaktorda link blokunun həmişə tam 1 dənə olmasını təmin edir (silinibsə sona əlavə edir, artıqları təmizləyir)
+        function ensurePublicLinkChip() {
+            const ed = document.getElementById("publicLinkEditor");
+            const chips = ed.querySelectorAll("[data-arachi-link]");
+            if (chips.length === 0) {
+                ed.appendChild(document.createTextNode("\n"));
+                ed.appendChild(makePublicLinkChip());
+            } else {
+                for (let i = 1; i < chips.length; i++) chips[i].remove();
+                chips[0].textContent = publicLinkValue;
+            }
+        }
+        function setPublicLinkEditor(templateText, link) {
+            publicLinkValue = link;
+            const ed = document.getElementById("publicLinkEditor");
+            ed.innerHTML = "";
+            const idx = templateText.indexOf(link);
+            if (idx === -1) {
+                ed.appendChild(document.createTextNode(templateText));
+                ensurePublicLinkChip();
+            } else {
+                ed.appendChild(document.createTextNode(templateText.slice(0, idx)));
+                ed.appendChild(makePublicLinkChip());
+                ed.appendChild(document.createTextNode(templateText.slice(idx + link.length)));
+            }
+        }
+        function serializePublicLinkEditor() {
+            const ed = document.getElementById("publicLinkEditor");
+            ensurePublicLinkChip();
+            let out = "";
+            const nl = () => { if (out && !out.endsWith("\n")) out += "\n"; };
+            (function walk(node) {
+                node.childNodes.forEach(c => {
+                    if (c.nodeType === 3) { out += c.nodeValue; return; }
+                    if (c.nodeType !== 1) return;
+                    if (c.hasAttribute("data-arachi-link")) { out += publicLinkValue; return; }
+                    if (c.tagName === "BR") { out += "\n"; return; }
+                    const block = c.tagName === "DIV" || c.tagName === "P";
+                    if (block) nl();
+                    walk(c);
+                    if (block) nl();
+                });
+            })(ed);
+            return out.replace(/ /g, " ").replace(/\n+$/, "");
+        }
+        (function initPublicLinkEditor() {
+            const ed = document.getElementById("publicLinkEditor");
+            if (!ed) return;
+            // Yapışdırma: yalnız sadə mətn və (kəsilib yapışdırılırsa) link bloku qəbul edilir
+            ed.addEventListener("paste", e => {
+                e.preventDefault();
+                const cd = e.clipboardData;
+                const html = cd.getData("text/html");
+                if (html && html.indexOf("data-arachi-link") !== -1) {
+                    const tmp = document.createElement("div"); tmp.innerHTML = html;
+                    let frag = "";
+                    (function walk(n) {
+                        n.childNodes.forEach(c => {
+                            if (c.nodeType === 3) frag += c.nodeValue.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+                            else if (c.nodeType === 1) {
+                                if (c.hasAttribute("data-arachi-link")) frag += makePublicLinkChip().outerHTML;
+                                else if (c.tagName === "BR") frag += "<br>";
+                                else walk(c);
+                            }
+                        });
+                    })(tmp);
+                    document.execCommand("insertHTML", false, frag);
+                } else {
+                    document.execCommand("insertText", false, cd.getData("text/plain"));
+                }
+            });
+            // Kənardan sürüşdürülən fayllar qəbul edilmir (redaktorun öz daxilində sürüşdürmə isə işləyir)
+            ed.addEventListener("drop", e => {
+                const types = e.dataTransfer ? Array.from(e.dataTransfer.types) : [];
+                if (types.indexOf("Files") !== -1) e.preventDefault();
+            });
+            // Link təsadüfən silinibsə pəncərədən çıxanda geri qaytarılır
+            ed.addEventListener("blur", () => { if (publicLinkValue) ensurePublicLinkChip(); });
+        })();
+
 function copyPublicLinkText() {
-            const copyText = document.getElementById("publicLinkTextarea");
-            copyText.select();
-            copyText.setSelectionRange(0, 99999); // Mobil cihazlar üçün
-            
-            navigator.clipboard.writeText(copyText.value).then(() => {
+            const finalText = serializePublicLinkEditor();
+            navigator.clipboard.writeText(finalText).then(() => {
                 alert("✅ Şablon və link uğurla kopyalandı! İndi istədiyiniz yerə yapışdıra bilərsiniz.");
             }).catch(err => {
                 alert("Kopyalama zamanı xəta baş verdi, zəhmət olmasa mətni əllə kopyalayın.");
@@ -4168,6 +4258,11 @@ function copyPublicLinkText() {
             "Daşınma növü": "Transportation Mode",
             "İxtiyari parametrlər": "Optional Parameters",
             "Yükləmə tarixi": "Loading Date",
+            "Daşınma tipi (FTL / LTL / LCL / FCL)": "Shipment Type (FTL / LTL / LCL / FCL)",
+            "Təhlükəli yük (ADR)": "Dangerous Goods (ADR)",
+            "Temperatur tələbi (Reefer)": "Temperature Requirement (Reefer)",
+            "Çatdırılma müddəti": "Delivery Deadline",
+            "Mətni redaktə edə bilərsiniz. Link dəyişdirilmir, yalnız yerini dəyişə bilərsiniz.": "You can edit the text. The link cannot be changed, only moved.",
             "Maşın növü": "Truck Type",
             "Əlavə məlumat (qeyd və ya sənəd əlavəsi)": "Additional Information (note or document attachment)",
             "Quru": "Road",
@@ -4471,8 +4566,8 @@ function copyPublicLinkText() {
 
         const SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, NOSCRIPT: 1 };
         function walk(root) {
-            if (root.nodeType === 3) { if (!SKIP[root.parentNode && root.parentNode.nodeName]) syncText(root); return; }
-            if (root.nodeType !== 1) return;
+            if (root.nodeType === 3) { if (!SKIP[root.parentNode && root.parentNode.nodeName] && !(root.parentNode && root.parentNode.closest && root.parentNode.closest("[data-no-i18n]"))) syncText(root); return; }
+            if (root.nodeType !== 1 || root.hasAttribute("data-no-i18n")) return;
             syncAttrs(root);
             if (SKIP[root.nodeName]) return;
             for (let c = root.firstChild; c; c = c.nextSibling) walk(c);
