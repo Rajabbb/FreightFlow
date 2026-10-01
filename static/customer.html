@@ -487,13 +487,13 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-        <div class="position-relative d-inline-flex align-items-center">
-            <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-          <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-              <option value="az">AZ</option>
-              <option value="en">EN</option>
-         </select>
-       </div>
+           <div class="position-relative d-inline-flex align-items-center">
+              <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
+            <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
+               <option value="az">AZ</option>
+               <option value="en">EN</option>
+            </select>
+          </div>
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
@@ -1101,7 +1101,7 @@ Best regards,
 
 <!-- YENİ ƏLAVƏ EDİLƏN QEYD -->
                     <div class="alert alert-light border rounded-3 p-2 small mb-3 text-muted shadow-sm">
-                        <i class="bi bi-info-circle me-1 text-primary"></i> <b>Qeyd:</b> "Link yarat və göndər" düyməsindən istifadə etdikdə aşağıdakı daşıyıcı seçimləri əhəmiyyət daşımır.
+                        <i class="bi bi-info-circle me-1 text-primary"></i> <b>Qeyd:</b> "Yalnız link yarat" seçimində aşağıdakı daşıyıcı seçimləri əhəmiyyət daşımır. "Daşıyıcılara göndər + Link yarat" seçimində isə seçilmiş daşıyıcılara e-poçt göndərilir və link də yaradılır.
                     </div>
 
                     <div class="form-check mb-2">
@@ -1147,12 +1147,29 @@ Best regards,
                 </div>
 
                 <div class="mt-4 d-flex flex-column flex-sm-row gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold" onclick="window.isPublicLinkMode = false;" id="submitRfqBtn">
+                    <button type="submit" class="btn btn-primary btn-lg w-100 py-3 fw-bold" onclick="window.isPublicLinkMode = false; window.alsoCreateLink = false;" id="submitRfqBtn">
                         <i class="bi bi-rocket-takeoff-fill me-2"></i> Birbaşa Daşıyıcılara Göndər
                     </button>
-                    <button type="submit" class="btn btn-white-animated btn-lg w-100 py-3 fw-bold" onclick="window.isPublicLinkMode = true;" id="generateLinkBtn">
-                       <i class="bi bi-link-45deg me-2 fs-4" style="vertical-align: middle;"></i> Link Yarat və Kopyala
-                    </button>
+                    <!-- İkinci düymə: açılan menyu (e-poçt + link  /  yalnız link) -->
+                    <div class="dropup w-100">
+                        <button type="button" class="btn btn-white-animated btn-lg w-100 py-3 fw-bold dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="generateLinkBtn">
+                            <i class="bi bi-link-45deg me-2 fs-4" style="vertical-align: middle;"></i> Daşıyıcılara Göndər / Link Yarat
+                        </button>
+                        <ul class="dropdown-menu w-100 shadow border-0 p-2" style="border-radius: 14px;">
+                            <li>
+                                <button type="button" class="dropdown-item rounded-3 py-2 text-wrap" onclick="submitRfqWithMode('both')">
+                                    <i class="bi bi-send-check me-2 text-primary"></i><strong>Daşıyıcılara göndər + Link yarat</strong>
+                                    <div class="text-muted small ms-4">Seçilmiş daşıyıcılara e-poçt göndərilir və paylaşmaq üçün link də yaradılır</div>
+                                </button>
+                            </li>
+                            <li>
+                                <button type="button" class="dropdown-item rounded-3 py-2 text-wrap" onclick="submitRfqWithMode('link')">
+                                    <i class="bi bi-link-45deg me-2 text-primary"></i><strong>Yalnız link yarat</strong>
+                                    <div class="text-muted small ms-4">Sorğu e-poçtla göndərilmir, linki özünüz istədiyiniz platformada paylaşırsınız</div>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </form>
         </div>
@@ -1279,7 +1296,7 @@ Best regards,
 
                     <!-- YENİ ƏLAVƏ EDİLƏN XƏBƏRDARLIQ (Gizli olaraq gözləyir) -->
                     <div id="publicLinkNotice" class="alert alert-primary bg-opacity-10 border-primary border-opacity-25 small d-none mb-3">
-                        <i class="bi bi-info-circle-fill text-primary me-1"></i> Bu RFQ sorğusu <b>"Link Yarat"</b> funksiyası ilə kənarda paylaşıldığı üçün "Göndərildi", "Çatdırıldı" və "Çatdırılmadı" statusları izlənilmir. Yalnız təklif verənləri görə bilərsiniz.
+                        <i class="bi bi-info-circle-fill text-primary me-1"></i> <b>Qeyd:</b> Bu sorğuda linkdən istifadə olunduğu üçün izləmə məhduddur. Link vasitəsilə göndərilənlər üçün yalnız "Baxıldı" və "Təklif alındı" izlənilir. <span id="publicLinkNoticeHybrid" class="d-none">"Göndərildi", "Çatdırıldı" və "Çatdırılmadı" statusları isə yalnız e-poçtla göndərilən daşıyıcıları əhatə edir.</span>
                     </div>
                     <div class="mini-stat-grid mb-3">
                         <div class="mini-stat-box">
@@ -1562,6 +1579,7 @@ Best regards,
                 <div class="modal-body p-4">
                     <p class="text-muted small mb-3">Aşağıdakı mətni kopyalayaraq daşıyıcılarınıza WhatsApp, Telegram və ya e-poçt vasitəsilə birbaşa göndərə bilərsiniz:</p>
                     
+                    <div id="publicLinkInfo" class="alert alert-success small py-2 mb-3 d-none"><i class="bi bi-check-circle-fill me-1"></i> <span id="publicLinkInfoCount"></span> <span>Aşağıdakı linki isə qalan daşıyıcılara özünüz istədiyiniz platformada göndərə bilərsiniz.</span></div>
                     <div id="publicLinkEditor" class="form-control mb-2 p-3 bg-white border-secondary shadow-sm" contenteditable="true" spellcheck="false" data-no-i18n style="font-family: monospace; font-size: 13px; min-height: 250px; max-height: 50vh; overflow-y: auto; white-space: pre-wrap; word-break: break-word; height: auto;"></div>
                     <div class="text-muted mb-3" style="font-size: 12px;"><i class="bi bi-pencil me-1"></i>Mətni redaktə edə bilərsiniz. Link dəyişdirilmir, yalnız yerini dəyişə bilərsiniz.</div>
                     
@@ -2991,7 +3009,15 @@ function loadBulkSubCategories(categoryId) {
             }
         }
 
+        // Açılan menyudan seçim: 'both' = daşıyıcılara e-poçt + link, 'link' = yalnız link
+        function submitRfqWithMode(mode) {
+            window.isPublicLinkMode = (mode === 'link');
+            window.alsoCreateLink = (mode === 'both');
+            document.getElementById('rfqForm').requestSubmit();
+        }
+
         async function createRfqImpl(e) {
+            const alsoCreateLink = !!window.alsoCreateLink && !window.isPublicLinkMode;
 
             let sendOpt = 'all';
             if (window.isPublicLinkMode) {
@@ -3158,7 +3184,7 @@ function loadBulkSubCategories(categoryId) {
                 custom_email_subject: customEmailSubjectVal,
                 custom_email_body: customEmailBodyVal, 
                 transportation_mode: transportModeVal,
-                send_to_all: (sendOpt === 'all'), send_option: sendOpt, carrier_ids: selectedCarriers, category_ids: selectedCategories
+                send_to_all: (sendOpt === 'all'), send_option: sendOpt, also_create_link: alsoCreateLink, carrier_ids: selectedCarriers, category_ids: selectedCategories
             };
 
             try {
@@ -3177,6 +3203,14 @@ function loadBulkSubCategories(categoryId) {
                         
                         // Mətni modaldakı xanaya yazırıq ve modalı açırıq
                         setPublicLinkEditor(templateText, data.public_link);
+                        // Hibrid rejimdə: neçə daşıyıcıya e-poçt getdiyini göstəririk
+                        const infoBox = document.getElementById("publicLinkInfo");
+                        if (infoBox) {
+                            if (data.emailed_count) {
+                                document.getElementById("publicLinkInfoCount").textContent = data.emailed_count + " daşıyıcıya e-poçt göndərildi.";
+                                infoBox.classList.remove("d-none");
+                            } else { infoBox.classList.add("d-none"); }
+                        }
                         new bootstrap.Modal(document.getElementById("publicLinkModal")).show();
                     } else {
                         // Normal email göndərilibsə köhnə qaydada bildiriş verir
@@ -3184,6 +3218,7 @@ function loadBulkSubCategories(categoryId) {
                         alert(msg);
                     }
                     
+                    window.isPublicLinkMode = false; window.alsoCreateLink = false;
                     document.getElementById("rfqForm").reset();
                     document.querySelectorAll('.opt-input').forEach(el => el.classList.add('d-none'));
                     const infoContainer = document.getElementById('inp_info_container');
@@ -3672,13 +3707,16 @@ function loadBulkSubCategories(categoryId) {
                 updateSelectedReminderCount();
 
                 const total = detailCarriersCache.length;
-                const delivered = detailCarriersCache.filter(c => c.mail_status === 'delivered').length;
+                // Link vasitəsilə gələnlər (ictimai link) e-poçtla göndərilənlərdən ayrılır: "Göndərildi/Çatdırıldı/Çatdırılmadı" yalnız e-poçt üçündür
+                const isLinkCarrier = c => c.is_public === true || (c.email && c.email.includes("public_link_"));
+                const emailCarriers = detailCarriersCache.filter(c => !isLinkCarrier(c));
+                const delivered = emailCarriers.filter(c => c.mail_status === 'delivered').length;
                 const viewed = detailCarriersCache.filter(c => c.is_viewed).length;
                 const quoted = detailCarriersCache.filter(c => c.has_submitted).length;
-                const failed = detailCarriersCache.filter(c => c.mail_status === 'failed').length;
+                const failed = emailCarriers.filter(c => c.mail_status === 'failed').length;
                 const pending = detailCarriersCache.filter(c => !c.has_submitted).length;
 
-                document.getElementById("statSent").textContent = total;
+                document.getElementById("statSent").textContent = emailCarriers.length;
                 document.getElementById("statDelivered").textContent = delivered;
                 document.getElementById("statViewed").textContent = viewed;
                 document.getElementById("statQuoted").textContent = quoted;
@@ -3687,20 +3725,33 @@ function loadBulkSubCategories(categoryId) {
                 document.getElementById("statBtnCarriersCount").textContent = total;
                 document.getElementById("panelCarriersCount").textContent = total;
                 // GENEL LİNK (PUBLIC LINK) KONTROLÜ VE ARAYÜZ GÜNCELLEMESİ
-                const isPublicLink = detailCarriersCache.some(c => c.email && c.email.includes("public_link_"));
+                const isPublicLink = data.has_public_link === true || detailCarriersCache.some(isLinkCarrier);
+                const hasEmailCarriers = emailCarriers.length > 0;
                 const noticeEl = document.getElementById("publicLinkNotice");
+                const hybridNoticeEl = document.getElementById("publicLinkNoticeHybrid");
                 
                 const boxSent = document.getElementById("statSent").parentElement;
                 const boxDelivered = document.getElementById("statDelivered").parentElement;
                 const boxFailed = document.getElementById("statFailed").parentElement;
 
                 if (isPublicLink) {
-                    // Link ile oluşturulmuşsa uyarıyı göster ve gereksiz kutuları gizle
+                    // Linkdən istifadə olunubsa məhdud izləmə qeydini göstəririk
                     if (noticeEl) noticeEl.classList.remove("d-none");
-                    boxSent.style.display = "none";
-                    boxDelivered.style.display = "none";
-                    boxFailed.style.display = "none";
+                    if (hasEmailCarriers) {
+                        // Hibrid: e-poçtla göndərilənlər üçün tam status saxlanılır
+                        if (hybridNoticeEl) hybridNoticeEl.classList.remove("d-none");
+                        boxSent.style.display = "";
+                        boxDelivered.style.display = "";
+                        boxFailed.style.display = "";
+                    } else {
+                        // Yalnız link: Göndərildi / Çatdırıldı / Çatdırılmadı gizlədilir
+                        if (hybridNoticeEl) hybridNoticeEl.classList.add("d-none");
+                        boxSent.style.display = "none";
+                        boxDelivered.style.display = "none";
+                        boxFailed.style.display = "none";
+                    }
                 } else {
+                    if (hybridNoticeEl) hybridNoticeEl.classList.add("d-none");
                     // Normal e-posta gönderimiyse uyarıyı gizle ve tüm kutuları görünür yap
                     if (noticeEl) noticeEl.classList.add("d-none");
                     boxSent.style.display = "";
@@ -3754,11 +3805,12 @@ function loadBulkSubCategories(categoryId) {
 
             let html = "";
             filtered.forEach((c, idx) => {
-                const isPublicLinkCarrier = c.email && c.email.includes("public_link_");
+                const isPublicLinkCarrier = c.is_public === true || (c.email && c.email.includes("public_link_"));
                 const color = isPublicLinkCarrier ? "#4f46e5" : AVATAR_PALETTE[idx % AVATAR_PALETTE.length]; 
                 const avatarContent = isPublicLinkCarrier ? '<i class="bi bi-link-45deg fs-4"></i>' : getInitials(c.company_name);
                 let deliveryBadge;
-                if (c.mail_status === 'delivered') { deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`; } 
+                if (isPublicLinkCarrier) { deliveryBadge = `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25"><i class="bi bi-link-45deg"></i> Link</span>`; }
+                else if (c.mail_status === 'delivered') { deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`; } 
                 else if (c.mail_status === 'failed') { deliveryBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Çatdırılmadı</span>`; } 
                 else { deliveryBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Göndərilir...</span>`; }
 
@@ -3767,7 +3819,8 @@ function loadBulkSubCategories(categoryId) {
                     : `<span class="text-warning fw-bold" style="font-size: 11.5px;"><i class="bi bi-hourglass-split me-1"></i>Təklif yoxdur</span>`;
 
                 let actionBtn;
-                if (c.mail_status === 'failed') { actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="resendCarrierEmail(${c.quote_id})"><i class="bi bi-arrow-clockwise me-1"></i>Yenidən göndər</button>`; } 
+                if (isPublicLinkCarrier) { actionBtn = ""; }
+                else if (c.mail_status === 'failed') { actionBtn = `<button class="btn btn-sm btn-outline-primary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="resendCarrierEmail(${c.quote_id})"><i class="bi bi-arrow-clockwise me-1"></i>Yenidən göndər</button>`; } 
                 else if (!c.has_submitted) { actionBtn = `<button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1" style="font-size: 11px;" onclick="sendSingleReminder(${c.quote_id})"><i class="bi bi-bell me-1"></i>Reminder göndər</button>`; } 
                 else { actionBtn = ""; }
 
@@ -4288,7 +4341,7 @@ function copyPublicLinkText() {
             "Dinamik dəyişənlər:": "Dynamic variables:",
             "Əsas Mətn (Body)": "Email Body",
             "Qeyd:": "Note:",
-            "\"Link yarat və göndər\" düyməsindən istifadə etdikdə aşağıdakı daşıyıcı seçimləri əhəmiyyət daşımır.": "When you use the \"Create link and send\" button, the carrier options below do not matter.",
+            "\"Yalnız link yarat\" seçimində aşağıdakı daşıyıcı seçimləri əhəmiyyət daşımır. \"Daşıyıcılara göndər + Link yarat\" seçimində isə seçilmiş daşıyıcılara e-poçt göndərilir və link də yaradılır.": "With \"Create link only\", the carrier options below do not matter. With \"Send to carriers + Create link\", emails are sent to the selected carriers and a link is also created.",
             "Sorğunu BÜTÜN daşıyıcılara göndər": "Send the request to ALL carriers",
             "Seçilmiş KATEQORİYALARA göndər": "Send to selected CATEGORIES",
             "Seçilmiş daşıyıcılara göndər": "Send to selected carriers",
@@ -4322,9 +4375,14 @@ function copyPublicLinkText() {
             "Daha ətraflı məlumat": "More details",
             "Göndərilmə statusu": "Delivery status",
             "Sorğunun daşıyıcılara çatdırılma və reaksiya statistikası.": "Delivery and response statistics of the request to carriers.",
-            "Bu RFQ sorğusu": "Because this RFQ was shared externally using the",
-            "\"Link Yarat\"": "\"Create Link\"",
-            "funksiyası ilə kənarda paylaşıldığı üçün \"Göndərildi\", \"Çatdırıldı\" və \"Çatdırılmadı\" statusları izlənilmir. Yalnız təklif verənləri görə bilərsiniz.": "function, the \"Sent\", \"Delivered\" and \"Not delivered\" statuses are not tracked. You can only see those who submitted offers.",
+            "Bu sorğuda linkdən istifadə olunduğu üçün izləmə məhduddur. Link vasitəsilə göndərilənlər üçün yalnız \"Baxıldı\" və \"Təklif alındı\" izlənilir.": "Tracking is limited because a link was used for this request. For recipients reached via the link, only \"Viewed\" and \"Offer received\" are tracked.",
+            "\"Göndərildi\", \"Çatdırıldı\" və \"Çatdırılmadı\" statusları isə yalnız e-poçtla göndərilən daşıyıcıları əhatə edir.": "The \"Sent\", \"Delivered\" and \"Not delivered\" statuses cover only carriers sent by email.",
+            "Daşıyıcılara Göndər / Link Yarat": "Send to Carriers / Create Link",
+            "Daşıyıcılara göndər + Link yarat": "Send to carriers + Create link",
+            "Seçilmiş daşıyıcılara e-poçt göndərilir və paylaşmaq üçün link də yaradılır": "Email is sent to the selected carriers and a shareable link is also created",
+            "Yalnız link yarat": "Create link only",
+            "Sorğu e-poçtla göndərilmir, linki özünüz istədiyiniz platformada paylaşırsınız": "The request is not sent by email; you share the link yourself on any platform you prefer",
+            "Aşağıdakı linki isə qalan daşıyıcılara özünüz istədiyiniz platformada göndərə bilərsiniz.": "You can send the link below yourself to the remaining carriers on any platform you prefer.",
             "məs: 1234.56": "e.g.: 1234.56",
             "məs: +2 to +8 °C": "e.g.: +2 to +8 °C",
             "Göndərildi": "Sent",
@@ -4495,6 +4553,7 @@ function copyPublicLinkText() {
             [/^Xəta\s*:?\s*([\s\S]*)$/, (m, t) => "Error: " + t],
             [/^Seçilmiş (\d+) daşıyıcını silmək istədiyinizə əminsiniz\?$/, (m, n) => `Are you sure you want to delete the ${n} selected carrier(s)?`],
             [/^Fayl yüklənərkən xəta baş verdi\s*:?\s*([\s\S]*)$/, (m, t) => "An error occurred while uploading the file: " + t],
+            [/^(\d+) daşıyıcıya e-poçt göndərildi\.$/, (m, n) => `Email sent to ${n} ${plural(n, "carrier", "carriers")}.`],
             [/^(\d+) təklif$/, (m, n) => `${n} ${plural(n, "offer", "offers")}`],
             [/^RFQ-ya Bax \((\d+) təklif\)$/, (m, n) => `View RFQ (${n} ${plural(n, "offer", "offers")})`],
             [/^(\d+(?:[.,]\d+)?) gün$/, (m, n) => `${n} ${plural(n, "day", "days")}`],
