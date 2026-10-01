@@ -447,6 +447,7 @@ class ShipmentRequestCreate(BaseModel):
     required_fields: Optional[List[Any]] = []
     send_to_all: bool = True
     send_option: Optional[str] = "all"
+    also_create_link: Optional[bool] = False
     carrier_ids: Optional[List[int]] = []
     category_ids: Optional[List[int]] = []
     attachment_url: Optional[str] = None
@@ -1183,6 +1184,33 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Aİ analizi xətası: {str(e)}")
         
+def create_public_link_quote(customer_id: int, request_id: int, all_carriers: list) -> str:
+    """Sorğu üçün ictimai (public) təklif linki yaradır və həmin linkin URL-ni qaytarır.
+    Yalnız link rejimində də, e-poçt + link (hibrid) rejimində də istifadə olunur."""
+    generic_email = f"public_link_{customer_id}@arachi.local"
+    pub_carrier = next((c for c in all_carriers if c.get("email") == generic_email), None)
+
+    if not pub_carrier:
+        ins_res = supabase.table("carriers").insert({
+            "customer_id": customer_id,
+            "company_name": "🌐 İctimai Link (Public)",
+            "email": generic_email
+        }).execute()
+        pub_carrier_id = ins_res.data[0]["id"]
+    else:
+        pub_carrier_id = pub_carrier["id"]
+
+    unique_token = str(uuid.uuid4())
+    supabase.table("quotes").insert({
+        "request_id": request_id,
+        "carrier_id": pub_carrier_id,
+        "token": unique_token,
+        "mail_status": "delivered",
+        "is_viewed": False
+    }).execute()
+
+    return f"{BASE_URL}/carrier_quote/quote?token={unique_token}&public=1"
+
 @app.post("/requests/create")
 async def create_shipment_request(payload: ShipmentRequestCreate, background_tasks: BackgroundTasks = BackgroundTasks(), current_user: dict = Depends(verify_token)):
     check_ownership(payload.customer_id, current_user)
@@ -1224,31 +1252,9 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
         
         send_opt = getattr(payload, "send_option", "all")
 
-        # --- YENİ: LİNK YARATMA REJİMİ ---
+        # --- YENİ: LİNK YARATMA REJİMİ (yalnız link) ---
         if send_opt == "public_link":
-            generic_email = f"public_link_{payload.customer_id}@arachi.local"
-            pub_carrier = next((c for c in all_carriers if c.get("email") == generic_email), None)
-            
-            if not pub_carrier:
-                ins_res = supabase.table("carriers").insert({
-                    "customer_id": payload.customer_id,
-                    "company_name": "🌐 İctimai Link (Public)",
-                    "email": generic_email
-                }).execute()
-                pub_carrier_id = ins_res.data[0]["id"]
-            else:
-                pub_carrier_id = pub_carrier["id"]
-                
-            unique_token = str(uuid.uuid4())
-            supabase.table("quotes").insert({
-                "request_id": request_id, 
-                "carrier_id": pub_carrier_id, 
-                "token": unique_token, 
-                "mail_status": "delivered", 
-                "is_viewed": False
-            }).execute()
-            
-            public_url = f"{BASE_URL}/carrier_quote/quote?token={unique_token}&public=1"
+            public_url = create_public_link_quote(payload.customer_id, request_id, all_carriers)
             
             return {
                 "status": "success", 
@@ -1288,7 +1294,14 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
                     sender_company=sender_company, reply_to_email=customer_email
                 )
 
-        return {"status": "success", "message": f"Sorğu #{request_id} yaradıldı. {len(target_carriers)} daşıyıcıya təklif linki göndərildi!", "request_details": shipment_data}
+        result = {"status": "success", "message": f"Sorğu #{request_id} yaradıldı. {len(target_carriers)} daşıyıcıya təklif linki göndərildi!", "emailed_count": len(target_carriers), "request_details": shipment_data}
+
+        # --- YENİ: HİBRİD REJİM - seçilmiş daşıyıcılara e-poçt + paylaşmaq üçün link ---
+        if payload.also_create_link:
+            result["public_link"] = create_public_link_quote(payload.customer_id, request_id, all_carriers)
+            result["message"] += " Paylaşmaq üçün link də yaradıldı."
+
+        return result
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -1309,10 +1322,13 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
     try:
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
         result_carriers = []
+        has_public_link = False
         
         for item in (quotes_res.data or []):
             carrier = item.get("carriers") or {}
             extra = item.get("extra_details") or {}
+            if "public_link_" in (carrier.get("email") or ""):
+                has_public_link = True
             has_submitted = item.get("price") is not None or extra.get("submitted") == True
             
             # İctimai (Public) əsas linki tapırıq
@@ -1331,9 +1347,10 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
                 "email": carrier.get("email", ""), 
                 "mail_status": item.get("mail_status", "pending"), 
                 "is_viewed": item.get("is_viewed", False),
-                "has_submitted": has_submitted, "token": item.get("token")
+                "has_submitted": has_submitted, "token": item.get("token"),
+                "is_public": "public_link_" in (carrier.get("email") or "")
             })
-        return {"status": "success", "carriers": result_carriers}
+        return {"status": "success", "carriers": result_carriers, "has_public_link": has_public_link}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
