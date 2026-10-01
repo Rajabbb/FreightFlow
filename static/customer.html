@@ -487,13 +487,13 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-           <div class="position-relative d-inline-flex align-items-center">
-              <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-            <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-               <option value="az">AZ</option>
-               <option value="en">EN</option>
-            </select>
-          </div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
@@ -1296,7 +1296,7 @@ Best regards,
 
                     <!-- YENİ ƏLAVƏ EDİLƏN XƏBƏRDARLIQ (Gizli olaraq gözləyir) -->
                     <div id="publicLinkNotice" class="alert alert-primary bg-opacity-10 border-primary border-opacity-25 small d-none mb-3">
-                        <i class="bi bi-info-circle-fill text-primary me-1"></i> <b>Qeyd:</b> Bu sorğuda linkdən istifadə olunduğu üçün izləmə məhduddur. Link vasitəsilə göndərilənlər üçün yalnız "Baxıldı" və "Təklif alındı" izlənilir. <span id="publicLinkNoticeHybrid" class="d-none">"Göndərildi", "Çatdırıldı" və "Çatdırılmadı" statusları isə yalnız e-poçtla göndərilən daşıyıcıları əhatə edir.</span>
+                        <i class="bi bi-info-circle-fill text-primary me-1"></i> <b>Qeyd:</b> Bu sorğuda linkdən istifadə olunduğu üçün izləmə məhduddur. Link vasitəsilə göndərilənlər üçün yalnız "Təklif alındı" izlənilir. <span id="publicLinkNoticeHybrid" class="d-none">"Göndərildi", "Çatdırıldı", "Baxıldı" və "Çatdırılmadı" statusları isə yalnız e-poçtla göndərilən daşıyıcıları əhatə edir.</span>
                     </div>
                     <div class="mini-stat-grid mb-3">
                         <div class="mini-stat-box">
@@ -3711,7 +3711,7 @@ function loadBulkSubCategories(categoryId) {
                 const isLinkCarrier = c => c.is_public === true || (c.email && c.email.includes("public_link_"));
                 const emailCarriers = detailCarriersCache.filter(c => !isLinkCarrier(c));
                 const delivered = emailCarriers.filter(c => c.mail_status === 'delivered').length;
-                const viewed = detailCarriersCache.filter(c => c.is_viewed).length;
+                const viewed = emailCarriers.filter(c => c.is_viewed).length;
                 const quoted = detailCarriersCache.filter(c => c.has_submitted).length;
                 const failed = emailCarriers.filter(c => c.mail_status === 'failed').length;
                 const pending = detailCarriersCache.filter(c => !c.has_submitted).length;
@@ -3733,6 +3733,7 @@ function loadBulkSubCategories(categoryId) {
                 const boxSent = document.getElementById("statSent").parentElement;
                 const boxDelivered = document.getElementById("statDelivered").parentElement;
                 const boxFailed = document.getElementById("statFailed").parentElement;
+                const boxViewed = document.getElementById("statViewed").parentElement;
 
                 if (isPublicLink) {
                     // Linkdən istifadə olunubsa məhdud izləmə qeydini göstəririk
@@ -3743,12 +3744,14 @@ function loadBulkSubCategories(categoryId) {
                         boxSent.style.display = "";
                         boxDelivered.style.display = "";
                         boxFailed.style.display = "";
+                        boxViewed.style.display = "";
                     } else {
                         // Yalnız link: Göndərildi / Çatdırıldı / Çatdırılmadı gizlədilir
                         if (hybridNoticeEl) hybridNoticeEl.classList.add("d-none");
                         boxSent.style.display = "none";
                         boxDelivered.style.display = "none";
                         boxFailed.style.display = "none";
+                        boxViewed.style.display = "none";
                     }
                 } else {
                     if (hybridNoticeEl) hybridNoticeEl.classList.add("d-none");
@@ -3757,8 +3760,9 @@ function loadBulkSubCategories(categoryId) {
                     boxSent.style.display = "";
                     boxDelivered.style.display = "";
                     boxFailed.style.display = "";
+                    boxViewed.style.display = "";
                 }
-                
+
                 const pendingBanner = document.getElementById("detailNonResponders");
                 document.getElementById("detailPendingCount").textContent = pending;
                 if (pending > 0) { pendingBanner.classList.remove("d-none"); pendingBanner.classList.add("d-flex"); } 
@@ -4375,8 +4379,8 @@ function copyPublicLinkText() {
             "Daha ətraflı məlumat": "More details",
             "Göndərilmə statusu": "Delivery status",
             "Sorğunun daşıyıcılara çatdırılma və reaksiya statistikası.": "Delivery and response statistics of the request to carriers.",
-            "Bu sorğuda linkdən istifadə olunduğu üçün izləmə məhduddur. Link vasitəsilə göndərilənlər üçün yalnız \"Baxıldı\" və \"Təklif alındı\" izlənilir.": "Tracking is limited because a link was used for this request. For recipients reached via the link, only \"Viewed\" and \"Offer received\" are tracked.",
-            "\"Göndərildi\", \"Çatdırıldı\" və \"Çatdırılmadı\" statusları isə yalnız e-poçtla göndərilən daşıyıcıları əhatə edir.": "The \"Sent\", \"Delivered\" and \"Not delivered\" statuses cover only carriers sent by email.",
+            "Bu sorğuda linkdən istifadə olunduğu üçün izləmə məhduddur. Link vasitəsilə göndərilənlər üçün yalnız \"Təklif alındı\" izlənilir.": "Tracking is limited because a link was used for this request. For recipients reached via the link, only \"Offer received\" is tracked.",
+            "\"Göndərildi\", \"Çatdırıldı\", \"Baxıldı\" və \"Çatdırılmadı\" statusları isə yalnız e-poçtla göndərilən daşıyıcıları əhatə edir.": "The \"Sent\", \"Delivered\", \"Viewed\" and \"Not delivered\" statuses cover only carriers sent by email.",
             "Daşıyıcılara Göndər / Link Yarat": "Send to Carriers / Create Link",
             "Daşıyıcılara göndər + Link yarat": "Send to carriers + Create link",
             "Seçilmiş daşıyıcılara e-poçt göndərilir və paylaşmaq üçün link də yaradılır": "Email is sent to the selected carriers and a shareable link is also created",
