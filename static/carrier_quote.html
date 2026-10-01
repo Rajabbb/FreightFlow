@@ -295,6 +295,31 @@
 
         let currentLang = 'en';
 
+        // Müştərinin tələb etdiyi parametrlərin adları (bazada ingiliscə saxlanılır) - AZ rejimində Azərbaycanca göstərilir
+        // HS Code, Incoterm, Stackable / Non-stackable kimi terminlər hər iki dildə olduğu kimi qalır
+        const REQ_LABELS_AZ = {
+            "Loading Date": "Yükləmə tarixi",
+            "Truck Type": "Maşın növü",
+            "Shipment Type": "Daşınma tipi",
+            "Dangerous Goods (ADR)": "Təhlükəli yük (ADR)",
+            "Temperature Requirement (Reefer)": "Temperatur tələbi (Reefer)",
+            "Temperature Requirement": "Temperatur tələbi",
+            "Delivery Deadline": "Çatdırılma müddəti",
+            "Additional Information": "Əlavə məlumat"
+        };
+        function localizeReqField(field) {
+            if (currentLang !== 'az' || typeof field !== 'string') return field;
+            for (const en in REQ_LABELS_AZ) {
+                if (field.startsWith(en + ":")) return REQ_LABELS_AZ[en] + field.slice(en.length);
+            }
+            return field;
+        }
+        function refreshReqFields() {
+            document.querySelectorAll('[data-req-field]').forEach(el => {
+                el.textContent = localizeReqField(el.getAttribute('data-req-field'));
+            });
+        }
+
         // --- TƏRCÜMƏ FUNKSİYASI ---
         function changeLanguage(lang) {
             currentLang = lang;
@@ -314,6 +339,8 @@
                     el.placeholder = translations[lang][key];
                 }
             });
+
+            refreshReqFields();
 
             // 3. Əgər tab-lar render olubsa dili dəyişəndə yenilənsin
             if (allCarrierQuotes.length > 0) {
@@ -571,7 +598,7 @@
                             hasItems = true;
                             const noteDiv = document.createElement("div");
                             noteDiv.className = "pt-3 mt-3 border-t border-slate-200";
-                            noteDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="customer_req">${translations[currentLang].customer_req}</span><div class="text-sm text-slate-700 leading-relaxed">${escapeHTML(field)}</div>`;
+                            noteDiv.innerHTML = `<span class="block text-xs font-semibold text-slate-500 mb-1" data-i18n="customer_req">${translations[currentLang].customer_req}</span><div class="text-sm text-slate-700 leading-relaxed" data-req-field="${escapeHTML(field)}">${escapeHTML(localizeReqField(field))}</div>`;
                             fieldsList.appendChild(noteDiv);
                         });
                     }
