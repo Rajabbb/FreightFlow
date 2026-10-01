@@ -483,19 +483,27 @@
         <div class="container-fluid px-3 px-md-4">
             <a class="navbar-brand fw-bold text-truncate d-flex align-items-center" href="#">
                 <img src="/static/arachi-logo.png" alt="Arachi" style="height: 26px; width: auto;" class="me-1">
-                <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">Müştəri paneli/Customer Panel</span>
+                <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">Müştəri paneli</span>
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
-                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət/Company</span>
+                <!-- DİL SEÇİMİ (Language Selector) -->
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
+                <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-envelope me-1"></i> E-poçtu Dəyiş/Change Email
+                    <i class="bi bi-envelope me-1"></i> E-poçtu Dəyiş
                 </button>
                 <button onclick="openChangePasswordModal()" class="btn btn-outline-primary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-key me-1"></i> Şifrəni Dəyiş/Change Password
+                    <i class="bi bi-key me-1"></i> Şifrəni Dəyiş
                 </button>
                 <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
-                    <i class="bi bi-box-arrow-right me-1"></i> Çıxış/Exit
+                    <i class="bi bi-box-arrow-right me-1"></i> Çıxış
                 </button>
             </div>
         </div>
@@ -507,22 +515,22 @@
         <ul class="nav nav-tabs main-app-tabs mb-4 flex-nowrap overflow-auto" id="mainAppTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tab-dashboard-btn" data-bs-toggle="tab" data-bs-target="#tab-dashboard" type="button" role="tab" aria-controls="tab-dashboard" aria-selected="true">
-                    <i class="bi bi-speedometer2 me-1"></i> Analitika və Panel/Analytics and Dashboard
+                    <i class="bi bi-speedometer2 me-1"></i> Analitika və Panel
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-vendors-btn" data-bs-toggle="tab" data-bs-target="#tab-vendors" type="button" role="tab" aria-controls="tab-vendors" aria-selected="false">
-                    <i class="bi bi-people-fill me-1"></i> Daşıyıcı Bazası/Carrier Base
+                    <i class="bi bi-people-fill me-1"></i> Daşıyıcı Bazası
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-builder-btn" data-bs-toggle="tab" data-bs-target="#tab-builder" type="button" role="tab" aria-controls="tab-builder" aria-selected="false">
-                    <i class="bi bi-box-seam-fill me-1"></i> Yeni RFQ Yarat/Create New RFQ
+                    <i class="bi bi-box-seam-fill me-1"></i> Yeni RFQ Yarat
                 </button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-tracking-btn" data-bs-toggle="tab" data-bs-target="#tab-tracking" type="button" role="tab" aria-controls="tab-tracking" aria-selected="false">
-                    <i class="bi bi-ui-checks-grid me-1"></i> Sorğular və Müqayisə/Inquiries and Comparison
+                    <i class="bi bi-ui-checks-grid me-1"></i> Sorğular və Müqayisə
                 </button>
             </li>
         </ul>
@@ -536,19 +544,19 @@
         <div class="row g-2 g-md-3 mb-4">
             <div class="col-12 col-sm-4">
                 <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Aktiv RFQ Sorğuları/Active RFQ Requests</span>
+                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Aktiv RFQ Sorğuları</span>
                     <h3 id="statActiveRfqs">0</h3>
                 </div>
             </div>
             <div class="col-12 col-sm-4">
                 <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Tamamlanmış Daşımalar/Completed Shipments</span>
+                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Tamamlanmış Daşımalar</span>
                     <h3 id="statCompleted">0</h3>
                 </div>
             </div>
             <div class="col-12 col-sm-4">
                 <div class="stats-card">
-                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Daşıyıcı Bazası/Carrier Base</span>
+                    <span class="text-muted small fw-bold text-uppercase tracking-wider">Daşıyıcı Bazası</span>
                     <h3 id="statCarriersCount">0</h3>
                 </div>
             </div>
@@ -561,12 +569,12 @@
                     <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
                         <div>
                             <div class="section-title mb-1">
-                                <i class="bi bi-clock-history text-primary me-2"></i> Son Gələn Təkliflər/Latest Offers
+                                <i class="bi bi-clock-history text-primary me-2"></i> Son Gələn Təkliflər
                             </div>
-                            <div class="section-desc" style="font-size: 13px;">Daşıyıcılardan gələn son 10 qiymət təklifi/The last 10 offers from carriers.</div>
+                            <div class="section-desc" style="font-size: 13px;">Daşıyıcılardan gələn son 10 qiymət təklifi</div>
                         </div>
                         <button onclick="loadRecentQuotes()" class="btn btn-sm btn-outline-secondary rounded-pill px-3 shadow-sm d-flex align-items-center text-nowrap flex-shrink-0" style="font-size: 12px; font-weight: 500; transition: all 0.2s;">
-                            <i class="bi bi-arrow-clockwise me-1" style="font-size: 14px;"></i> Yenilə/Refresh
+                            <i class="bi bi-arrow-clockwise me-1" style="font-size: 14px;"></i> Yenilə
                         </button>
                     </div>
                     
@@ -574,14 +582,14 @@
                         <table class="table table-hover align-middle mb-0 text-sm">
                             <thead class="bg-light text-muted text-nowrap" style="font-size: 12.5px;">
                                 <tr>
-                                    <th class="py-3 px-3">Sorğu/Inquiries (RFQ)</th>
-                                    <th class="py-3 px-3">Daşıyıcı/Carrier</th>
-                                    <th class="py-3 px-3 text-success">Qiymət/Price</th>
-                                    <th class="py-3 px-3 text-end">Əməliyyat/Operation</th>
+                                    <th class="py-3 px-3">Sorğu</th>
+                                    <th class="py-3 px-3">Daşıyıcı</th>
+                                    <th class="py-3 px-3 text-success">Qiymət</th>
+                                    <th class="py-3 px-3 text-end">Əməliyyat</th>
                                 </tr>
                             </thead>
                             <tbody id="recentQuotesContainer">
-                                <tr><td colspan="4" class="text-center text-muted py-4 small">Təkliflər yüklənir.../Loading offers...</td></tr>
+                                <tr><td colspan="4" class="text-center text-muted py-4 small">Təkliflər yüklənir...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -592,47 +600,47 @@
             <div class="col-12 col-lg-4">
                 <div class="card h-100 mb-0 shadow-sm border-0 bg-light">
                     <div class="section-title mb-1">
-                        <i class="bi bi-file-earmark-bar-graph text-success"></i> Hesabat Mərkəzi/Reporting Center
+                        <i class="bi bi-file-earmark-bar-graph text-success"></i> Hesabat Mərkəzi
                     </div>
-                    <div class="section-desc mb-3">Sistemdən RFQ və ya Təklif məlumatlarını endirin/Download RFQ or proposal data from the system.</div>
+                    <div class="section-desc mb-3">Sistemdən RFQ və ya Təklif məlumatlarını endirin</div>
                     
                     <div class="mb-3 p-2 bg-white border rounded-3 shadow-sm">
-                        <label class="form-label text-muted small fw-bold mb-2 d-block">Hesabatın Məzmunu/Report Contents</label>
+                        <label class="form-label text-muted small fw-bold mb-2 d-block">Hesabatın Məzmunu</label>
                         <div class="form-check mb-2">
                             <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catRfq" value="rfq" checked>
-                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catRfq">📦 Bütün RFQ Detalları/All RFQ Details</label>
+                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catRfq">📦 Bütün RFQ Detalları</label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input border-secondary shadow-sm" type="radio" name="reportCategory" id="catQuote" value="quote">
-                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catQuote">💬 Gələn Təkliflər/Quotes</label>
+                            <label class="form-check-label fw-bold text-dark" style="font-size: 12.5px; cursor: pointer;" for="catQuote">💬 Gələn Təkliflər</label>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">Sorğu aralığı/Query interval</label>
+                        <label class="form-label text-muted small fw-bold">Sorğu aralığı</label>
                         <select class="form-select shadow-sm" id="reportTypeSelect" onchange="toggleReportOptions()" style="font-size: 13px;">
-                            <option value="all">Bütün Sorğular (Ümumi)/All Inquiries (General)</option>
-                            <option value="today">Bugünün sorğuları/Today's inquiries</option>
-                            <option value="date_range">İstənilən tarix aralığı/Any date range</option>
-                            <option value="selected">Seçilmiş RFQ-lər/Selected RFQs</option>
+                            <option value="all">Bütün Sorğular (Ümumi)</option>
+                            <option value="today">Bugünün sorğuları</option>
+                            <option value="date_range">İstənilən tarix aralığı</option>
+                            <option value="selected">Seçilmiş RFQ-lər</option>
                         </select>
                     </div>
 
                     <div id="reportDateRangeOptions" class="d-none mb-3 p-3 bg-white border rounded-3 shadow-sm">
                         <div class="mb-2">
-                            <label class="form-label text-muted" style="font-size: 11px;">Başlanğıc Tarixi/Start Date</label>
+                            <label class="form-label text-muted" style="font-size: 11px;">Başlanğıc Tarixi</label>
                             <input type="date" class="form-control form-control-sm" id="reportStartDate">
                         </div>
                         <div>
-                            <label class="form-label text-muted" style="font-size: 11px;">Bitiş Tarixi/End Date</label>
+                            <label class="form-label text-muted" style="font-size: 11px;">Bitiş Tarixi</label>
                             <input type="date" class="form-control form-control-sm" id="reportEndDate">
                         </div>
                     </div>
 
                     <div id="reportSelectedOptions" class="d-none mb-3 p-2 bg-white border rounded-3 shadow-sm" style="max-height: 150px; overflow-y: auto;">
-                        <small class="text-muted fw-bold d-block mb-2 ps-1" style="font-size: 11px;">Aşağıdan sorğuları seçin/Select queries from below:</small>
+                        <small class="text-muted fw-bold d-block mb-2 ps-1" style="font-size: 11px;">Aşağıdan sorğuları seçin:</small>
                         <div id="reportRfqCheckboxes">
-                            <span class="text-muted small">Yüklənir.../Loading...</span>
+                            <span class="text-muted small">Yüklənir...</span>
                         </div>
                     </div>
 
@@ -648,7 +656,7 @@
                     </div>
 
                     <button class="btn btn-success w-100 fw-bold shadow-sm" onclick="downloadReport()">
-                        <i class="bi bi-cloud-arrow-down-fill me-1"></i> Hesabatı Endir/Download the Report
+                        <i class="bi bi-cloud-arrow-down-fill me-1"></i> Hesabatı Endir
                     </button>
                 </div>
             </div>
@@ -881,23 +889,23 @@
             <form id="rfqForm" onsubmit="createRfq(event)">
                 <div class="row g-2 g-md-3 mb-2">
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Loading Location (Yükləmə yeri) <span class="text-danger">*</span></label>
+                        <label class="form-label">Yükləmə yeri <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="origin" required placeholder="məs: Bakı, Azərbaycan">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Delivery Location (Boşaltma yeri) <span class="text-danger">*</span></label>
+                        <label class="form-label">Boşaltma yeri <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="destination" required placeholder="məs: İstanbul, Türkiyə">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Cargo Type (Yükün növü) <span class="text-danger">*</span></label>
+                        <label class="form-label">Yükün növü <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="cargo_type" required placeholder="məs: Quru yük / Tekstil">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Weight (Çəki - kq) <span class="text-danger">*</span></label>
+                        <label class="form-label">Çəki (kq) <span class="text-danger">*</span></label>
                         <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Həcm / Palet (Volume / Pallet) <span class="text-danger">*</span></label>
+                        <label class="form-label">Həcm / Palet <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <select class="form-select border-end-0 bg-white shadow-sm" id="volume_type" style="max-width: 110px; cursor: pointer; font-weight: 600;">
                                 <option value="CBM">CBM</option>
@@ -907,26 +915,26 @@
                         </div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">Transportation Mode (Daşınma Növü) <span class="text-danger">*</span></label>
+                        <label class="form-label">Daşınma növü <span class="text-danger">*</span></label>
                         <select class="form-select" id="transportation_mode" required>
                             <option value="">Daşınma növünü seçin...</option>
-                            <option value="Quru (Road)">Quru (Road)</option>
-                            <option value="Hava (Air)">Hava (Air)</option>
-                            <option value="Su/Dəniz (Sea)">Su / Dəniz (Sea)</option>
-                            <option value="Dəmiryolu (Rail)">Dəmiryolu (Rail)</option>
+                            <option value="Quru (Road)">Quru</option>
+                            <option value="Hava (Air)">Hava</option>
+                            <option value="Su/Dəniz (Sea)">Su / Dəniz</option>
+                            <option value="Dəmiryolu (Rail)">Dəmiryolu</option>
                         </select>
                     </div>
                 </div>
 
                 <div class="optional-box">
                     <label class="form-label fw-bold mb-3 text-dark fs-6 d-flex align-items-center">
-                        <i class="bi bi-sliders text-primary me-2 fs-5"></i> İxtiyari (Optional) Parametrlər
+                        <i class="bi bi-sliders text-primary me-2 fs-5"></i> İxtiyari parametrlər
                     </label>
 
                     <div class="opt-row">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_loading_date" onchange="toggleOptField('loading_date')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_loading_date">Loading Date (Yükləmə tarixi)</label>
+                            <label class="form-check-label fw-bold text-dark" for="chk_loading_date">Yükləmə tarixi</label>
                         </div>
                         <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_loading_date">
                     </div>
@@ -934,7 +942,7 @@
                     <div class="opt-row">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_truck_type" onchange="toggleOptField('truck_type')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_truck_type">Truck Type (Maşın növü)</label>
+                            <label class="form-check-label fw-bold text-dark" for="chk_truck_type">Maşın növü</label>
                         </div>
                         <input type="text" class="form-control opt-input d-none mt-2" id="inp_truck_type" placeholder="məs: Tentli / Refrijerator">
                     </div>
@@ -1021,7 +1029,7 @@
                     <div class="opt-row">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_info" onchange="toggleOptField('info')">
-                            <label class="form-check-label fw-bold text-dark" for="chk_info">Additional Information (Qeyd və ya sənəd əlavəsi)</label>
+                            <label class="form-check-label fw-bold text-dark" for="chk_info">Əlavə məlumat (qeyd və ya sənəd əlavəsi)</label>
                         </div>
                         <div id="inp_info_container" class="d-none mt-2">
                             <textarea class="form-control mb-2" id="inp_info_text" rows="2" placeholder="Əlavə xüsusi şərtlər və təlimatlar..."></textarea>
@@ -3590,10 +3598,10 @@ function loadBulkSubCategories(categoryId) {
             const box = document.getElementById("requestExtraModalContent");
             try {
                 const rows = [
-                    ["Daşınma növü / Truck type", req.truck_type],
-                    ["Yük tipi (Shipment type)", req.shipment_type],
+                    ["Daşınma növü", req.truck_type],
+                    ["Yük tipi", req.shipment_type],
                     ["HS Kodu", req.hs_code],
-                    ["Stiflənə bilər (Stackable)", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
+                    ["Stiflənə bilər", req.stackable === true ? "Bəli" : (req.stackable === false ? "Xeyr" : null)],
                     ["Əlavə qeydlər", req.additional_notes || req.note]
                 ];
 
@@ -4030,6 +4038,465 @@ function copyPublicLinkText() {
             });
         }
         
+    </script>
+    <!-- ===================== DİL TƏRCÜMƏSİ (AZ / EN) ===================== -->
+    <script>
+    (function () {
+        // Səhifənin əsas dili Azərbaycan dilidir. İngilis dili seçiləndə mətnlər bu lüğət vasitəsilə tərcümə olunur.
+        const DICT = {
+            // --- Navbar və əsas tablar ---
+            "Müştəri paneli": "Customer Panel",
+            "Müştəri": "Customer",
+            "Şirkət": "Company",
+            "E-poçtu Dəyiş": "Change Email",
+            "Şifrəni Dəyiş": "Change Password",
+            "Çıxış": "Exit",
+            "Analitika və Panel": "Analytics and Dashboard",
+            "Daşıyıcı Bazası": "Carrier Base",
+            "Yeni RFQ Yarat": "Create New RFQ",
+            "Sorğular və Müqayisə": "Inquiries and Comparison",
+
+            // --- Dashboard ---
+            "Aktiv RFQ Sorğuları": "Active RFQ Requests",
+            "Tamamlanmış Daşımalar": "Completed Shipments",
+            "Son Gələn Təkliflər": "Latest Offers",
+            "Daşıyıcılardan gələn son 10 qiymət təklifi": "The last 10 offers from carriers.",
+            "Yenilə": "Refresh",
+            "Sorğu": "Inquiries (RFQ)",
+            "Daşıyıcı": "Carrier",
+            "Qiymət": "Price",
+            "Əməliyyat": "Operation",
+            "Təkliflər yüklənir...": "Loading offers...",
+            "Son 24 saatda yeni təklif gəlməyib.": "No new offers in the last 24 hours.",
+            "Qiymət qeyd edilməyib": "Price not specified",
+            "Xəta baş verdi.": "An error occurred.",
+            "Xəta baş verdi": "An error occurred",
+            "Hesabat Mərkəzi": "Reporting Center",
+            "Sistemdən RFQ və ya Təklif məlumatlarını endirin": "Download RFQ or proposal data from the system.",
+            "Hesabatın Məzmunu": "Report Contents",
+            "Bütün RFQ Detalları": "All RFQ Details",
+            "Gələn Təkliflər": "Quotes",
+            "Sorğu aralığı": "Query interval",
+            "Bütün Sorğular (Ümumi)": "All Inquiries (General)",
+            "Bugünün sorğuları": "Today's inquiries",
+            "İstənilən tarix aralığı": "Any date range",
+            "Seçilmiş RFQ-lər": "Selected RFQs",
+            "Başlanğıc Tarixi": "Start Date",
+            "Bitiş Tarixi": "End Date",
+            "Aşağıdan sorğuları seçin:": "Select queries from below:",
+            "Yüklənir...": "Loading...",
+            "Hesabatı Endir": "Download the Report",
+            "Hazırlanır...": "Preparing...",
+            "Bazada heç bir sorğu yoxdur.": "There are no requests in the database.",
+            "RFQ Detalları Hesabatı": "RFQ Details Report",
+            "Daşıyıcı Təklifləri Hesabatı": "Carrier Offers Report",
+
+            // --- Daşıyıcı bazası ---
+            "Daşıyıcı Kateqoriyaları": "Carrier Categories",
+            "Daşıyıcılarınızı qruplaşdırmaq üçün kateqoriyalar yaradın.": "Create categories to group your carriers.",
+            "Yeni əsas kateqoriya adı daxil edin...": "Enter new main category name...",
+            "Yarat": "Create",
+            "Kateqoriyalar yüklənir...": "Loading categories...",
+            "Alt Kateqoriya Yarat və İdarə Et": "Create and Manage Subcategories",
+            "-- Əsas Kateqoriya --": "-- Main Category --",
+            "Yeni alt kateqoriya adı daxil edin...": "Enter new subcategory name...",
+            "Alt kateqoriyaları görmək və silmək üçün soldan əsas kateqoriya seçin...": "Select a main category on the left to view and delete its subcategories...",
+            "Bu əsas kateqoriyaya aid heç bir alt kateqoriya yoxdur.": "This main category has no subcategories.",
+            "Məlumatları çəkərkən xəta baş verdi.": "An error occurred while fetching the data.",
+            "Heç bir kateqoriya yaradılmayıb.": "No categories have been created.",
+            "Bazada kateqoriya tapılmadı. Zəhmət olmasa \"Daşıyıcı Bazası\" bölümündən yaradın.": "No categories found in the database. Please create one in the \"Carrier Base\" section.",
+            "Daşıyıcı Bazasını İdarə Etmək": "Manage Carrier Base",
+            "Daşıyıcıları istədiyiniz üsulla bazaya əlavə edin və ya idarə edin.": "Add or manage carriers in the database using the method you prefer.",
+            "Fayl Yüklə": "Upload File",
+            "Əllə Daxil Et": "Enter Manually",
+            "Cədvəldən Yapışdır": "Paste from Table",
+            "Excel / CSV Faylı Yüklə": "Upload Excel / CSV File",
+            "Əlavə Et": "Add",
+            "Şirkət / Daşıyıcı Adı": "Company / Carrier Name",
+            "Məsələn: LogiTrans MMC": "e.g.: LogiTrans LLC",
+            "E-poçt Ünvanı": "Email Address",
+            "Daşıyıcıyı Əlavə Et": "Add Carrier",
+            "Excel-dən sütunları kopyalayıb bura yapışdırın:": "Copy columns from Excel and paste them here:",
+            "Şirkət A a@example.com Şirkət B b@example.com": "Company A a@example.com Company B b@example.com",
+            "Cədvəldən Əlavə Et": "Add from Table",
+            "Bazadakı Mövcud Daşıyıcılar": "Existing Carriers in the Database",
+            "Daşıyıcı axtar...": "Search carrier...",
+            "Hamısını seç": "Select all",
+            "Seçilmişləri Sil (": "Delete Selected (",
+            "-- Kateqoriya Seçin --": "-- Select Category --",
+            "-- Alt Kateqoriya --": "-- Subcategory --",
+            "-- Kateqoriyasız --": "-- No Category --",
+            "❌ Kateqoriyadan çıxar": "❌ Remove from category",
+            "Tətbiq et": "Apply",
+            "Daşıyıcılar yüklənir...": "Loading carriers...",
+            "Şirkət adı yoxdur": "No company name",
+            "Bazada daşıyıcı tapılmadı.": "No carriers found in the database.",
+            "Bazada hələ heç bir daşıyıcı yoxdur.": "There are no carriers in the database yet.",
+            "Uyğun daşıyıcı tapılmadı.": "No matching carrier found.",
+
+            // --- Yeni RFQ ---
+            "Yeni Yük Sorğusu (RFQ) Yarat": "Create New Cargo Request (RFQ)",
+            "Logistika parametrlərini ətraflı daxil edin və sorğunuzu göndərin.": "Enter the logistics parameters in detail and send your request.",
+            "Aİ ilə Avtomatik Doldur (Beta)": "Auto-fill with AI (Beta)",
+            "Müştəridən aldığınız faylı yükləyin və ya mətni birbaşa kopyalayıb yapışdırın.": "Upload the file you received from the customer or copy and paste the text directly.",
+            "📁 Fayl Yüklə": "📁 Upload File",
+            "📋 Mətn Yapışdır (Copy-Paste)": "📋 Paste Text (Copy-Paste)",
+            "Analiz Et": "Analyze",
+            "Mətni Analiz Et": "Analyze Text",
+            "Aİ mətni oxuyur və analiz edir, lütfən gözləyin...": "AI is reading and analyzing the text, please wait...",
+            "Müştərinin mətnini buraya kopyalayıb yapışdırın... (Məs: Salam, Bakıdan Berl ilə 1500 kq yük göndərmək istəyirik...)": "Copy and paste the customer's text here... (e.g.: Hello, we want to ship 1500 kg of cargo from Baku to Berlin...)",
+            "Yükləmə yeri": "Loading Location",
+            "Boşaltma yeri": "Delivery Location",
+            "Yükün növü": "Cargo Type",
+            "Çəki (kq)": "Weight (kg)",
+            "Həcm / Palet": "Volume / Pallet",
+            "Daşınma növü": "Transportation Mode",
+            "İxtiyari parametrlər": "Optional Parameters",
+            "Yükləmə tarixi": "Loading Date",
+            "Maşın növü": "Truck Type",
+            "Əlavə məlumat (qeyd və ya sənəd əlavəsi)": "Additional Information (note or document attachment)",
+            "Quru": "Road",
+            "Hava": "Air",
+            "Su / Dəniz": "Sea",
+            "Dəmiryolu": "Rail",
+            "Daşınma növünü seçin...": "Select transportation mode...",
+            "Daşınma tipini seçin...": "Select shipment type...",
+            "Incoterm şərtini seçin...": "Select Incoterm...",
+            "Seçin...": "Select...",
+            "Miqdarı yazın (məs: 15)": "Enter quantity (e.g.: 15)",
+            "məs: Bakı, Azərbaycan": "e.g.: Baku, Azerbaijan",
+            "məs: İstanbul, Türkiyə": "e.g.: Istanbul, Turkey",
+            "məs: Quru yük / Tekstil": "e.g.: Dry cargo / Textile",
+            "məs: Tentli / Refrijerator": "e.g.: Curtainsider / Refrigerated",
+            "məs: Klass 3": "e.g.: Class 3",
+            "Əlavə xüsusi şərtlər və təlimatlar...": "Additional special conditions and instructions...",
+            "Əlavə fayl yüklə (istəyə bağlı):": "Upload additional file (optional):",
+            "Daşıyıcılara Göndəriləcək Email Məzmunu": "Email Content to Be Sent to Carriers",
+            "Standart Şablon": "Standard Template",
+            "Öz Şablonumu Daxil Et (Custom)": "Enter My Own Template (Custom)",
+            "E-poçt Mövzusu (Subject)": "Email Subject",
+            "Dinamik dəyişənlər:": "Dynamic variables:",
+            "Əsas Mətn (Body)": "Email Body",
+            "Qeyd:": "Note:",
+            "\"Link yarat və göndər\" düyməsindən istifadə etdikdə aşağıdakı daşıyıcı seçimləri əhəmiyyət daşımır.": "When you use the \"Create link and send\" button, the carrier options below do not matter.",
+            "Sorğunu BÜTÜN daşıyıcılara göndər": "Send the request to ALL carriers",
+            "Seçilmiş KATEQORİYALARA göndər": "Send to selected CATEGORIES",
+            "Seçilmiş daşıyıcılara göndər": "Send to selected carriers",
+            "Aşağıdan göndəriləcək kateqoriyaları seçin:": "Select the categories to send to below:",
+            "Daşıyıcıları seçin:": "Select carriers:",
+            "Hamısını Seç": "Select All",
+            "Təmizlə": "Clear",
+            "Birbaşa Daşıyıcılara Göndər": "Send Directly to Carriers",
+            "Link Yarat və Kopyala": "Create and Copy Link",
+
+            // --- Sorğular və təkliflər ---
+            "RFQ Sorğuları və Təkliflər": "RFQ Requests and Offers",
+            "Yaratdığınız sorğuların statusunu izləyin və təklifləri analiz edin.": "Track the status of your requests and analyze the offers.",
+            "Sorğu Siyahısı": "Request List",
+            "Hamısı": "All",
+            "Açıq": "Open",
+            "Bağlı": "Closed",
+            "Sorğularda axtar...": "Search requests...",
+            "Sorğular yüklənir...": "Loading requests...",
+            "Hələ heç bir sorğu yaratmamısınız.": "You haven't created any requests yet.",
+            "Uyğun sorğu tapılmadı.": "No matching request found.",
+            "Təklif Detalları": "Offer Details",
+            "Bağla": "Close",
+            "RFQ-lar": "RFQs",
+            "Daşıyıcılar (": "Carriers (",
+            "Təkliflər (": "Offers (",
+            "Növ": "Type",
+            "Çəki / Həcm": "Weight / Volume",
+            "Yükləmə": "Loading",
+            "Yaradılıb": "Created",
+            "Daha ətraflı məlumat": "More details",
+            "Göndərilmə statusu": "Delivery status",
+            "Sorğunun daşıyıcılara çatdırılma və reaksiya statistikası.": "Delivery and response statistics of the request to carriers.",
+            "Bu RFQ sorğusu": "Because this RFQ was shared externally using the",
+            "\"Link Yarat\"": "\"Create Link\"",
+            "funksiyası ilə kənarda paylaşıldığı üçün \"Göndərildi\", \"Çatdırıldı\" və \"Çatdırılmadı\" statusları izlənilmir. Yalnız təklif verənləri görə bilərsiniz.": "function, the \"Sent\", \"Delivered\" and \"Not delivered\" statuses are not tracked. You can only see those who submitted offers.",
+            "məs: 1234.56": "e.g.: 1234.56",
+            "məs: +2 to +8 °C": "e.g.: +2 to +8 °C",
+            "Göndərildi": "Sent",
+            "Çatdırıldı": "Delivered",
+            "Baxıldı": "Viewed",
+            "Təklif alındı": "Offer received",
+            "Təklif yoxdur": "No offer",
+            "Çatdırılmadı": "Not delivered",
+            "Göndərilir...": "Sending...",
+            "Daşıyıcıların göndərdiyi qiymət təklifləri.": "Price offers sent by carriers.",
+            "RFQ paylaşım məlumatı": "RFQ sharing information",
+            "Göndərən": "Sender",
+            "Göndərən email": "Sender email",
+            "Email şablonu": "Email template",
+            "Standart şablon": "Standard template",
+            "Fərdi şablon": "Custom template",
+            "Bu RFQ üçün": "For this RFQ,",
+            "daşıyıcı hələ təklif göndərməyib. (": "carriers have not submitted an offer yet. (",
+            "seçilib)": "selected)",
+            "Seçilənləri reminder göndər": "Send reminder to selected",
+            "Seçilənləri reminder göndər (": "Send reminder to selected (",
+            "Hamısı (": "All (",
+            "Təklif verənlər (": "Offer submitters (",
+            "Gözlənilir (": "Pending (",
+            "Seçimi ləğv et": "Clear selection",
+            "RFQ-nun Əlavə Detalları": "Additional RFQ Details",
+            "Yenidən göndər": "Resend",
+            "Reminder göndər": "Send reminder",
+            "Məlum deyil": "Unknown",
+            "Qeyd edilməyib": "Not specified",
+            "Qeyd olunmayıb": "Not specified",
+            "Yoxdur": "None",
+            "Məlumat yoxdur": "No information",
+            "Sənədə Bax": "View Document",
+            "Bax": "View",
+            "Yüklə": "Download",
+            "Sənəd": "Document",
+            "Daşıyıcı Şirkət": "Carrier Company",
+            "Müddət": "Duration",
+            "Qeydlər": "Notes",
+            "Daha Ətraflı": "More Details",
+            "Qalibi ləğv et": "Cancel winner",
+            "Müştəriyə Göndər": "Send to Customer",
+            "Qalib Seç": "Select Winner",
+            "Təkliflər yüklənir...": "Loading offers...",
+            "Təklifləri yükləmək xətası.": "Error loading offers.",
+            "Hələ bu sorğuya təklif göndərilməyib.": "No offer has been submitted for this request yet.",
+            "Təklif Tarixçəsi (Audit Log)": "Offer History (Audit Log)",
+            "Qoşulmuş Fayl": "Attached File",
+            "Təklif olunan Qiymət": "Offered Price",
+            "Tranzit Müddəti": "Transit Time",
+            "gün": "days",
+            "Əlavə Məlumatlar və Şərtlər": "Additional Information and Terms",
+            "Əlavə detal qeyd olunmayıb.": "No additional details specified.",
+            "Qiymət yoxdur": "No price",
+            "İxtiyari Parametrlər": "Optional Parameters",
+            "Qoşulmuş sənəd": "Attached document",
+            "Yük tipi": "Shipment type",
+            "HS Kodu": "HS Code",
+            "Stiflənə bilər": "Stackable",
+            "Əlavə qeydlər": "Additional notes",
+            "Bəli": "Yes",
+            "Xeyr": "No",
+            "Məlumatları göstərərkən xəta baş verdi.": "An error occurred while displaying the data.",
+            "Daşıyıcıları yükləmək mümkün olmadı.": "Could not load carriers.",
+            "Yenilənib": "Updated",
+
+            // --- PDF təklif modalı ---
+            "Müştəriyə Rəsmi Təklif Yarat": "Create Official Offer for Customer",
+            "Daşıyıcıdan Alınan": "Received from Carrier",
+            "Xidmət Haqqı Əlavə Et": "Add Service Fee",
+            "Müştəriyə Satılan": "Sold to Customer",
+            "Təklifin Etibarlılıq Tarixi": "Offer Validity Date",
+            "Standart Şərtlər və Qaydalar (T&C)": "Standard Terms and Conditions (T&C)",
+            "Gömrük rüsumları daxil deyil": "Customs duties are not included",
+            "Sığorta daxil deyil": "Insurance is not included",
+            "Yükləmə/Boşaltma daxil deyil": "Loading/Unloading is not included",
+            "Ölçülər dəyişərsə qiymət dəyişir": "Price changes if dimensions change",
+            "Blind Shipment Aktivdir:": "Blind Shipment is Active:",
+            "Yaradılacaq PDF sənədində orijinal daşıyıcının heç bir məlumatı görünməyəcək. Sənəd yalnız sizin şirkətin adından hazırlanır.": "No information about the original carrier will be visible in the generated PDF document. The document is prepared solely on behalf of your company.",
+            "Təsdiqlə və PDF Endir": "Confirm and Download PDF",
+
+            // --- Şifrə / e-poçt modalları ---
+            "Cari Şifrə": "Current Password",
+            "Hazırkı şifrənizi yazın": "Enter your current password",
+            "Yeni Şifrə": "New Password",
+            "Yeni şifrə yaradın": "Create a new password",
+            "Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm.": "At least 8 characters, 1 uppercase, 1 lowercase letter and a digit.",
+            "Yeni Şifrə (Təkrar)": "New Password (Repeat)",
+            "Yeni şifrəni təkrar yazın": "Repeat the new password",
+            "Şifrəni Yenilə": "Update Password",
+            "Yeni E-poçt": "New Email",
+            "Yeni e-poçt ünvanınızı yazın": "Enter your new email address",
+            "Cari Şifrə (Təsdiq üçün)": "Current Password (for confirmation)",
+            "Təhlükəsizlik üçün hazırkı şifrənizi daxil edin": "Enter your current password for security",
+            "E-poçtu Yenilə": "Update Email",
+            "Gözləyin...": "Please wait...",
+            "Yeni şifrələr bir-biri ilə eyni deyil!": "The new passwords do not match!",
+            "Yeni şifrə tələblərə cavab vermir. Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm yazın.": "The new password does not meet the requirements. Enter at least 8 characters, 1 uppercase, 1 lowercase letter and a digit.",
+            "Şifrəniz uğurla dəyişdirildi!": "Your password has been changed successfully!",
+            "E-poçtunuz uğurla dəyişdirildi!": "Your email has been changed successfully!",
+            "Sistemlə əlaqə kəsildi.": "Connection to the system was lost.",
+            "Link və Şablon Hazırdır!": "Link and Template Are Ready!",
+            "Aşağıdakı mətni kopyalayaraq daşıyıcılarınıza WhatsApp, Telegram və ya e-poçt vasitəsilə birbaşa göndərə bilərsiniz:": "You can copy the text below and send it directly to your carriers via WhatsApp, Telegram or email:",
+            "Mətni və Linki Kopyala": "Copy Text and Link",
+            "© 2026 Arachi Logistics. Bütün hüquqlar qorunur.": "© 2026 Arachi Logistics. All rights reserved.",
+            "İstifadə Şərtləri": "Terms of Use",
+            "Məxfilik Siyasəti": "Privacy Policy",
+
+            // --- Xəbərdarlıqlar (alert / confirm) ---
+            "Sessiyanız bitmişdir.": "Your session has expired.",
+            "Naməlum xəta": "Unknown error",
+            "Zəhmət olmasa təhlil üçün mətni sahəyə yapışdırın.": "Please paste the text into the field for analysis.",
+            "✅ Aİ mətni uğurla analiz etdi və formu doldurdu!": "✅ AI successfully analyzed the text and filled in the form!",
+            "Mətni analiz etmək mümkün olmadı.": "Could not analyze the text.",
+            "Serverlə əlaqə qurulmadı.": "Could not connect to the server.",
+            "Zəhmət olmasa analiz üçün bir fayl seçin.": "Please select a file for analysis.",
+            "✅ Aİ faylı uğurla oxudu və formu doldurdu! Məlumatları gözdən keçirib sorğunu göndərə bilərsiniz.": "✅ AI successfully read the file and filled in the form! You can review the data and send the request.",
+            "Faylı analiz etmək mümkün olmadı.": "Could not analyze the file.",
+            "Serverlə əlaqə qurulmadı. Aİ emalı baş tutmadı.": "Could not connect to the server. AI processing failed.",
+            "Zəhmət olmasa tarix aralığını seçin.": "Please select a date range.",
+            "Zəhmət olmasa ən azı bir sorğu seçin.": "Please select at least one request.",
+            "Seçilmiş kriteriyalara uyğun məlumat tapılmadı.": "No data found matching the selected criteria.",
+            "Məlumatı yaratmaq mümkün olmadı": "Could not generate the data",
+            "Serverlə əlaqə qurulmadı!": "Could not connect to the server!",
+            "Kateqoriya yaradıla bilmədi": "Category could not be created",
+            "Lütfən əsas kateqoriyanı seçin.": "Please select the main category.",
+            "Alt kateqoriya adını daxil edin.": "Enter the subcategory name.",
+            "Alt kateqoriya uğurla yaradıldı!": "Subcategory created successfully!",
+            "Alt kateqoriya yaradılarkən xəta baş verdi.": "An error occurred while creating the subcategory.",
+            "Bu kateqoriyanı silmək istədiyinizə əminsiniz?": "Are you sure you want to delete this category?",
+            "Bu alt kateqoriyanı silmək istədiyinizə əminsiniz?": "Are you sure you want to delete this subcategory?",
+            "Alt kateqoriya uğurla silindi!": "Subcategory deleted successfully!",
+            "Silinərkən xəta baş verdi.": "An error occurred while deleting.",
+            "Zəhmət olmasa tətbiq etmək üçün kateqoriya seçin!": "Please select a category to apply!",
+            "Zəhmət olmasa ən azı bir daşıyıcı seçin!": "Please select at least one carrier!",
+            "Kateqoriya seçilmiş daşıyıcılara tətbiq edildi!": "The category was applied to the selected carriers!",
+            "Bu daşıyıcını bazanızdan silmək istədiyinizə əminsiniz?": "Are you sure you want to delete this carrier from your database?",
+            "Daşıyıcı bazadan uğurla silindi!": "Carrier deleted from the database successfully!",
+            "Zəhmət olmasa Excel və ya CSV faylı seçin!": "Please select an Excel or CSV file!",
+            "Fayl uğurla yükləndi!": "File uploaded successfully!",
+            "Zəhmət olmasa bütün xanaları doldurun!": "Please fill in all fields!",
+            "Daşıyıcı uğurla əlavə edildi!": "Carrier added successfully!",
+            "Zəhmət olmasa cədvəl məlumatlarını yapışdırın!": "Please paste the table data!",
+            "Daşıyıcılar uğurla əlavə edildi!": "Carriers added successfully!",
+            "Zəhmət olmasa siyahıdan ən azı bir daşıyıcı seçin!": "Please select at least one carrier from the list!",
+            "Zəhmət olmasa siyahıdan ən azı bir kateqoriya və ya alt kateqoriya seçin!": "Please select at least one category or subcategory from the list!",
+            "Seçdiyiniz kateqoriya və ya alt kateqoriyalarda heç bir daşıyıcı tapılmadı!": "No carriers found in the selected categories or subcategories!",
+            "Faylı serverə yükləmək mümkün olmadı!": "Could not upload the file to the server!",
+            "Zəhmət olmasa bütün məcburi (*) sahələri doldurun!": "Please fill in all required (*) fields!",
+            "Sorğu uğurla yaradıldı!": "Request created successfully!",
+            "Bu təklifi qalib seçmək istədiyinizə əminsiniz?": "Are you sure you want to select this offer as the winner?",
+            "Qalib təklif uğurla təsdiqləndi!": "The winning offer was confirmed successfully!",
+            "Server xətası!": "Server error!",
+            "Bu təklifin qalibliyini ləğv etmək istədiyinizə əminsiniz? (Sorğu yenidən aktiv olacaq)": "Are you sure you want to cancel the winner status of this offer? (The request will become active again)",
+            "Qalib seçimi ləğv edildi.": "Winner selection was cancelled.",
+            "Reminder göndərildi!": "Reminder sent!",
+            "Mail yenidən göndərildi!": "Email resent!",
+            "Reminderlər göndərildi!": "Reminders sent!",
+            "Zəhmət olmasa Daşıyıcılar panelindən azı bir daşıyıcı seçin.": "Please select at least one carrier from the Carriers panel.",
+            "✅ Şablon və link uğurla kopyalandı! İndi istədiyiniz yerə yapışdıra bilərsiniz.": "✅ Template and link copied successfully! You can now paste it wherever you want.",
+            "Kopyalama zamanı xəta baş verdi, zəhmət olmasa mətni əllə kopyalayın.": "An error occurred while copying, please copy the text manually."
+        };
+
+        // Dəyişən hissəsi olan mətnlər üçün qaydalar (rəqəm, ad və s.)
+        const plural = (n, one, many) => (Number(n) === 1 ? one : many);
+        const RULES = [
+            [/^Xəta\s*:?\s*([\s\S]*)$/, (m, t) => "Error: " + t],
+            [/^Seçilmiş (\d+) daşıyıcını silmək istədiyinizə əminsiniz\?$/, (m, n) => `Are you sure you want to delete the ${n} selected carrier(s)?`],
+            [/^Fayl yüklənərkən xəta baş verdi\s*:?\s*([\s\S]*)$/, (m, t) => "An error occurred while uploading the file: " + t],
+            [/^(\d+) təklif$/, (m, n) => `${n} ${plural(n, "offer", "offers")}`],
+            [/^RFQ-ya Bax \((\d+) təklif\)$/, (m, n) => `View RFQ (${n} ${plural(n, "offer", "offers")})`],
+            [/^(\d+(?:[.,]\d+)?) gün$/, (m, n) => `${n} ${plural(n, "day", "days")}`],
+            [/^Tranzit\s*:?\s*([\s\S]+)$/, (m, t) => "Transit: " + T(t)],
+            [/^Yenilənib \(v(\d+)\)$/, (m, n) => `Updated (v${n})`],
+            [/^Təklif v(\d+)( \(Sonuncu\))?\s*:?$/, (m, n, l) => `Offer v${n}${l ? " (Latest)" : ""}:`],
+            [/^Hazırda baxılır\s*:?\s*Təklif (v\d+)( \(Sonuncu\))?$/, (m, v, l) => `Currently viewing: Offer ${v}${l ? " (Latest)" : ""}`]
+        ];
+
+        let lang = "az";
+        try { lang = localStorage.getItem("arachi_lang") === "en" ? "en" : "az"; } catch (e) {}
+
+        const norm = s => s.replace(/\s+/g, " ").trim();
+        const NDICT = {};
+        Object.keys(DICT).forEach(k => { NDICT[norm(k)] = DICT[k]; });
+
+        function lookup(core) {
+            if (NDICT[core] !== undefined) return NDICT[core];
+            // sonundakı ":" ilə
+            const m = core.match(/^([\s\S]*?)(\s*[:：])$/);
+            if (m && NDICT[m[1]] !== undefined) return NDICT[m[1]] + m[2];
+            for (const [re, fn] of RULES) {
+                const r = core.match(re);
+                if (r) return fn(...r);
+            }
+            return null;
+        }
+
+        // Mətnin başındakı/sonundakı boşluqlar və emoji saxlanılır, yalnız mətni tərcümə edir
+        function T(s) {
+            if (typeof s !== "string") return s;
+            const ws = s.match(/^(\s*)([\s\S]*?)(\s*)$/);
+            let core = norm(ws[2]);
+            if (!core) return s;
+            let out = lookup(core);
+            if (out === null) {
+                const em = core.match(/^((?:[\p{Extended_Pictographic}️‍]|\s)+)([\s\S]+)$/u);
+                if (em) {
+                    const inner = lookup(norm(em[2]));
+                    if (inner !== null) out = em[1] + inner;
+                }
+            }
+            return out === null ? s : ws[1] + out + ws[3];
+        }
+
+        const textRec = new WeakMap();
+        function syncText(node) {
+            let rec = textRec.get(node);
+            if (!rec || node.nodeValue !== rec.out) { rec = { src: node.nodeValue, out: node.nodeValue }; textRec.set(node, rec); }
+            const want = lang === "en" ? T(rec.src) : rec.src;
+            if (node.nodeValue !== want) node.nodeValue = want;
+            rec.out = want;
+        }
+
+        const ATTRS = ["placeholder", "title"];
+        const attrRec = new WeakMap();
+        function syncAttrs(el) {
+            ATTRS.forEach(a => {
+                if (!el.hasAttribute(a)) return;
+                let all = attrRec.get(el); if (!all) { all = {}; attrRec.set(el, all); }
+                const cur = el.getAttribute(a);
+                let rec = all[a];
+                if (!rec || cur !== rec.out) { rec = { src: cur, out: cur }; all[a] = rec; }
+                const want = lang === "en" ? T(rec.src) : rec.src;
+                if (cur !== want) el.setAttribute(a, want);
+                rec.out = want;
+            });
+        }
+
+        const SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1, NOSCRIPT: 1 };
+        function walk(root) {
+            if (root.nodeType === 3) { if (!SKIP[root.parentNode && root.parentNode.nodeName]) syncText(root); return; }
+            if (root.nodeType !== 1) return;
+            syncAttrs(root);
+            if (SKIP[root.nodeName]) return;
+            for (let c = root.firstChild; c; c = c.nextSibling) walk(c);
+        }
+
+        const observer = new MutationObserver(muts => {
+            for (const m of muts) {
+                if (m.type === "childList") m.addedNodes.forEach(walk);
+                else if (m.type === "characterData") walk(m.target);
+                else if (m.type === "attributes") syncAttrs(m.target);
+            }
+        });
+
+        function applyLanguage() {
+            document.documentElement.lang = lang;
+            const t = lang === "en" ? "Customer Panel - Arachi" : "Müştəri Paneli - Arachi";
+            if (document.title !== t) document.title = t;
+            walk(document.body);
+            const sel = document.getElementById("langSelector");
+            if (sel && sel.value !== lang) sel.value = lang;
+        }
+
+        window.changeLanguage = function (l) {
+            lang = l === "en" ? "en" : "az";
+            try { localStorage.setItem("arachi_lang", lang); } catch (e) {}
+            applyLanguage();
+        };
+        window.t = T;
+
+        // alert / confirm mesajları
+        const nativeAlert = window.alert.bind(window);
+        const nativeConfirm = window.confirm.bind(window);
+        const trMsg = m => (lang === "en" ? String(m).split("\n").map(T).join("\n") : m);
+        window.alert = m => nativeAlert(trMsg(m));
+        window.confirm = m => nativeConfirm(trMsg(m));
+
+        applyLanguage();
+        observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+    })();
     </script>
 </body>
 </html>
