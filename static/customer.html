@@ -487,13 +487,13 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-        <div class="position-relative d-inline-flex align-items-center">
-             <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-           <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-             <option value="az">AZ</option>
-             <option value="en">EN</option>
-          </select>
-        </div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
@@ -1896,6 +1896,7 @@ async function parseTextWithAI() {
                     if(d.cargo_type) document.getElementById("cargo_type").value = d.cargo_type;
                     if(d.weight_kg) document.getElementById("weight_kg").value = d.weight_kg;
                     if(d.volume_m3) document.getElementById("volume_cbm").value = d.volume_m3;
+                    applyAiVolumeType(d, rawText);
                     
                     if(d.transportation_mode) {
                         const sel = document.getElementById("transportation_mode");
@@ -1982,6 +1983,7 @@ async function parseTextWithAI() {
                     if(d.cargo_type) document.getElementById("cargo_type").value = d.cargo_type;
                     if(d.weight_kg) document.getElementById("weight_kg").value = d.weight_kg;
                     if(d.volume_m3) document.getElementById("volume_cbm").value = d.volume_m3;
+                    applyAiVolumeType(d, "");
                     
                     if(d.transportation_mode) {
                         const sel = document.getElementById("transportation_mode");
@@ -2033,13 +2035,25 @@ async function parseTextWithAI() {
         }
 
 
-function resetFormForAI() {
+// Aİ cavabına əsasən CBM / Palet seçimini təyin edir (Aİ volume_type qaytarmasa, mətndə "palet" sözünə baxır)
+        function applyAiVolumeType(d, rawText) {
+            const sel = document.getElementById("volume_type");
+            if (!sel) return;
+            let type = String(d.volume_type || "").toLowerCase().startsWith("pal") ? "Palet" : "CBM";
+            if (!d.volume_type && /palet|pallet|паллет|поддон/i.test(rawText || "")) type = "Palet";
+            sel.value = type;
+        }
+
+        function resetFormForAI() {
+
             // 1. Əsas xanaları təmizləyirik
             const mainFields = ["origin", "destination", "cargo_type", "weight_kg", "volume_cbm"];
             mainFields.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = "";
             });
+            const volTypeEl = document.getElementById("volume_type");
+            if (volTypeEl) volTypeEl.value = "CBM";
 
             // 2. Nəqliyyat növünü sıfırlayırıq (ilk seçimə qaytarırıq)
             const transportSelect = document.getElementById("transportation_mode");
@@ -2236,11 +2250,28 @@ function resetFormForAI() {
                         });
                         tableHtml += `</tbody></table></div>`;
 
+                        // iPhone/iPad Safari-də canvas ölçüsünə limit var (təxminən 16 milyon piksel). Limit aşılanda PDF boş çıxır.
+                        // Ona görə cədvəlin real hündürlüyünü ölçüb miqyası (scale) avtomatik uyğunlaşdırırıq.
+                        const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+                        let pdfScale = 2;
+                        try {
+                            const probe = document.createElement('div');
+                            probe.style.cssText = 'position:absolute; left:-99999px; top:0; width:2400px; visibility:hidden;';
+                            probe.innerHTML = tableHtml;
+                            document.body.appendChild(probe);
+                            const probeHeight = probe.offsetHeight || 1;
+                            document.body.removeChild(probe);
+                            const maxPixels = isIOS ? 12000000 : 100000000;
+                            pdfScale = Math.min(2, Math.sqrt(maxPixels / (2400 * probeHeight)));
+                            if (isIOS) pdfScale = Math.min(pdfScale, 1.5);
+                            pdfScale = Math.max(pdfScale, 0.4);
+                        } catch (probeErr) { pdfScale = isIOS ? 1 : 2; }
+
                         const opt = {
                             margin:       0.3,
                             filename:     `${fileNamePrefix}.pdf`,
-                            image:        { type: 'jpeg', quality: 1 },
-                            html2canvas:  { scale: 2, useCORS: true, letterRendering: true, windowWidth: 2400 },
+                            image:        { type: 'jpeg', quality: isIOS ? 0.92 : 1 },
+                            html2canvas:  { scale: pdfScale, useCORS: true, letterRendering: true, windowWidth: 2400, scrollX: 0, scrollY: 0 },
                             jsPDF:        { unit: 'in', format: 'a1', orientation: 'landscape' }
                         };
                         
