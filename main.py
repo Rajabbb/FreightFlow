@@ -1019,6 +1019,42 @@ async def upload_request_attachment(file: UploadFile = File(...), current_user: 
         return {"status": "success", "attachment_url": f"/uploads/{unique_filename}", "filename": file.filename}
     except Exception as e: raise HTTPException(status_code=500, detail=f"Fayl yüklənərkən xəta: {str(e)}")
 
+# Aİ ilə avtomatik doldurma üçün ortaq təlimat (həm fayl, həm də mətn analizi istifadə edir)
+AI_PARSE_PROMPT = """Sən peşəkar logistika assistentisən. Sənə verilən sənədi/mətni böyük diqqətlə oxu və aşağıdakı qaydalara əməl edərək YALNIZ təmiz JSON formatında cavab qaytar.
+    Heç bir əlavə markdown (məsələn ```json) və ya izahat yazma!
+
+    Qaydalar:
+    - Origin və destination hissələrində şəhər və ölkəni dəqiq təyin et. Mətn hansı dildə yazılıbsa, həmin dildə yaz (məsələn Azərbaycanca yazılıbsa "Bakı, Azərbaycan", ingiliscə yazılıbsa "Baku, Azerbaijan").
+    - weight_kg yalnız ədəd olmalıdır (əgər ton ilədirsə kq-a çevir, məsələn 1.5 ton = 1500). Yoxdursa null qoy.
+    - volume_m3 yalnız rəqəm (miqdar) olmalıdır və "volume_type" ilə birlikdə işləyir.
+    - volume_type yalnız "CBM" və ya "Palet" ola bilər:
+        * Yük palet / pallet / паллет / поддон ilə ifadə olunubsa (məsələn "10 palet mal", "10 pallets of goods") volume_type = "Palet" və volume_m3 = paletlərin SAYI (məsələn 10).
+        * Həcm kub metr / m3 / m³ / CBM ilə verilibsə volume_type = "CBM" və volume_m3 = həmin rəqəm.
+        * Heç biri göstərilməyibsə volume_m3 = null və volume_type = "CBM".
+    - "cargo_type" yalnız yükün NÖVÜNÜ/təsvirini göstərməlidir (məsələn "Tekstil", "Electronics"). Miqdarı (palet sayı, çəki, həcm) cargo_type-a YAZMA. Yalnız "10 palet mal" kimi ümumi ifadə varsa cargo_type = "Mal" (ingiliscə mətndə "Goods").
+    - DİL QAYDASI: "cargo_type" və "additional_notes" xanalarını sənəddəki/mətndəki ORİJİNAL DİLDƏ saxla, TƏRCÜMƏ ETMƏ. Azərbaycanca yazılıbsa Azərbaycanca, ingiliscə yazılıbsa ingiliscə, rusca yazılıbsa rusca yaz. Mətn qarışıqdırsa ən çox işlənən dildən istifadə et.
+
+    JSON Formatı:
+    {
+        "origin": "Yükləmə yeri",
+        "destination": "Boşaltma yeri",
+        "cargo_type": "Yükün növü (mətnin öz dilində)",
+        "weight_kg": 0.0,
+        "volume_m3": 0.0,
+        "volume_type": "CBM və ya Palet",
+        "transportation_mode": "Quru (Road) / Hava (Air) / Su/Dəniz (Sea) / Dəmiryolu (Rail)",
+        "truck_type": "Maşın növü",
+        "hs_code": "HS Kod",
+        "stackable": "Stackable / Non-stackable",
+        "shipment_type": "FTL / LTL / FCL / LCL",
+        "incoterm": "Incoterm",
+        "adr": "ADR sinfi",
+        "temperature": "Temperatur",
+        "deadline": "YYYY-MM-DDTHH:MM",
+        "additional_notes": "Əlavə qeydlər (mətnin öz dilində)"
+    }"""
+
+
 @app.post("/requests/parse-ai")
 @limiter.limit("5/minute")
 async def parse_document_with_ai(request: Request, file: UploadFile = File(...), current_user: dict = Depends(verify_token)):
@@ -1029,33 +1065,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
     ext = os.path.splitext(file.filename)[1].lower()
 
     # TƏKMİLLƏŞDİRİLMİŞ VƏ SƏRT PROMPT:
-    prompt = """Sən peşəkar logistika assistentisən. Sənə verilən sənədi/mətni böyük diqqətlə oxu və aşağıdakı qaydalara əməl edərək YALNIZ təmiz JSON formatında cavab qaytar. 
-    Heç bir əlavə markdown (məsələn ```json) və ya izahat yazma!
-    
-    Qaydalar:
-    - Origin və destination hissələrində şəhər və ölkəni dəqiq təyin et (məsələn: "Bakı, Azərbaycan").
-    - weight_kg yalnız ədəd olmalıdır (əgər ton ilədirsə kq-a çevir, məsələn 1.5 ton = 1500). Yoxdursa null qoy.
-    - volume_m3 yalnız rəqəm olmalıdır.
-    - DİQQƏT: "cargo_type" və "additional_notes" xanalarının məzmununu MÜTLƏQ İNGİLİS DİLİNDƏ (English) yaz! Sənəddəki dil nə olursa olsun (Azərbaycanca, Rusca və s.), yalnız bu iki xananı ingiliscəyə tərcümə edib çıxar.
-    
-    JSON Formatı:
-    {
-        "origin": "Yükləmə yeri",
-        "destination": "Boşaltma yeri",
-        "cargo_type": "Cargo type MUST be in English",
-        "weight_kg": 0.0,
-        "volume_m3": 0.0,
-        "transportation_mode": "Quru (Road) / Hava (Air) / Su/Dəniz (Sea) / Dəmiryolu (Rail)",
-        "truck_type": "Maşın növü",
-        "hs_code": "HS Kod",
-        "stackable": "Stackable / Non-stackable",
-        "shipment_type": "FTL / LTL / FCL / LCL",
-        "incoterm": "Incoterm",
-        "adr": "ADR sinfi",
-        "temperature": "Temperatur",
-        "deadline": "YYYY-MM-DDTHH:MM",
-        "additional_notes": "Additional notes MUST be in English"
-    }"""
+    prompt = AI_PARSE_PROMPT
 
     try:
         text_content = ""
@@ -1130,33 +1140,7 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
     if not payload.raw_text or not payload.raw_text.strip():
         raise HTTPException(status_code=400, detail="Analiz üçün mətn daxil edilməyib.")
 
-    prompt = """Sən peşəkar logistika assistentisən. Sənə verilən sənədi/mətni böyük diqqətlə oxu və aşağıdakı qaydalara əməl edərək YALNIZ təmiz JSON formatında cavab qaytar. 
-    Heç bir əlavə markdown (məsələn ```json) və ya izahat yazma!
-    
-    Qaydalar:
-    - Origin və destination hissələrində şəhər və ölkəni dəqiq təyin et (məsələn: "Bakı, Azərbaycan").
-    - weight_kg yalnız ədəd olmalıdır (əgər ton ilədirsə kq-a çevir, məsələn 1.5 ton = 1500). Yoxdursa null qoy.
-    - volume_m3 yalnız rəqəm olmalıdır.
-    - DİQQƏT: "cargo_type" və "additional_notes" xanalarının məzmununu MÜTLƏQ İNGİLİS DİLİNDƏ (English) yaz! Sənəddəki dil nə olursa olsun (Azərbaycanca, Rusca və s.), yalnız bu iki xananı ingiliscəyə tərcümə edib çıxar.
-    
-    JSON Formatı:
-    {
-        "origin": "Yükləmə yeri",
-        "destination": "Boşaltma yeri",
-        "cargo_type": "Cargo type MUST be in English",
-        "weight_kg": 0.0,
-        "volume_m3": 0.0,
-        "transportation_mode": "Quru (Road) / Hava (Air) / Su/Dəniz (Sea) / Dəmiryolu (Rail)",
-        "truck_type": "Maşın növü",
-        "hs_code": "HS Kod",
-        "stackable": "Stackable / Non-stackable",
-        "shipment_type": "FTL / LTL / FCL / LCL",
-        "incoterm": "Incoterm",
-        "adr": "ADR sinfi",
-        "temperature": "Temperatur",
-        "deadline": "YYYY-MM-DDTHH:MM",
-        "additional_notes": "Additional notes MUST be in English"
-    }"""
+    prompt = AI_PARSE_PROMPT
     
     try:
         messages = [
