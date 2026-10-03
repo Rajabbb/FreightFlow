@@ -475,6 +475,238 @@
             .request-card { padding: 14px; }
         }
     </style>
+    <!-- ===================== YENİ GÖRÜNÜŞ (yalnız dizayn: loqonun rəngləri) ===================== -->
+    <style id="arachi-theme">
+        :root {
+            --primary-blue: #0037B8;
+            --primary-hover: #002C93;
+            --secondary-color: #4D7CF2;
+            --brand-tint: #E7EEFF;
+            --brand-ice: #F4F7FF;
+            --brand-line: #DCE4F7;
+            --brand-line-2: #C5D3F5;
+            --text-main: #0B1433;
+            --text-muted: #56627F;
+            --border-color: #DCE4F7;
+            --radius-lg: 22px;
+            --radius-md: 13px;
+            --brand-shadow: 0 18px 40px -30px rgba(0, 55, 184, 0.55);
+        }
+
+        body {
+            background:
+                radial-gradient(900px 480px at 100% -10%, rgba(77, 124, 242, 0.10), transparent 65%),
+                radial-gradient(800px 420px at -10% 110%, rgba(201, 187, 255, 0.16), transparent 65%),
+                #F6F8FE;
+            background-attachment: fixed;
+            color: var(--text-main);
+        }
+        ::selection { background: rgba(77, 124, 242, 0.25); }
+        ::-webkit-scrollbar-thumb { background: #C5D3F5; border-color: #F6F8FE; }
+        ::-webkit-scrollbar-thumb:hover { background: #9DB3F2; }
+
+        /* --- Naviqasiya --- */
+        .navbar {
+            background: rgba(255, 255, 255, 0.82);
+            border-bottom: 1px solid var(--brand-line);
+            box-shadow: 0 10px 30px -24px rgba(0, 55, 184, 0.6);
+        }
+        .navbar-brand {
+            background: linear-gradient(45deg, var(--primary-blue), var(--secondary-color));
+            -webkit-background-clip: text;
+        }
+        .navbar-brand img { border-radius: 8px; }
+        #userCompanyName { background: var(--brand-tint) !important; color: var(--primary-blue) !important; border: 1px solid var(--brand-line-2); }
+        .navbar .btn-sm { transition: all .2s ease; }
+        .navbar .btn-outline-primary { color: var(--primary-blue); border-color: var(--brand-line-2); }
+        .navbar .btn-outline-primary:hover { background: var(--primary-blue); border-color: var(--primary-blue); color: #fff; }
+        .navbar .btn-outline-secondary { border-color: var(--brand-line); color: var(--text-muted); }
+        .navbar .btn-outline-secondary:hover { background: var(--brand-tint); border-color: var(--brand-line-2); color: var(--primary-blue); }
+        #langSelector { border-color: var(--brand-line-2); background-color: #fff; color: var(--primary-blue) !important; }
+        #langSelector + i, .bi-globe2 { color: var(--primary-blue) !important; }
+
+        /* --- Əsas tablar: tək kapsul panel --- */
+        .main-app-tabs {
+            background: rgba(255, 255, 255, 0.75);
+            border: 1px solid var(--brand-line);
+            border-radius: 18px;
+            padding: 6px;
+            box-shadow: var(--brand-shadow);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+        }
+        .main-app-tabs .nav-link {
+            background: transparent;
+            border-radius: 13px;
+            color: var(--text-muted);
+        }
+        .main-app-tabs .nav-link:hover { color: var(--primary-blue); background: var(--brand-tint); }
+        .main-app-tabs .nav-link.active {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #2F63E0 100%);
+            box-shadow: 0 10px 20px -10px rgba(0, 55, 184, 0.75), inset 0 1px 0 rgba(255,255,255,.2);
+        }
+
+        /* --- Kartlar və bölmə başlıqları --- */
+        .card {
+            background: #ffffff;
+            border: 1px solid var(--brand-line);
+            box-shadow: var(--brand-shadow);
+        }
+        .section-title { color: var(--text-main); }
+        .section-title i {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 36px; height: 36px; border-radius: 11px; flex-shrink: 0;
+            font-size: 17px;
+            background: var(--brand-tint);
+            -webkit-background-clip: border-box; background-clip: border-box;
+            -webkit-text-fill-color: var(--primary-blue);
+            color: var(--primary-blue);
+            border: 1px solid var(--brand-line-2);
+        }
+        .text-primary { color: var(--primary-blue) !important; }
+        .bg-primary { background-color: var(--primary-blue) !important; }
+        .border-primary { border-color: var(--primary-blue) !important; }
+        .text-indigo-600 { color: var(--primary-blue) !important; }
+        .border-indigo-200 { border-color: var(--brand-line-2) !important; }
+
+        /* --- Statistika kartları --- */
+        .stats-card {
+            background: #ffffff;
+            border: 1px solid var(--brand-line);
+            box-shadow: var(--brand-shadow);
+        }
+        .stats-card::before { background: linear-gradient(to bottom, var(--primary-blue), var(--secondary-color)); width: 4px; }
+        .stats-card:nth-child(2)::before { background: linear-gradient(to bottom, #12A06E, #3DD08F); }
+        .stats-card:nth-child(3)::before { background: linear-gradient(to bottom, #F59E0B, #FBBF24); }
+        .stats-card:hover { box-shadow: 0 24px 46px -30px rgba(0, 55, 184, 0.65); }
+        .stats-card h3 { font-size: 34px; background: linear-gradient(135deg, var(--text-main) 0%, #2A3A6E 100%); -webkit-background-clip: text; }
+        .stats-card::after {
+            content: ""; position: absolute; right: -40px; top: -40px; width: 130px; height: 130px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(77, 124, 242, 0.18), rgba(77, 124, 242, 0) 70%);
+            pointer-events: none;
+        }
+        /* hər statistika kartına öz rəngi (kartlar ayrı sütunlardadır) */
+        #tab-dashboard .row > div:nth-child(2) > .stats-card::before { background: linear-gradient(to bottom, #12A06E, #3DD08F); }
+        #tab-dashboard .row > div:nth-child(3) > .stats-card::before { background: linear-gradient(to bottom, #F59E0B, #FBBF24); }
+        #tab-dashboard .row > div:nth-child(2) > .stats-card::after { background: radial-gradient(circle, rgba(18, 160, 110, 0.16), rgba(18, 160, 110, 0) 70%); }
+        #tab-dashboard .row > div:nth-child(3) > .stats-card::after { background: radial-gradient(circle, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0) 70%); }
+        .stats-card:nth-child(2)::after { background: radial-gradient(circle, rgba(18, 160, 110, 0.16), rgba(18, 160, 110, 0) 70%); }
+        .stats-card:nth-child(3)::after { background: radial-gradient(circle, rgba(245, 158, 11, 0.16), rgba(245, 158, 11, 0) 70%); }
+        @media (max-width: 576px) { .stats-card h3 { font-size: 26px; } }
+
+        /* --- Forma elementləri --- */
+        .form-control, .form-select {
+            border: 1px solid var(--brand-line);
+            background-color: #F8FAFF;
+            color: var(--text-main);
+        }
+        .form-control::placeholder { color: #9AA4BE; }
+        .form-control:hover, .form-select:hover { border-color: var(--brand-line-2); }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 4px rgba(0, 55, 184, 0.10);
+        }
+        .form-label { color: var(--text-main); font-weight: 600; }
+        .form-check-input { border-color: var(--brand-line-2); }
+        .form-check-input:checked {
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(0, 55, 184, 0.12);
+        }
+        .form-check-input:focus { box-shadow: 0 0 0 3px rgba(0, 55, 184, 0.15); border-color: var(--primary-blue); }
+
+        /* --- Düymələr --- */
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #2F63E0 100%);
+            box-shadow: 0 10px 20px -10px rgba(0, 55, 184, 0.75), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .btn-primary:hover, .btn-primary:focus {
+            background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary-blue) 100%);
+            box-shadow: 0 16px 26px -12px rgba(0, 55, 184, 0.8), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .btn-primary:disabled { background: linear-gradient(135deg, #7F96D6, #9AB0EA); box-shadow: none; }
+        .btn-outline-primary { color: var(--primary-blue); border-color: var(--brand-line-2); }
+        .btn-outline-primary:hover, .btn-outline-primary.active, .btn-check:checked + .btn-outline-primary {
+            background: var(--primary-blue); border-color: var(--primary-blue); color: #fff;
+        }
+        .btn-light { background: #fff; border-color: var(--brand-line) !important; }
+        .btn-light:hover { background: var(--brand-tint); }
+        .btn-white-animated, .btn-white-animated:visited {
+            color: var(--primary-blue) !important;
+            border: 1px solid var(--brand-line-2) !important;
+            box-shadow: 0 10px 20px -14px rgba(0, 55, 184, 0.5);
+        }
+        .btn-white-animated:hover, .btn-white-animated:focus, .btn-white-animated:active {
+            color: var(--primary-blue) !important;
+            border-color: var(--primary-blue) !important;
+            box-shadow: 0 14px 24px -12px rgba(0, 55, 184, 0.45) !important;
+        }
+        .dropdown-menu { border: 1px solid var(--brand-line) !important; box-shadow: 0 24px 50px -24px rgba(0, 55, 184, 0.55) !important; }
+        .dropdown-item:hover, .dropdown-item:focus { background: var(--brand-tint); }
+
+        /* --- İxtiyari parametrlər qutusu --- */
+        .optional-box { background: var(--brand-ice); border: 1.5px dashed var(--brand-line-2); }
+        .opt-row { border: 1px solid var(--brand-line); }
+        .opt-row:hover { border-color: var(--brand-line-2); box-shadow: 0 10px 20px -16px rgba(0, 55, 184, 0.45); }
+        .opt-row:has(.form-check-input:checked) { border-color: var(--primary-blue); background: linear-gradient(90deg, var(--brand-tint), #fff 70%); }
+
+        /* --- Daşıyıcı siyahıları --- */
+        .carrier-select-box { border: 1px solid var(--brand-line); }
+        .carrier-item-row:hover { background: var(--brand-ice); }
+        .carrier-panel-row { border: 1px solid var(--brand-line); }
+        .carrier-panel-row:hover { border-color: var(--brand-line-2); background: var(--brand-ice); }
+        .filter-pill { border-color: var(--brand-line); }
+        .filter-pill:hover { border-color: var(--brand-line-2); color: var(--primary-blue); }
+        .filter-pill.active { background: var(--primary-blue); border-color: var(--primary-blue); box-shadow: 0 8px 16px -10px rgba(0, 55, 184, 0.8); }
+
+        /* --- Sorğu kartları və detal --- */
+        .request-card {
+            background: #ffffff;
+            border: 1px solid var(--brand-line);
+            box-shadow: var(--brand-shadow);
+        }
+        .request-card:hover { border-color: var(--brand-line-2); box-shadow: 0 26px 50px -32px rgba(0, 55, 184, 0.7); }
+        .request-card::before { background: linear-gradient(to bottom, var(--primary-blue), var(--secondary-color)); }
+        .request-meta-box { border: 1px solid var(--brand-line); background: var(--brand-ice); }
+        .detail-header-card { background: #fff; border: 1px solid var(--brand-line); box-shadow: var(--brand-shadow); }
+        .mini-stat-box { background: #fff; border: 1px solid var(--brand-line); transition: transform .2s ease, box-shadow .2s ease; }
+        .mini-stat-box:hover { transform: translateY(-2px); box-shadow: 0 14px 26px -20px rgba(0, 55, 184, 0.6); }
+        .envelope-box { background: linear-gradient(135deg, var(--brand-tint) 0%, #EEF4FF 100%); }
+
+        /* --- Cədvəllər --- */
+        .table { --bs-table-hover-bg: var(--brand-ice); }
+        .table thead th, .table thead td {
+            background: var(--brand-ice) !important;
+            color: var(--text-muted);
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            border-bottom: 1px solid var(--brand-line) !important;
+        }
+        .table td, .table th { border-color: #EBF0FB; }
+
+        /* --- Modallar və yan panel --- */
+        .modal-content { border-radius: 24px; box-shadow: 0 40px 80px -30px rgba(0, 30, 110, 0.45); }
+        .modal-header { background: linear-gradient(180deg, var(--brand-ice), #fff); border-bottom: 1px solid var(--brand-line); }
+        .modal-footer { background: var(--brand-ice); border-top: 1px solid var(--brand-line); }
+        .modal-backdrop.show { opacity: .45; }
+        .modal-backdrop { background-color: #0B1433; }
+        .offcanvas { border-left: 1px solid var(--brand-line) !important; box-shadow: -30px 0 60px -40px rgba(0, 30, 110, 0.5); }
+        .offcanvas-header { background: linear-gradient(180deg, var(--brand-ice), #fff); }
+
+        /* --- Nişanlar və bildirişlər --- */
+        .badge { font-weight: 600; letter-spacing: .01em; border-radius: 999px; }
+        .alert { border-radius: 16px; }
+        .alert-light { background: #fff; border-color: var(--brand-line) !important; }
+        .alert-primary { background: var(--brand-tint); border-color: var(--brand-line-2); color: var(--primary-blue); }
+
+        /* --- Altbilgi --- */
+        .border-top { border-color: var(--brand-line) !important; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .mini-stat-box, .opt-row, .request-card { transition: none; }
+        }
+    </style>
 </head>
 <body>
 
@@ -487,13 +719,13 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-<div class="position-relative d-inline-flex align-items-center">
-    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-        <option value="az">AZ</option>
-        <option value="en">EN</option>
-    </select>
-</div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
