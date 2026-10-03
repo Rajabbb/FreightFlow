@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#050816">
+<meta name="theme-color" content="#ffffff">
 <title>Arachi — Yükdaşıma Sorğularının Vahid İdarəetmə Platforması</title>
 <meta name="description" content="Arachi ilə yük sorğularınızı bir neçə daşıyıcıya eyni anda göndərin, gələn təklifləri tək paneldə toplayın və ən sərfəlisini seçin.">
 <link rel="icon" type="image/png" sizes="96x96" href="/static/arachi-logo.png">
@@ -15,20 +15,23 @@
 <script>document.documentElement.classList.add('js');</script>
 <style>
   :root{
-    --bg:#050816;
-    --bg-2:#0A1030;
-    --bg-3:#0E1640;
-    --surface:rgba(255,255,255,.045);
-    --surface-2:rgba(255,255,255,.075);
-    --line:rgba(255,255,255,.1);
-    --line-2:rgba(255,255,255,.18);
-    --text:#EEF2FF;
-    --muted:#9DA9CC;
-    --brand:#3A5BC7;
-    --blue:#6C8DFF;
-    --glow:#8EA8FF;
-    --mint:#5FE0B7;
-    --violet:#A78BFA;
+    /* loqonun rəngləri */
+    --brand:#0037B8;
+    --brand-2:#2F63E0;
+    --blue:#4D7CF2;
+    --pale:#CBD8F9;
+    --tint:#E7EEFF;
+    --ice:#F4F7FF;
+    --glow:#6C8DFF;
+    --ink:#0B1433;
+    --muted:#56627F;
+    --soft:#8893AE;
+    --line:#DCE4F7;
+    --line-2:#C5D3F5;
+    --ok:#12A06E;
+    --ok-tint:#E3F7EF;
+    --warn:#B7791F;
+    --warn-tint:#FFF4DB;
     --font-display:'Space Grotesk', sans-serif;
     --font-body:'Inter', sans-serif;
     --font-mono:'JetBrains Mono', monospace;
@@ -37,46 +40,41 @@
 
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
-  html{overflow-x:hidden;width:100%;background:var(--bg);}
+  html{overflow-x:hidden;width:100%;background:#fff;}
   body{
-    margin:0;
-    overflow-x:hidden;
-    width:100%;
-    font-family:var(--font-body);
-    background:var(--bg);
-    color:var(--text);
+    margin:0;overflow-x:hidden;width:100%;
+    font-family:var(--font-body);background:#fff;color:var(--ink);
     -webkit-font-smoothing:antialiased;
   }
   img{max-width:100%;display:block;}
   a{text-decoration:none;color:inherit;}
   .wrap{max-width:1180px;margin:0 auto;padding:0 28px;}
   :focus-visible{outline:3px solid var(--glow);outline-offset:3px;border-radius:8px;}
-  ::selection{background:rgba(108,141,255,.45);}
+  ::selection{background:rgba(77,124,242,.28);}
 
   /* ---------- reveal ---------- */
   .js .reveal{
-    opacity:0;transform:translateY(26px);
+    opacity:0;transform:translateY(24px);
     transition:opacity .8s var(--ease), transform .8s var(--ease);
     transition-delay:var(--d,0s);
   }
   .js .reveal.in{opacity:1;transform:none;}
 
-  /* ---------- NAV (üzən kapsul) ---------- */
+  /* ---------- NAV ---------- */
   .nav{position:sticky;top:14px;z-index:60;padding:0 14px;}
   .nav-inner{
     max-width:1080px;margin:0 auto;padding:9px 10px 9px 14px;
     display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:nowrap;
     border-radius:20px;
-    background:rgba(10,16,48,.58);
+    background:rgba(255,255,255,.78);
     border:1px solid var(--line);
-    -webkit-backdrop-filter:saturate(160%) blur(18px);
-    backdrop-filter:saturate(160%) blur(18px);
-    box-shadow:0 20px 40px -24px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06);
-    transition:background .25s ease, border-color .25s ease;
+    -webkit-backdrop-filter:saturate(180%) blur(18px);backdrop-filter:saturate(180%) blur(18px);
+    box-shadow:0 14px 34px -22px rgba(0,55,184,.45);
+    transition:background .25s ease, box-shadow .25s ease;
   }
-  .nav.scrolled .nav-inner{background:rgba(8,12,36,.86);border-color:var(--line-2);}
+  .nav.scrolled .nav-inner{background:rgba(255,255,255,.94);box-shadow:0 18px 40px -22px rgba(0,55,184,.55);}
   .brand{display:flex;align-items:center;gap:10px;min-width:0;flex-shrink:1;}
-  .brand-mark{height:38px;width:38px;object-fit:cover;border-radius:11px;flex-shrink:0;box-shadow:0 0 0 1px rgba(255,255,255,.18), 0 8px 20px -6px rgba(108,141,255,.7);transition:transform .3s var(--ease);}
+  .brand-mark{height:38px;width:38px;object-fit:cover;border-radius:11px;flex-shrink:0;box-shadow:0 0 0 1px var(--line), 0 8px 18px -8px rgba(0,55,184,.6);transition:transform .3s var(--ease);}
   .brand:hover .brand-mark{transform:rotate(-6deg) scale(1.06);}
   .nav-actions{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;flex-shrink:0;}
   .nav-actions>*{white-space:nowrap;}
@@ -95,11 +93,11 @@
   .icon-btn{
     display:inline-flex;align-items:center;justify-content:center;
     width:40px;height:40px;border-radius:50%;
-    color:var(--text);border:1px solid var(--line);background:var(--surface);
-    transition:border-color .2s ease, background .2s ease, transform .25s var(--ease);
+    color:var(--brand);border:1.5px solid var(--line);background:#fff;
+    transition:border-color .2s ease, background .2s ease, transform .25s var(--ease), box-shadow .2s ease;
     flex-shrink:0;
   }
-  .icon-btn:hover{border-color:var(--glow);background:var(--surface-2);transform:translateY(-2px);}
+  .icon-btn:hover{border-color:var(--brand);background:var(--tint);transform:translateY(-2px);box-shadow:0 10px 20px -12px rgba(0,55,184,.7);}
 
   .btn{
     font-family:var(--font-body);font-weight:600;font-size:14.5px;
@@ -108,89 +106,79 @@
     transition:transform .25s var(--ease), box-shadow .25s ease, background .2s ease, color .2s ease, border-color .2s ease;
   }
   .btn-solid{
-    background:linear-gradient(135deg,#4468E0 0%,#6C8DFF 55%,#8EA8FF 100%);
-    color:#fff;
-    box-shadow:0 12px 30px -10px rgba(108,141,255,.9), inset 0 1px 0 rgba(255,255,255,.35);
+    background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 100%);
+    color:#fff;box-shadow:0 12px 26px -10px rgba(0,55,184,.85), inset 0 1px 0 rgba(255,255,255,.25);
   }
   .btn-solid::after{
     content:"";position:absolute;top:0;left:-70%;width:50%;height:100%;
-    background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.38),transparent);
     transform:skewX(-20deg);transition:left .65s ease;
   }
-  .btn-solid:hover{transform:translateY(-3px);box-shadow:0 20px 38px -12px rgba(108,141,255,1), inset 0 1px 0 rgba(255,255,255,.4);}
+  .btn-solid:hover{transform:translateY(-3px);box-shadow:0 20px 34px -12px rgba(0,55,184,.9), inset 0 1px 0 rgba(255,255,255,.3);}
   .btn-solid:hover::after{left:130%;}
   .btn-solid:active{transform:translateY(0);}
-  .btn-ghost{background:var(--surface);color:var(--text);border:1px solid var(--line-2);}
-  .btn-ghost:hover{border-color:var(--glow);background:var(--surface-2);transform:translateY(-3px);}
+  .btn-ghost{background:#fff;color:var(--brand);border:1.5px solid var(--line-2);}
+  .btn-ghost:hover{border-color:var(--brand);background:var(--tint);transform:translateY(-3px);}
   .btn-lg{padding:17px 30px;font-size:16px;border-radius:15px;}
-  .btn-on-dark{background:#fff;color:#0A1030;box-shadow:0 14px 34px -12px rgba(255,255,255,.55);}
-  .btn-on-dark:hover{transform:translateY(-3px);box-shadow:0 22px 42px -14px rgba(142,168,255,.9);}
-  .btn-ghost-dark{background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.3);}
-  .btn-ghost-dark:hover{border-color:#fff;background:rgba(255,255,255,.14);transform:translateY(-3px);}
+  .btn-on-dark{background:#fff;color:var(--brand);box-shadow:0 14px 30px -12px rgba(0,20,90,.7);}
+  .btn-on-dark:hover{transform:translateY(-3px);box-shadow:0 22px 40px -14px rgba(0,20,90,.85);}
+  .btn-ghost-dark{background:rgba(255,255,255,.1);color:#fff;border:1.5px solid rgba(255,255,255,.45);}
+  .btn-ghost-dark:hover{border-color:#fff;background:rgba(255,255,255,.2);transform:translateY(-3px);}
 
   /* ---------- HERO ---------- */
   .hero{
     position:relative;overflow:hidden;
-    margin-top:-72px;           /* naviqasiya şüşəsi arxasından başlasın */
-    padding:176px 0 90px;
-    text-align:center;
+    margin-top:-72px;padding:176px 0 90px;text-align:center;
     background:
-      radial-gradient(1200px 600px at 50% -10%, #17236E 0%, rgba(23,35,110,0) 62%),
-      var(--bg);
+      radial-gradient(1100px 560px at 50% -10%, #E3EBFF 0%, rgba(227,235,255,0) 66%),
+      #fff;
   }
   .hero-bg{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden;}
-  .aurora{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;will-change:transform;}
-  .aurora.a1{width:560px;height:560px;left:-120px;top:40px;background:radial-gradient(circle at 40% 40%,#4468E0,rgba(68,104,224,0) 68%);animation:drift1 18s ease-in-out infinite;}
-  .aurora.a2{width:520px;height:520px;right:-140px;top:-60px;background:radial-gradient(circle at 50% 50%,#8B5CF6,rgba(139,92,246,0) 68%);animation:drift2 22s ease-in-out infinite;opacity:.42;}
-  .aurora.a3{width:460px;height:360px;left:35%;bottom:-120px;background:radial-gradient(circle at 50% 50%,#1FBF9A,rgba(31,191,154,0) 68%);animation:drift1 26s ease-in-out infinite reverse;opacity:.3;}
+  .aurora{position:absolute;border-radius:50%;filter:blur(70px);will-change:transform;}
+  .aurora.a1{width:520px;height:520px;left:-120px;top:40px;background:radial-gradient(circle at 40% 40%,#A9C0FF,rgba(169,192,255,0) 68%);opacity:.6;animation:drift1 18s ease-in-out infinite;}
+  .aurora.a2{width:480px;height:480px;right:-130px;top:-60px;background:radial-gradient(circle at 50% 50%,#C9BBFF,rgba(201,187,255,0) 68%);opacity:.5;animation:drift2 22s ease-in-out infinite;}
+  .aurora.a3{width:440px;height:340px;left:38%;bottom:-120px;background:radial-gradient(circle at 50% 50%,#9BE8D0,rgba(155,232,208,0) 68%);opacity:.4;animation:drift1 26s ease-in-out infinite reverse;}
   @keyframes drift1{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(60px,40px) scale(1.12);}}
   @keyframes drift2{0%,100%{transform:translate(0,0) scale(1);}50%{transform:translate(-70px,50px) scale(1.1);}}
   .hero-bg::before{
     content:"";position:absolute;inset:0;
     background-image:
-      linear-gradient(rgba(142,168,255,.09) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(142,168,255,.09) 1px, transparent 1px);
+      linear-gradient(rgba(0,55,184,.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,55,184,.07) 1px, transparent 1px);
     background-size:56px 56px;
     -webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 25%, #000 0%, transparent 72%);
     mask-image:radial-gradient(ellipse 80% 70% at 50% 25%, #000 0%, transparent 72%);
   }
-  .hero-bg::after{
-    content:"";position:absolute;left:0;right:0;bottom:0;height:200px;
-    background:linear-gradient(180deg,rgba(5,8,22,0),var(--bg));
-  }
+  .hero-bg::after{content:"";position:absolute;left:0;right:0;bottom:0;height:160px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff);}
 
   .hero-top{position:relative;z-index:2;max-width:980px;margin:0 auto;}
   .eyebrow{
     display:inline-flex;align-items:center;gap:10px;
     font-family:var(--font-mono);font-size:12px;letter-spacing:.12em;
-    color:#CFDAFF;background:var(--surface);
+    color:var(--brand);background:rgba(255,255,255,.85);
     padding:9px 18px;border-radius:999px;margin-bottom:30px;
     border:1px solid var(--line-2);
-    -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);
+    box-shadow:0 8px 22px -12px rgba(0,55,184,.5);
   }
   .eyebrow::before{
-    content:"";width:8px;height:8px;border-radius:50%;background:var(--mint);
-    box-shadow:0 0 0 0 rgba(95,224,183,.8);animation:live 2s ease-out infinite;
+    content:"";width:8px;height:8px;border-radius:50%;background:var(--ok);
+    box-shadow:0 0 0 0 rgba(18,160,110,.7);animation:live 2s ease-out infinite;
   }
-  @keyframes live{0%{box-shadow:0 0 0 0 rgba(95,224,183,.8);}100%{box-shadow:0 0 0 10px rgba(95,224,183,0);}}
+  @keyframes live{0%{box-shadow:0 0 0 0 rgba(18,160,110,.7);}100%{box-shadow:0 0 0 10px rgba(18,160,110,0);}}
 
   .hero h1{
     font-family:var(--font-display);font-weight:700;
-    font-size:clamp(38px, 7.4vw, 88px);
-    line-height:1.02;letter-spacing:-0.04em;
-    color:#fff;margin:0 0 28px;
+    font-size:clamp(38px, 7.2vw, 86px);
+    line-height:1.04;letter-spacing:-0.04em;color:var(--ink);margin:0 0 28px;
   }
   .hero h1 .accent{
-    background:linear-gradient(100deg,#8EA8FF 0%,#B79CFF 30%,#5FE0B7 62%,#8EA8FF 100%);
+    background:linear-gradient(100deg,var(--brand) 0%,#3F75F0 40%,#6C8DFF 55%,var(--brand) 100%);
     background-size:240% 100%;
     -webkit-background-clip:text;background-clip:text;color:transparent;
     animation:shimmer 8s ease-in-out infinite;
   }
   @keyframes shimmer{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
-  .hero-sub{
-    font-size:clamp(16px,1.6vw,19px);line-height:1.7;color:var(--muted);
-    max-width:660px;margin:0 auto 38px;
-  }
+  .hero-sub{font-size:clamp(16px,1.6vw,19px);line-height:1.7;color:var(--muted);max-width:660px;margin:0 auto 38px;}
   .hero-ctas{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-bottom:54px;}
   .hero-ctas>*{margin:0 7px 14px;}
 
@@ -200,47 +188,44 @@
   }
   .hero-point{
     position:relative;display:flex;gap:13px;align-items:flex-start;overflow:hidden;
-    background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 16px;
-    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
-    transition:transform .3s var(--ease), border-color .3s ease, background .3s ease;
+    background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:18px;padding:16px;
+    box-shadow:0 14px 30px -24px rgba(0,55,184,.6);
+    transition:transform .3s var(--ease), border-color .3s ease, box-shadow .3s ease;
   }
   .hero-point::before{
     content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s ease;
-    background:radial-gradient(240px 140px at var(--mx,50%) var(--my,0%), rgba(142,168,255,.22), transparent 70%);
+    background:radial-gradient(240px 140px at var(--mx,50%) var(--my,0%), rgba(77,124,242,.14), transparent 70%);
   }
-  .hero-point:hover{transform:translateY(-4px);border-color:var(--line-2);background:var(--surface-2);}
+  .hero-point:hover{transform:translateY(-4px);border-color:var(--line-2);box-shadow:0 22px 38px -24px rgba(0,55,184,.65);}
   .hero-point:hover::before{opacity:1;}
   .hero-point svg{
-    position:relative;flex-shrink:0;margin-top:1px;color:#04210F;
-    background:linear-gradient(135deg,#5FE0B7,#8DF0CF);
+    position:relative;flex-shrink:0;margin-top:1px;color:#fff;
+    background:linear-gradient(135deg,var(--brand),var(--brand-2));
     border-radius:50%;padding:5px;width:26px;height:26px;
-    box-shadow:0 8px 18px -4px rgba(95,224,183,.7);
+    box-shadow:0 8px 16px -6px rgba(0,55,184,.7);
   }
   .hero-point span{position:relative;font-size:13.5px;color:var(--muted);line-height:1.55;}
-  .hero-point b{display:block;color:#fff;font-size:15px;font-weight:600;margin-bottom:3px;}
+  .hero-point b{display:block;color:var(--ink);font-size:15px;font-weight:600;margin-bottom:3px;}
 
   /* --- marşrut səhnəsi --- */
   .stage{
     position:relative;z-index:2;margin:74px auto 0;max-width:1100px;
     border-radius:32px;
     background:
-      radial-gradient(520px 300px at 8% 50%, rgba(108,141,255,.26), transparent 70%),
-      radial-gradient(520px 300px at 95% 30%, rgba(95,224,183,.12), transparent 70%),
-      linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-    border:1px solid var(--line-2);
+      radial-gradient(520px 300px at 8% 50%, rgba(77,124,242,.14), transparent 70%),
+      radial-gradient(520px 300px at 95% 30%, rgba(18,160,110,.08), transparent 70%),
+      #fff;
+    border:1px solid var(--line);
     padding:20px;
-    box-shadow:0 60px 100px -40px rgba(0,0,0,.9), 0 0 80px -30px rgba(108,141,255,.5), inset 0 1px 0 rgba(255,255,255,.1);
-    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
-    transform-style:preserve-3d;
-    transition:transform .5s var(--ease);
-    overflow:hidden;
+    box-shadow:0 50px 90px -46px rgba(0,55,184,.55), 0 0 0 6px rgba(231,238,255,.6);
+    transform-style:preserve-3d;transition:transform .5s var(--ease);overflow:hidden;
   }
   .stage::before{
     content:"";position:absolute;inset:0;pointer-events:none;
-    background-image:radial-gradient(rgba(255,255,255,.14) 1px, transparent 1.4px);
+    background-image:radial-gradient(rgba(0,55,184,.14) 1px, transparent 1.4px);
     background-size:20px 20px;
-    -webkit-mask-image:linear-gradient(90deg, rgba(0,0,0,.9), transparent 55%, rgba(0,0,0,.6));
-    mask-image:linear-gradient(90deg, rgba(0,0,0,.9), transparent 55%, rgba(0,0,0,.6));
+    -webkit-mask-image:linear-gradient(90deg, rgba(0,0,0,.9), transparent 55%, rgba(0,0,0,.5));
+    mask-image:linear-gradient(90deg, rgba(0,0,0,.9), transparent 55%, rgba(0,0,0,.5));
   }
   .stage svg{position:relative;z-index:1;width:100%;height:auto;display:block;min-width:0;}
   .stage .svg-mobile{display:none;}
@@ -251,31 +236,30 @@
   }
   .net-label{
     position:absolute;z-index:3;font-family:var(--font-mono);font-size:11px;
-    color:#DDE6FF;letter-spacing:.1em;
-    background:rgba(255,255,255,.08);border:1px solid var(--line-2);
+    color:var(--brand);letter-spacing:.1em;
+    background:var(--tint);border:1px solid var(--line-2);
     padding:6px 12px;border-radius:999px;
-    -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);
   }
-  .net-line{fill:none;stroke:rgba(255,255,255,.12);stroke-width:1.4;}
+  .net-line{fill:none;stroke:var(--pale);stroke-width:1.5;}
   .net-flow{fill:none;stroke:url(#flowGrad);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:5 11;animation:dashmove 2.8s linear infinite;}
-  .net-flow.reverse{stroke:var(--mint);animation:dashmove-rev 3.2s linear infinite;animation-delay:.4s;}
+  .net-flow.reverse{stroke:var(--ok);animation:dashmove-rev 3.2s linear infinite;animation-delay:.4s;}
   @keyframes dashmove{to{stroke-dashoffset:-160;}}
   @keyframes dashmove-rev{to{stroke-dashoffset:160;}}
-  .card-bg{fill:rgba(255,255,255,.06);stroke:rgba(255,255,255,.16);stroke-width:1;}
-  .card-bg.ok{fill:rgba(95,224,183,.09);stroke:rgba(95,224,183,.55);}
-  .bar{fill:rgba(255,255,255,.22);}
-  .bar.dim{fill:rgba(255,255,255,.12);}
-  .avatar{fill:rgba(142,168,255,.5);}
-  .check-bg{fill:var(--mint);}
-  .check-mark{fill:none;stroke:#04210F;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
-  .net-hub{fill:var(--blue);}
+  .card-bg{fill:#fff;stroke:var(--line-2);stroke-width:1.2;filter:drop-shadow(0 8px 14px rgba(0,55,184,.1));}
+  .card-bg.ok{fill:#F3FCF8;stroke:var(--ok);}
+  .bar{fill:#C9D5F3;}
+  .bar.dim{fill:#E3EAFA;}
+  .avatar{fill:#9DB3F2;}
+  .check-bg{fill:var(--ok);}
+  .check-mark{fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+  .net-hub{fill:var(--brand);}
   .net-hub-core{fill:#fff;}
-  .net-hub-ring{fill:rgba(108,141,255,.16);stroke:rgba(142,168,255,.5);stroke-width:1;}
-  .net-pulse{fill:none;stroke:var(--glow);stroke-width:1.5;opacity:.6;animation:pulse 3s ease-out infinite;transform-box:fill-box;transform-origin:center;}
+  .net-hub-ring{fill:rgba(0,55,184,.08);stroke:rgba(0,55,184,.35);stroke-width:1;}
+  .net-pulse{fill:none;stroke:var(--brand);stroke-width:1.5;opacity:.5;animation:pulse 3s ease-out infinite;transform-box:fill-box;transform-origin:center;}
   .net-pulse.p2{animation-delay:1.5s;}
-  @keyframes pulse{0%{transform:scale(.6);opacity:.75;}100%{transform:scale(3.2);opacity:0;}}
-  .net-packet{fill:#fff;}
-  .net-packet.mint{fill:var(--mint);}
+  @keyframes pulse{0%{transform:scale(.6);opacity:.65;}100%{transform:scale(3.2);opacity:0;}}
+  .net-packet{fill:var(--brand);}
+  .net-packet.mint{fill:var(--ok);}
 
   /* ---------- SECTION shared ---------- */
   section{padding:110px 0;position:relative;}
@@ -283,218 +267,317 @@
   .kicker{
     display:inline-flex;align-items:center;gap:10px;
     font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;
-    color:var(--glow);text-transform:uppercase;margin:0 0 16px;
+    color:var(--brand);text-transform:uppercase;margin:0 0 16px;
   }
-  .kicker::before{content:"";width:28px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--blue),var(--mint));}
+  .kicker::before{content:"";width:28px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--brand),var(--glow));}
   .section-head h2{
     font-family:var(--font-display);font-weight:700;
-    font-size:clamp(30px,4.4vw,54px);color:#fff;
+    font-size:clamp(30px,4.2vw,52px);color:var(--ink);
     letter-spacing:-0.035em;margin:0 0 18px;line-height:1.08;
   }
   .section-head p{font-size:17.5px;color:var(--muted);line-height:1.65;margin:0;}
   .center{text-align:center;margin-left:auto;margin-right:auto;}
-  .center .kicker::after{content:"";width:28px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--mint),var(--blue));}
+  .center .kicker::after{content:"";width:28px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--glow),var(--brand));}
+
+  /* ---------- MOCK UI (real panelə oxşar nümunələr) ---------- */
+  .mock{
+    background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;
+    box-shadow:0 30px 60px -34px rgba(0,55,184,.5), 0 2px 0 rgba(255,255,255,.8) inset;
+    font-family:var(--font-body);font-size:12px;color:var(--ink);text-align:left;
+  }
+  .mock-top{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--line);background:#F7F9FF;}
+  .mock-top .dot{width:9px;height:9px;border-radius:50%;background:var(--pale);display:block;}
+  .mock-top .dot:nth-child(1){background:#FFB4AE;} .mock-top .dot:nth-child(2){background:#FFE3A1;} .mock-top .dot:nth-child(3){background:#A8E8CC;}
+  .mock-title{margin-left:8px;font-weight:600;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mock-body{padding:14px;display:flex;flex-direction:column;gap:10px;}
+  .m-label{font-size:10.5px;color:var(--soft);font-weight:600;margin-bottom:4px;letter-spacing:.01em;}
+  .m-label i{color:#E5484D;font-style:normal;}
+  .m-input{border:1px solid var(--line);border-radius:9px;padding:8px 10px;background:#F8FAFF;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .m-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .m-split{display:flex;gap:6px;}
+  .m-split .m-input:first-child{flex:0 0 auto;padding-right:16px;position:relative;}
+  .m-split .m-input:first-child::after{content:"▾";position:absolute;right:6px;color:var(--soft);font-size:10px;top:8px;}
+  .m-btn{
+    background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;border-radius:10px;
+    padding:10px 12px;font-weight:600;text-align:center;font-size:12px;
+    box-shadow:0 10px 18px -10px rgba(0,55,184,.8);
+  }
+  .m-btn.ghost{background:#fff;color:var(--brand);border:1px solid var(--line-2);box-shadow:none;}
+  .m-btn.sm{padding:6px 10px;font-size:11px;border-radius:8px;white-space:nowrap;}
+  .m-ai{
+    display:flex;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;
+    background:linear-gradient(135deg,#EEF2FF,#F3EEFF);border:1px solid #D9DFFF;
+    font-weight:600;color:#3B3FB5;font-size:12px;
+  }
+  .m-ai svg{flex-shrink:0;}
+  .m-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:10.5px;font-weight:600;white-space:nowrap;}
+  .m-badge.ok{background:var(--ok-tint);color:var(--ok);border:1px solid rgba(18,160,110,.3);}
+  .m-badge.info{background:var(--tint);color:var(--brand);border:1px solid var(--line-2);}
+  .m-badge.warn{background:var(--warn-tint);color:var(--warn);border:1px solid rgba(183,121,31,.3);}
+  .m-badge.mute{background:#F1F3F8;color:var(--muted);border:1px solid var(--line);}
+  .m-badge.bad{background:#FFECEC;color:#C7373C;border:1px solid rgba(199,55,60,.3);}
+  .m-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 11px;border:1px solid var(--line);border-radius:11px;background:#fff;}
+  .m-row.win{border-color:var(--ok);background:#F3FCF8;box-shadow:0 10px 20px -14px rgba(18,160,110,.8);}
+  .m-name{font-weight:600;font-size:12px;color:var(--ink);line-height:1.2;}
+  .m-sub{font-size:10.5px;color:var(--soft);margin-top:2px;}
+  .m-price{font-weight:700;color:var(--ok);font-size:12.5px;white-space:nowrap;}
+  .m-radio{display:flex;align-items:center;gap:8px;font-weight:600;font-size:12px;}
+  .m-radio i{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--line-2);display:inline-block;flex-shrink:0;background:#fff;position:relative;}
+  .m-radio.on i{border-color:var(--brand);}
+  .m-radio.on i::after{content:"";position:absolute;inset:2.5px;border-radius:50%;background:var(--brand);}
+  .m-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+  .m-stat{border:1px solid var(--line);border-radius:10px;padding:7px 4px;text-align:center;background:#fff;}
+  .m-stat b{display:block;font-size:15px;line-height:1;font-weight:800;color:var(--ink);}
+  .m-stat span{display:block;font-size:8.5px;color:var(--muted);font-weight:700;margin-top:4px;line-height:1.1;}
+  .m-stat.a b{color:var(--brand);} .m-stat.b b{color:var(--ok);} .m-stat.d b{color:#C98A14;} .m-stat.e b{color:#C7373C;}
+  .m-table{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden;}
+  .m-tr{display:grid;gap:8px;align-items:center;padding:9px 11px;border-top:1px solid var(--line);font-size:11.5px;}
+  .m-tr:first-child{border-top:0;}
+  .m-tr.head{background:#F7F9FF;font-size:10px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.04em;}
+  .m-tr.c4{grid-template-columns:.9fr 1.5fr 1fr auto;}
+  .m-tr.c4b{grid-template-columns:1.5fr 1fr .8fr auto;}
+  .m-tr.c3{grid-template-columns:1.2fr 1.6fr .7fr;}
+  .m-tr.win{background:#F3FCF8;}
+  .m-tr b{font-weight:700;}
+  .m-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .m-chip{padding:5px 10px;border-radius:999px;border:1px solid var(--line-2);background:#fff;font-size:11px;font-weight:600;color:var(--brand);}
+  .m-chip.on{background:var(--brand);color:#fff;border-color:var(--brand);}
+  .m-chip small{opacity:.7;font-weight:600;margin-left:3px;}
+  .m-drop{border:1.5px dashed var(--line-2);border-radius:12px;padding:11px;display:flex;align-items:center;gap:10px;background:#F8FAFF;}
+  .m-file{width:30px;height:34px;border-radius:7px;background:linear-gradient(135deg,#1B9E5E,#3BC585);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:11px;flex-shrink:0;}
+  .m-link{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;background:var(--tint);border:1px solid var(--line-2);color:var(--brand);font-family:var(--font-mono);font-size:10.5px;overflow:hidden;white-space:nowrap;}
+  .m-link span{overflow:hidden;text-overflow:ellipsis;}
+  .m-menu{border:1px solid var(--line);border-radius:12px;padding:6px;background:#fff;box-shadow:0 18px 30px -20px rgba(0,55,184,.6);}
+  .m-menu-item{padding:8px 9px;border-radius:9px;}
+  .m-menu-item.on{background:var(--tint);}
+  .m-menu-item b{display:block;font-size:11.5px;}
+  .m-menu-item small{display:block;color:var(--soft);font-size:10px;margin-top:2px;line-height:1.35;}
+  .m-text{border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:#F8FAFF;font-size:11.5px;line-height:1.5;color:var(--ink);}
+  .m-sum{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11.5px;padding:2px 2px;}
+  .m-sum.total{border-top:1px dashed var(--line-2);padding-top:9px;margin-top:2px;font-weight:700;}
+  .m-sum.total b{color:var(--ok);font-size:14px;}
+  .m-ver{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 11px;border-radius:10px;border:1px solid var(--line);background:#F8FAFF;font-size:11.5px;}
+  .m-ver.last{background:var(--tint);border-color:var(--brand);color:var(--brand);}
+  .m-ver b{font-weight:700;}
 
   /* ---------- HOW IT WORKS ---------- */
   .bg-ice{
     background:
-      radial-gradient(800px 380px at 0% 0%, rgba(68,104,224,.22), transparent 70%),
-      radial-gradient(700px 360px at 100% 100%, rgba(139,92,246,.16), transparent 70%),
-      var(--bg-2);
+      radial-gradient(800px 380px at 0% 0%, rgba(77,124,242,.1), transparent 70%),
+      radial-gradient(700px 360px at 100% 100%, rgba(201,187,255,.2), transparent 70%),
+      var(--ice);
     border-top:1px solid var(--line);border-bottom:1px solid var(--line);
   }
   .flow-wrap{display:flex;flex-direction:column;gap:22px;min-width:0;}
   .flow-list{display:grid;grid-template-columns:1fr;gap:12px;position:relative;}
-  @media(min-width:900px){
-    .flow-list{grid-template-columns:repeat(4,1fr);gap:16px;}
-  }
+  @media(min-width:900px){ .flow-list{grid-template-columns:repeat(4,1fr);gap:16px;} }
   .flow-item{
     position:relative;overflow:hidden;
     display:flex;gap:14px;align-items:flex-start;
     padding:22px 22px 26px;cursor:pointer;
-    background:var(--surface);border:1px solid var(--line);border-radius:20px;
+    background:#fff;border:1px solid var(--line);border-radius:20px;
+    box-shadow:0 14px 30px -26px rgba(0,55,184,.6);
     transition:transform .35s var(--ease), background .3s ease, border-color .3s ease, box-shadow .3s ease;
   }
   .flow-item .flow-num{margin-right:0;}
-  .flow-item:hover{transform:translateY(-4px);border-color:var(--line-2);background:var(--surface-2);}
+  .flow-item:hover{transform:translateY(-4px);border-color:var(--line-2);box-shadow:0 22px 38px -26px rgba(0,55,184,.7);}
   .flow-item.active{
-    background:linear-gradient(160deg, rgba(108,141,255,.22), rgba(108,141,255,.06));
-    border-color:rgba(142,168,255,.6);
-    box-shadow:0 24px 50px -26px rgba(108,141,255,.8);
+    background:linear-gradient(160deg,#fff,var(--tint));
+    border-color:var(--brand);
+    box-shadow:0 26px 48px -26px rgba(0,55,184,.7);
   }
-  .flow-progress{position:absolute;left:0;bottom:0;height:3px;width:100%;background:rgba(255,255,255,.06);}
-  .flow-progress::after{
-    content:"";position:absolute;left:0;top:0;height:100%;width:0;
-    background:linear-gradient(90deg,var(--blue),var(--mint));border-radius:3px;
-  }
+  .flow-progress{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--tint);}
+  .flow-progress::after{content:"";position:absolute;left:0;top:0;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--glow));border-radius:3px;}
   .flow-item.active .flow-progress::after{width:100%;}
   .flow-list.autoplay .flow-item.active .flow-progress::after{width:0;animation:fillbar var(--dur,6s) linear forwards;}
   @keyframes fillbar{to{width:100%;}}
   .flow-num{
     font-family:var(--font-mono);font-weight:500;font-size:13px;
-    color:var(--muted);flex-shrink:0;padding:4px 8px;border-radius:8px;
-    background:rgba(255,255,255,.06);border:1px solid var(--line);height:fit-content;
+    color:var(--soft);flex-shrink:0;padding:4px 8px;border-radius:8px;
+    background:var(--ice);border:1px solid var(--line);height:fit-content;
     transition:color .2s ease, background .2s ease, border-color .2s ease;
   }
-  .flow-item.active .flow-num{color:#04210F;background:var(--mint);border-color:var(--mint);font-weight:700;}
-  .flow-text b{display:block;font-size:16.5px;color:#fff;margin-bottom:5px;letter-spacing:-.01em;}
+  .flow-item.active .flow-num{color:#fff;background:var(--brand);border-color:var(--brand);font-weight:700;}
+  .flow-text b{display:block;font-size:16.5px;color:var(--ink);margin-bottom:5px;letter-spacing:-.01em;}
   .flow-text span{font-size:14px;color:var(--muted);line-height:1.55;}
 
   .flow-detail{
     position:relative;overflow:hidden;
-    display:grid;grid-template-columns:1fr;gap:30px;align-items:center;
+    display:grid;grid-template-columns:1fr;gap:34px;align-items:center;
     padding:40px 34px;border-radius:28px;
     background:
-      radial-gradient(500px 280px at 100% 0%, rgba(108,141,255,.22), transparent 70%),
-      linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-    border:1px solid var(--line-2);
-    box-shadow:0 40px 80px -40px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.08);
+      radial-gradient(480px 280px at 100% 0%, rgba(77,124,242,.12), transparent 70%),
+      #fff;
+    border:1px solid var(--line);
+    box-shadow:0 40px 80px -50px rgba(0,55,184,.55);
     min-height:340px;
   }
-  @media(min-width:900px){
-    .flow-detail{grid-template-columns:1.05fr .95fr;padding:52px 56px;}
-  }
+  @media(min-width:900px){ .flow-detail{grid-template-columns:.95fr 1.05fr;padding:48px 52px;} }
   .flow-copy{position:relative;z-index:2;min-width:0;}
   .flow-detail-icon{
     width:60px;height:60px;border-radius:18px;
-    background:linear-gradient(135deg,#4468E0,#8EA8FF);
+    background:linear-gradient(135deg,var(--brand),var(--blue));
     display:flex;align-items:center;justify-content:center;color:#fff;margin-bottom:26px;
-    box-shadow:0 18px 34px -12px rgba(108,141,255,.9), inset 0 1px 0 rgba(255,255,255,.4);
+    box-shadow:0 18px 30px -12px rgba(0,55,184,.8), inset 0 1px 0 rgba(255,255,255,.35);
   }
-  .flow-detail h3{
-    font-family:var(--font-display);font-size:clamp(24px,3vw,34px);font-weight:700;
-    color:#fff;margin:0 0 14px;letter-spacing:-.025em;
-  }
+  .flow-detail h3{font-family:var(--font-display);font-size:clamp(24px,3vw,34px);font-weight:700;color:var(--ink);margin:0 0 14px;letter-spacing:-.025em;}
   .flow-detail p{font-size:16.5px;line-height:1.75;color:var(--muted);margin:0;max-width:520px;}
 
-  /* illüstrasiya səhnələri */
-  .scene-box{
-    position:relative;z-index:1;min-width:0;
-    aspect-ratio:360/250;width:100%;max-width:440px;margin:0 auto;
-    border-radius:22px;background:rgba(5,8,22,.55);border:1px solid var(--line);
-    overflow:hidden;
-  }
-  .scene-box::before{
-    content:"";position:absolute;inset:0;
-    background-image:radial-gradient(rgba(255,255,255,.12) 1px, transparent 1.4px);background-size:18px 18px;
-    -webkit-mask-image:radial-gradient(ellipse at center,#000,transparent 80%);mask-image:radial-gradient(ellipse at center,#000,transparent 80%);
-  }
-  .scene{position:absolute;inset:0;width:100%;height:100%;opacity:0;transform:scale(.96) translateY(8px);transition:opacity .5s ease, transform .6s var(--ease);pointer-events:none;}
-  .flow-detail[data-scene="1"] .scene-1,
-  .flow-detail[data-scene="2"] .scene-2,
-  .flow-detail[data-scene="3"] .scene-3,
-  .flow-detail[data-scene="4"] .scene-4{opacity:1;transform:none;}
-  .sc-card{fill:rgba(255,255,255,.07);stroke:rgba(255,255,255,.2);stroke-width:1;}
-  .sc-bar{fill:rgba(255,255,255,.24);}
-  .sc-bar.blue{fill:var(--blue);}
-  .sc-bar.mint{fill:var(--mint);}
-  .sc-line{fill:none;stroke:rgba(255,255,255,.18);stroke-width:1.4;}
-  .sc-flow{fill:none;stroke:var(--glow);stroke-width:2;stroke-dasharray:5 9;stroke-linecap:round;animation:dashmove 2.4s linear infinite;}
-  .sc-node{fill:#fff;}
-  .sc-btn{fill:url(#btnGrad);}
-  .caret{animation:blink 1.1s steps(1) infinite;}
-  @keyframes blink{50%{opacity:0;}}
-  .rise{animation:rise 3.2s var(--ease) infinite;}
-  .rise.d2{animation-delay:.4s;}.rise.d3{animation-delay:.8s;}
-  @keyframes rise{0%{transform:translateY(26px);opacity:0;}25%{transform:none;opacity:1;}85%{transform:none;opacity:1;}100%{transform:translateY(-6px);opacity:0;}}
-  .grow{transform-box:fill-box;transform-origin:left center;animation:grow 3.4s var(--ease) infinite;}
-  .grow.g2{animation-delay:.25s;}.grow.g3{animation-delay:.5s;}
-  @keyframes grow{0%{transform:scaleX(0);}35%,85%{transform:scaleX(1);}100%{transform:scaleX(0);}}
-  .winner-glow{animation:winner 2.4s ease-in-out infinite;}
-  @keyframes winner{0%,100%{opacity:.45;}50%{opacity:1;}}
+  /* addım nümunələri (üst-üstə düzülür, aktiv olan görünür) */
+  .mock-stage{display:grid;min-width:0;position:relative;z-index:1;}
+  .mock-scene{grid-area:1/1;opacity:0;visibility:hidden;transform:translateY(10px) scale(.985);transition:opacity .45s ease, transform .55s var(--ease), visibility 0s linear .45s;}
+  .flow-detail[data-scene="1"] .s1,
+  .flow-detail[data-scene="2"] .s2,
+  .flow-detail[data-scene="3"] .s3,
+  .flow-detail[data-scene="4"] .s4{opacity:1;visibility:visible;transform:none;transition:opacity .45s ease, transform .55s var(--ease), visibility 0s;}
+  .mock-scene .rv{opacity:0;transform:translateY(8px);}
+  .flow-detail[data-scene="1"] .s1 .rv,
+  .flow-detail[data-scene="2"] .s2 .rv,
+  .flow-detail[data-scene="3"] .s3 .rv,
+  .flow-detail[data-scene="4"] .s4 .rv{opacity:1;transform:none;transition:opacity .5s ease, transform .5s var(--ease);transition-delay:calc(var(--i,0) * .09s + .12s);}
 
-  /* ---------- FEATURES (bento) ---------- */
+  /* ---------- 3 KART ---------- */
   .bento{display:grid;grid-template-columns:1fr;gap:20px;min-width:0;}
   @media(min-width:860px){
     .bento{grid-template-columns:repeat(6,1fr);}
     .bento .card:nth-child(1){grid-column:span 3;}
     .bento .card:nth-child(2){grid-column:span 3;}
-    .bento .card:nth-child(3){grid-column:span 6;display:grid;grid-template-columns:1.1fr .9fr;gap:30px;align-items:center;}
+    .bento .card:nth-child(3){grid-column:span 6;display:grid;grid-template-columns:.9fr 1.1fr;gap:34px;align-items:center;}
   }
   .card{
     position:relative;overflow:hidden;
-    border:1px solid var(--line);border-radius:26px;padding:34px 32px;
-    background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    border:1px solid var(--line);border-radius:26px;padding:34px 32px;background:#fff;
+    box-shadow:0 20px 44px -34px rgba(0,55,184,.5);
     transition:transform .4s var(--ease), border-color .3s ease, box-shadow .4s ease;
   }
   .card::before{
     content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .35s ease;
-    background:radial-gradient(380px 260px at var(--mx,50%) var(--my,0%), rgba(142,168,255,.2), transparent 70%);
+    background:radial-gradient(380px 260px at var(--mx,50%) var(--my,0%), rgba(77,124,242,.1), transparent 70%);
   }
-  .card:hover{transform:translateY(-6px);border-color:rgba(142,168,255,.5);box-shadow:0 36px 70px -34px rgba(108,141,255,.7);}
+  .card:hover{transform:translateY(-6px);border-color:var(--line-2);box-shadow:0 36px 64px -34px rgba(0,55,184,.6);}
   .card:hover::before{opacity:1;}
   .card-body{position:relative;z-index:1;min-width:0;}
   .card-icon{
     width:52px;height:52px;border-radius:16px;
-    background:linear-gradient(135deg,rgba(108,141,255,.3),rgba(108,141,255,.1));
-    border:1px solid rgba(142,168,255,.4);color:#CFDAFF;
+    background:var(--tint);border:1px solid var(--line-2);color:var(--brand);
     display:flex;align-items:center;justify-content:center;margin-bottom:22px;
     transition:transform .45s var(--ease), background .3s ease, color .3s ease;
   }
-  .card:hover .card-icon{transform:rotate(-8deg) scale(1.1);background:linear-gradient(135deg,#4468E0,#8EA8FF);color:#fff;}
-  .card h3{font-family:var(--font-display);font-size:22px;font-weight:700;color:#fff;margin:0 0 12px;letter-spacing:-.02em;}
+  .card:hover .card-icon{transform:rotate(-8deg) scale(1.1);background:linear-gradient(135deg,var(--brand),var(--blue));color:#fff;}
+  .card h3{font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--ink);margin:0 0 12px;letter-spacing:-.02em;}
   .card p{font-size:15.5px;line-height:1.7;color:var(--muted);margin:0;}
-  .card-art{position:relative;z-index:1;margin-top:26px;border-radius:18px;background:rgba(5,8,22,.5);border:1px solid var(--line);overflow:hidden;}
-  .card-art svg{display:block;width:100%;height:auto;}
+  .card-art{position:relative;z-index:1;margin-top:26px;min-width:0;}
   .bento .card:nth-child(3) .card-art{margin-top:0;}
   @media(max-width:859px){ .bento .card:nth-child(3) .card-art{margin-top:26px;} }
+
+  /* ---------- İMKANLAR (6) ---------- */
+  .bg-ice-2{background:var(--ice);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .feat-grid{display:grid;grid-template-columns:1fr;gap:22px;min-width:0;}
+  @media(min-width:760px){ .feat-grid{grid-template-columns:repeat(2,1fr);} }
+  @media(min-width:1060px){ .feat-grid{grid-template-columns:repeat(3,1fr);} }
+  .feat{
+    position:relative;overflow:hidden;display:flex;flex-direction:column;
+    background:#fff;border:1px solid var(--line);border-radius:24px;padding:28px 26px 26px;
+    box-shadow:0 20px 44px -36px rgba(0,55,184,.6);
+    transition:transform .4s var(--ease), box-shadow .4s ease, border-color .3s ease;
+  }
+  .feat:hover{transform:translateY(-6px);border-color:var(--line-2);box-shadow:0 36px 62px -34px rgba(0,55,184,.65);}
+  .feat-num{font-family:var(--font-mono);font-size:12px;color:var(--brand);letter-spacing:.1em;margin-bottom:14px;display:inline-flex;align-items:center;gap:8px;}
+  .feat-num::after{content:"";width:22px;height:1.5px;background:var(--pale);}
+  .feat h3{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--ink);margin:0 0 10px;letter-spacing:-.02em;line-height:1.2;}
+  .feat p{font-size:14.5px;line-height:1.65;color:var(--muted);margin:0 0 22px;}
+  .feat-art{margin-top:auto;border-radius:16px;padding:14px;background:linear-gradient(160deg,var(--ice),#fff);border:1px solid var(--line);}
+  .feat-art .mock{box-shadow:0 14px 28px -22px rgba(0,55,184,.6);}
+  .feat-art .mock-body{gap:8px;padding:12px;}
+
+  /* ---------- FAQ ---------- */
+  .faq{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:14px;}
+  .faq-item{
+    background:#fff;border:1px solid var(--line);border-radius:20px;
+    box-shadow:0 16px 36px -32px rgba(0,55,184,.6);
+    transition:border-color .3s ease, box-shadow .3s ease;
+  }
+  .faq-item[open]{border-color:var(--brand);box-shadow:0 26px 50px -30px rgba(0,55,184,.7);}
+  .faq-item summary{
+    list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:18px;
+    padding:22px 26px;font-family:var(--font-display);font-weight:600;font-size:clamp(17px,2vw,20px);
+    letter-spacing:-.015em;color:var(--ink);
+  }
+  .faq-item summary::-webkit-details-marker{display:none;}
+  .faq-item summary:hover{color:var(--brand);}
+  .faq-icon{
+    position:relative;flex-shrink:0;width:34px;height:34px;border-radius:50%;
+    background:var(--tint);border:1px solid var(--line-2);
+    transition:background .3s ease, transform .4s var(--ease);
+  }
+  .faq-icon::before,.faq-icon::after{
+    content:"";position:absolute;left:50%;top:50%;width:12px;height:2px;margin:-1px 0 0 -6px;border-radius:2px;background:var(--brand);
+    transition:transform .35s var(--ease), background .3s ease;
+  }
+  .faq-icon::after{transform:rotate(90deg);}
+  .faq-item[open] .faq-icon{background:var(--brand);transform:rotate(180deg);}
+  .faq-item[open] .faq-icon::before,.faq-item[open] .faq-icon::after{background:#fff;}
+  .faq-item[open] .faq-icon::after{transform:rotate(0deg);}
+  .faq-a{padding:0 26px 24px;animation:faqin .45s var(--ease);}
+  .faq-a p{margin:0;font-size:16px;line-height:1.75;color:var(--muted);max-width:720px;}
+  @keyframes faqin{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:none;}}
 
   /* ---------- CTA BAND ---------- */
   .cta-band{
     position:relative;overflow:hidden;text-align:center;
-    border-radius:36px;padding:96px 40px;
+    border-radius:36px;padding:92px 40px;
     background:
-      radial-gradient(700px 360px at 12% 0%, rgba(68,104,224,.7), transparent 62%),
-      radial-gradient(700px 360px at 90% 100%, rgba(139,92,246,.55), transparent 62%),
-      linear-gradient(150deg,#0B1240,#0A0F33);
-    border:1px solid var(--line-2);
-    box-shadow:0 60px 110px -50px rgba(68,104,224,.8);
+      radial-gradient(700px 360px at 12% 0%, rgba(108,141,255,.65), transparent 62%),
+      radial-gradient(700px 360px at 92% 100%, rgba(201,187,255,.45), transparent 62%),
+      linear-gradient(150deg,#0037B8,#0A2E9A);
+    box-shadow:0 60px 100px -50px rgba(0,55,184,.85);
   }
   .cta-band::before{
     content:"";position:absolute;inset:0;
     background-image:
-      linear-gradient(rgba(255,255,255,.07) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,.07) 1px, transparent 1px);
+      linear-gradient(rgba(255,255,255,.09) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.09) 1px, transparent 1px);
     background-size:48px 48px;
     -webkit-mask-image:radial-gradient(ellipse 70% 80% at 50% 50%, #000, transparent 78%);
     mask-image:radial-gradient(ellipse 70% 80% at 50% 50%, #000, transparent 78%);
   }
   .cta-band::after{
     content:"";position:absolute;left:50%;top:-40%;width:620px;height:620px;margin-left:-310px;border-radius:50%;
-    border:1.5px dashed rgba(255,255,255,.14);animation:spin 60s linear infinite;
+    border:1.5px dashed rgba(255,255,255,.22);animation:spin 60s linear infinite;
   }
   @keyframes spin{to{transform:rotate(360deg);}}
   .cta-band-inner{position:relative;z-index:1;}
-  .cta-band h2{
-    font-family:var(--font-display);font-weight:700;color:#fff;
-    font-size:clamp(30px,5vw,58px);margin:0 0 18px;letter-spacing:-.035em;line-height:1.06;
-  }
-  .cta-band p{color:rgba(255,255,255,.78);font-size:18px;margin:0 0 40px;}
+  .cta-band h2{font-family:var(--font-display);font-weight:700;color:#fff;font-size:clamp(30px,5vw,56px);margin:0 0 18px;letter-spacing:-.035em;line-height:1.06;}
+  .cta-band p{color:rgba(255,255,255,.85);font-size:18px;margin:0 0 40px;}
   .cta-band-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:14px;}
   .cta-band-actions>*{margin:0 7px 10px;}
 
   /* ---------- FOOTER ---------- */
-  footer{border-top:1px solid var(--line);padding:56px 0 40px;background:linear-gradient(180deg,var(--bg),#03050F);}
+  footer{border-top:1px solid var(--line);padding:56px 0 40px;background:linear-gradient(180deg,#fff,var(--ice));}
   .foot-grid{display:flex;flex-direction:column;gap:26px;align-items:center;text-align:center;}
   .foot-brand{display:flex;align-items:center;justify-content:center;}
-  .foot-brand img{border-radius:10px;box-shadow:0 0 0 1px rgba(255,255,255,.16);}
-  .foot-copy{font-size:13px;color:var(--muted);margin-top:18px;text-align:center;}
+  .foot-brand img{border-radius:10px;box-shadow:0 0 0 1px var(--line), 0 10px 20px -12px rgba(0,55,184,.6);}
+  .foot-copy{font-size:13px;color:var(--soft);margin-top:18px;text-align:center;}
   .foot-copy a{transition:color .2s ease, opacity .2s ease;}
-  .foot-copy a:hover{color:#fff;opacity:1 !important;}
+  .foot-copy a:hover{color:var(--brand);opacity:1 !important;}
 
   @media(max-width:640px){
     .hero{padding:140px 0 60px;}
     section{padding:78px 0;}
     .cta-band{padding:64px 22px;border-radius:28px;}
-    .flow-detail{padding:30px 22px;}
-    .card{padding:28px 24px;}
+    .flow-detail{padding:28px 18px;}
+    .card{padding:28px 22px;}
+    .feat{padding:24px 20px 20px;}
     .wrap{padding:0 20px;}
+    .faq-item summary{padding:18px 18px;}
+    .faq-a{padding:0 18px 20px;}
+    .m-stat span{font-size:7.5px;}
   }
   @media (prefers-reduced-motion: reduce){
-    .aurora,.eyebrow::before,.hero h1 .accent,.net-flow,.net-flow.reverse,.net-pulse,.sc-flow,.caret,.rise,.grow,.winner-glow,.cta-band::after{animation:none !important;}
+    .aurora,.eyebrow::before,.hero h1 .accent,.net-flow,.net-flow.reverse,.net-pulse,.cta-band::after,.faq-a{animation:none !important;}
     .net-packet{display:none;}
     .js .reveal{opacity:1;transform:none;transition:none;}
-    .grow{transform:none;} .rise{opacity:1;}
+    .mock-scene .rv{transition:none !important;}
   }
 </style>
 </head>
@@ -561,34 +644,27 @@
     </div>
 
     <div class="stage net-wrap" id="stage" role="img" aria-label="Bir mərkəzi sorğu düyünündən beş daşıyıcıya gedən və geri təklif gətirən şəbəkə diaqramı">
-      <!-- masaüstü -->
       <svg class="svg-desktop" viewBox="0 0 1000 440" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <linearGradient id="flowGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0" stop-color="#6C8DFF"/>
-            <stop offset="1" stop-color="#CFDAFF"/>
+            <stop offset="0" stop-color="#0037B8"/>
+            <stop offset="1" stop-color="#6C8DFF"/>
           </linearGradient>
         </defs>
-
-        <!-- bağlantı xətləri -->
         <path class="net-line" d="M130,220 C330,220 540,50 790,50"/>
         <path class="net-line" d="M130,220 C330,220 540,135 790,135"/>
         <path class="net-line" d="M130,220 C330,220 540,220 790,220"/>
         <path class="net-line" d="M130,220 C330,220 540,305 790,305"/>
         <path class="net-line" d="M130,220 C330,220 540,390 790,390"/>
 
-        <!-- gedən axın -->
         <path class="net-flow" d="M130,220 C330,220 540,50 790,50"/>
         <path class="net-flow" d="M130,220 C330,220 540,135 790,135"/>
         <path class="net-flow" d="M130,220 C330,220 540,220 790,220"/>
         <path class="net-flow" d="M130,220 C330,220 540,305 790,305"/>
         <path class="net-flow" d="M130,220 C330,220 540,390 790,390"/>
-
-        <!-- qayıdan axın -->
         <path class="net-flow reverse" d="M790,135 C540,135 330,220 130,220"/>
         <path class="net-flow reverse" d="M790,305 C540,305 330,220 130,220"/>
 
-        <!-- hərəkət edən nöqtələr -->
         <circle class="net-packet" r="4"><animateMotion dur="3.4s" repeatCount="indefinite" path="M130,220 C330,220 540,50 790,50"/></circle>
         <circle class="net-packet" r="4"><animateMotion dur="3.4s" begin="-1.2s" repeatCount="indefinite" path="M130,220 C330,220 540,135 790,135"/></circle>
         <circle class="net-packet" r="4"><animateMotion dur="3.4s" begin="-2.3s" repeatCount="indefinite" path="M130,220 C330,220 540,220 790,220"/></circle>
@@ -597,51 +673,25 @@
         <circle class="net-packet mint" r="4.5"><animateMotion dur="3.8s" begin="-0.9s" repeatCount="indefinite" path="M790,135 C540,135 330,220 130,220"/></circle>
         <circle class="net-packet mint" r="4.5"><animateMotion dur="3.8s" begin="-2.6s" repeatCount="indefinite" path="M790,305 C540,305 330,220 130,220"/></circle>
 
-        <!-- mərkəz -->
         <circle class="net-pulse" cx="130" cy="220" r="18"/>
         <circle class="net-pulse p2" cx="130" cy="220" r="18"/>
         <circle class="net-hub-ring" cx="130" cy="220" r="34"/>
         <circle class="net-hub" cx="130" cy="220" r="19"/>
         <circle class="net-hub-core" cx="130" cy="220" r="6.5"/>
 
-        <!-- daşıyıcı kartları -->
-        <g>
-          <rect class="card-bg" x="790" y="26" width="170" height="48" rx="13"/>
-          <circle class="avatar" cx="814" cy="50" r="9"/>
-          <rect class="bar" x="832" y="41" width="86" height="6" rx="3"/><rect class="bar dim" x="832" y="53" width="56" height="6" rx="3"/>
-        </g>
-        <g>
-          <rect class="card-bg ok" x="790" y="111" width="170" height="48" rx="13"/>
-          <circle class="avatar" cx="814" cy="135" r="9"/>
-          <rect class="bar" x="832" y="126" width="70" height="6" rx="3"/><rect class="bar dim" x="832" y="138" width="50" height="6" rx="3"/>
-          <circle class="check-bg" cx="938" cy="135" r="10"/><path class="check-mark" d="M933,135 l3.5,3.5 l7,-7.5"/>
-        </g>
-        <g>
-          <rect class="card-bg" x="790" y="196" width="170" height="48" rx="13"/>
-          <circle class="avatar" cx="814" cy="220" r="9"/>
-          <rect class="bar" x="832" y="211" width="78" height="6" rx="3"/><rect class="bar dim" x="832" y="223" width="48" height="6" rx="3"/>
-        </g>
-        <g>
-          <rect class="card-bg ok" x="790" y="281" width="170" height="48" rx="13"/>
-          <circle class="avatar" cx="814" cy="305" r="9"/>
-          <rect class="bar" x="832" y="296" width="64" height="6" rx="3"/><rect class="bar dim" x="832" y="308" width="52" height="6" rx="3"/>
-          <circle class="check-bg" cx="938" cy="305" r="10"/><path class="check-mark" d="M933,305 l3.5,3.5 l7,-7.5"/>
-        </g>
-        <g>
-          <rect class="card-bg" x="790" y="366" width="170" height="48" rx="13"/>
-          <circle class="avatar" cx="814" cy="390" r="9"/>
-          <rect class="bar" x="832" y="381" width="90" height="6" rx="3"/><rect class="bar dim" x="832" y="393" width="44" height="6" rx="3"/>
-        </g>
+        <g><rect class="card-bg" x="790" y="26" width="170" height="48" rx="13"/><circle class="avatar" cx="814" cy="50" r="9"/><rect class="bar" x="832" y="41" width="86" height="6" rx="3"/><rect class="bar dim" x="832" y="53" width="56" height="6" rx="3"/></g>
+        <g><rect class="card-bg ok" x="790" y="111" width="170" height="48" rx="13"/><circle class="avatar" cx="814" cy="135" r="9"/><rect class="bar" x="832" y="126" width="70" height="6" rx="3"/><rect class="bar dim" x="832" y="138" width="50" height="6" rx="3"/><circle class="check-bg" cx="938" cy="135" r="10"/><path class="check-mark" d="M933,135 l3.5,3.5 l7,-7.5"/></g>
+        <g><rect class="card-bg" x="790" y="196" width="170" height="48" rx="13"/><circle class="avatar" cx="814" cy="220" r="9"/><rect class="bar" x="832" y="211" width="78" height="6" rx="3"/><rect class="bar dim" x="832" y="223" width="48" height="6" rx="3"/></g>
+        <g><rect class="card-bg ok" x="790" y="281" width="170" height="48" rx="13"/><circle class="avatar" cx="814" cy="305" r="9"/><rect class="bar" x="832" y="296" width="64" height="6" rx="3"/><rect class="bar dim" x="832" y="308" width="52" height="6" rx="3"/><circle class="check-bg" cx="938" cy="305" r="10"/><path class="check-mark" d="M933,305 l3.5,3.5 l7,-7.5"/></g>
+        <g><rect class="card-bg" x="790" y="366" width="170" height="48" rx="13"/><circle class="avatar" cx="814" cy="390" r="9"/><rect class="bar" x="832" y="381" width="90" height="6" rx="3"/><rect class="bar dim" x="832" y="393" width="44" height="6" rx="3"/></g>
       </svg>
 
-      <!-- mobil -->
       <svg class="svg-mobile" viewBox="0 0 360 430" xmlns="http://www.w3.org/2000/svg">
         <path class="net-line" d="M180,70 C180,190 40,200 40,330"/>
         <path class="net-line" d="M180,70 C180,190 110,210 110,330"/>
         <path class="net-line" d="M180,70 L180,330"/>
         <path class="net-line" d="M180,70 C180,190 250,210 250,330"/>
         <path class="net-line" d="M180,70 C180,190 320,200 320,330"/>
-
         <path class="net-flow" d="M180,70 C180,190 40,200 40,330"/>
         <path class="net-flow" d="M180,70 C180,190 110,210 110,330"/>
         <path class="net-flow" d="M180,70 L180,330"/>
@@ -719,55 +769,84 @@
           <p id="flowDesc">Yükün çəkisini, ölçülərini, marşrutunu və tələb olunan tarixləri sistemə bir dəfə daxil edin. Bütün detallar saxlanılır və növbəti sorğularda təkrar istifadə edilə bilər.</p>
         </div>
 
-        <div class="scene-box" aria-hidden="true">
-          <!-- 1: forma doldurulur -->
-          <svg class="scene scene-1" viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg">
-            <defs><linearGradient id="btnGrad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4468E0"/><stop offset="1" stop-color="#8EA8FF"/></linearGradient></defs>
-            <rect class="sc-card" x="50" y="26" width="260" height="198" rx="18"/>
-            <circle cx="72" cy="48" r="5" fill="#5FE0B7"/><rect class="sc-bar" x="86" y="45" width="70" height="6" rx="3"/>
-            <rect class="sc-card" x="70" y="68" width="100" height="30" rx="9"/><rect class="sc-bar grow" x="80" y="80" width="62" height="6" rx="3"/>
-            <rect class="sc-card" x="190" y="68" width="100" height="30" rx="9"/><rect class="sc-bar grow g2" x="200" y="80" width="48" height="6" rx="3"/>
-            <rect class="sc-card" x="70" y="110" width="100" height="30" rx="9"/><rect class="sc-bar grow g3" x="80" y="122" width="70" height="6" rx="3"/>
-            <rect class="sc-card" x="190" y="110" width="100" height="30" rx="9"/><rect class="sc-bar blue grow g2" x="200" y="122" width="38" height="6" rx="3"/><rect class="sc-bar blue caret" x="242" y="119" width="2" height="12"/>
-            <rect class="sc-card" x="70" y="152" width="220" height="30" rx="9"/><rect class="sc-bar grow" x="80" y="164" width="130" height="6" rx="3"/>
-            <rect class="sc-btn" x="70" y="194" width="96" height="22" rx="11"/><rect x="92" y="203" width="52" height="5" rx="2.5" fill="#fff" opacity=".85"/>
-          </svg>
-          <!-- 2: eyni anda göndərilir -->
-          <svg class="scene scene-2" viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg">
-            <path class="sc-line" d="M62,125 C130,125 190,40 290,40"/><path class="sc-line" d="M62,125 C130,125 190,90 290,90"/><path class="sc-line" d="M62,125 C130,125 190,160 290,160"/><path class="sc-line" d="M62,125 C130,125 190,210 290,210"/>
-            <path class="sc-flow" d="M62,125 C130,125 190,40 290,40"/><path class="sc-flow" d="M62,125 C130,125 190,90 290,90"/><path class="sc-flow" d="M62,125 C130,125 190,160 290,160"/><path class="sc-flow" d="M62,125 C130,125 190,210 290,210"/>
-            <circle cx="62" cy="125" r="22" fill="rgba(108,141,255,.18)" stroke="rgba(142,168,255,.5)"/><circle cx="62" cy="125" r="12" fill="#6C8DFF"/><circle cx="62" cy="125" r="4.5" fill="#fff"/>
-            <rect class="sc-card" x="290" y="26" width="52" height="28" rx="9"/><rect class="sc-card" x="290" y="76" width="52" height="28" rx="9"/><rect class="sc-card" x="290" y="146" width="52" height="28" rx="9"/><rect class="sc-card" x="290" y="196" width="52" height="28" rx="9"/>
-            <circle class="sc-node" r="3.5"><animateMotion dur="2.6s" repeatCount="indefinite" path="M62,125 C130,125 190,40 290,40"/></circle>
-            <circle class="sc-node" r="3.5"><animateMotion dur="2.6s" begin="-.7s" repeatCount="indefinite" path="M62,125 C130,125 190,90 290,90"/></circle>
-            <circle class="sc-node" r="3.5"><animateMotion dur="2.6s" begin="-1.3s" repeatCount="indefinite" path="M62,125 C130,125 190,160 290,160"/></circle>
-            <circle class="sc-node" r="3.5"><animateMotion dur="2.6s" begin="-1.9s" repeatCount="indefinite" path="M62,125 C130,125 190,210 290,210"/></circle>
-          </svg>
-          <!-- 3: təkliflər toplanır -->
-          <svg class="scene scene-3" viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg">
-            <rect class="sc-card" x="60" y="24" width="240" height="202" rx="18"/>
-            <rect class="sc-bar" x="78" y="42" width="84" height="7" rx="3.5"/>
-            <g class="rise"><rect class="sc-card" x="78" y="64" width="204" height="40" rx="11"/><circle cx="100" cy="84" r="8" fill="rgba(142,168,255,.5)"/><rect class="sc-bar" x="118" y="76" width="80" height="6" rx="3"/><rect class="sc-bar blue" x="118" y="88" width="46" height="6" rx="3"/><circle cx="262" cy="84" r="9" fill="#5FE0B7"/><path d="M257,84 l3.5,3.5 l6.5,-7" fill="none" stroke="#04210F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
-            <g class="rise d2"><rect class="sc-card" x="78" y="112" width="204" height="40" rx="11"/><circle cx="100" cy="132" r="8" fill="rgba(142,168,255,.5)"/><rect class="sc-bar" x="118" y="124" width="64" height="6" rx="3"/><rect class="sc-bar blue" x="118" y="136" width="58" height="6" rx="3"/><circle cx="262" cy="132" r="9" fill="#5FE0B7"/><path d="M257,132 l3.5,3.5 l6.5,-7" fill="none" stroke="#04210F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
-            <g class="rise d3"><rect class="sc-card" x="78" y="160" width="204" height="40" rx="11"/><circle cx="100" cy="180" r="8" fill="rgba(142,168,255,.5)"/><rect class="sc-bar" x="118" y="172" width="90" height="6" rx="3"/><rect class="sc-bar blue" x="118" y="184" width="40" height="6" rx="3"/><circle cx="262" cy="180" r="9" fill="#5FE0B7"/><path d="M257,180 l3.5,3.5 l6.5,-7" fill="none" stroke="#04210F" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
-          </svg>
-          <!-- 4: müqayisə və qalib -->
-          <svg class="scene scene-4" viewBox="0 0 360 250" xmlns="http://www.w3.org/2000/svg">
-            <rect class="sc-card" x="40" y="26" width="280" height="198" rx="18"/>
-            <rect class="sc-bar" x="60" y="44" width="70" height="7" rx="3.5"/>
-            <rect class="sc-card" x="58" y="66" width="244" height="40" rx="11"/><rect class="sc-bar grow" x="74" y="83" width="170" height="7" rx="3.5"/>
-            <rect class="sc-card" x="58" y="114" width="244" height="40" rx="11"/><rect class="sc-bar grow g2" x="74" y="131" width="130" height="7" rx="3.5"/>
-            <g class="winner-glow"><rect x="56" y="162" width="248" height="44" rx="12" fill="rgba(95,224,183,.12)" stroke="#5FE0B7" stroke-width="1.5"/></g>
-            <rect class="sc-bar mint grow g3" x="74" y="181" width="84" height="7" rx="3.5"/>
-            <circle cx="278" cy="184" r="12" fill="#5FE0B7"/><path d="M272,184 l4.2,4.2 l8,-8.6" fill="none" stroke="#04210F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+        <div class="mock-stage" aria-hidden="true">
+          <!-- 1: RFQ forması -->
+          <div class="mock-scene s1">
+            <div class="mock">
+              <div class="mock-top"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mock-title">Yeni Yük Sorğusu (RFQ) Yarat</span></div>
+              <div class="mock-body">
+                <div class="m-ai rv" style="--i:0"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg> Aİ ilə Avtomatik Doldur (Beta)</div>
+                <div class="m-grid-2">
+                  <div class="rv" style="--i:1"><div class="m-label">Yükləmə yeri <i>*</i></div><div class="m-input">Bakı, Azərbaycan</div></div>
+                  <div class="rv" style="--i:2"><div class="m-label">Boşaltma yeri <i>*</i></div><div class="m-input">İstanbul, Türkiyə</div></div>
+                  <div class="rv" style="--i:3"><div class="m-label">Yükün növü <i>*</i></div><div class="m-input">Tekstil məhsulları</div></div>
+                  <div class="rv" style="--i:4"><div class="m-label">Çəki (kq) <i>*</i></div><div class="m-input">1000</div></div>
+                  <div class="rv" style="--i:5"><div class="m-label">Həcm / Palet <i>*</i></div><div class="m-split"><div class="m-input">Palet</div><div class="m-input" style="flex:1">10</div></div></div>
+                  <div class="rv" style="--i:6"><div class="m-label">Daşınma növü <i>*</i></div><div class="m-input">Quru</div></div>
+                </div>
+                <div class="m-btn rv" style="--i:7">Birbaşa Daşıyıcılara Göndər</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2: göndərmə -->
+          <div class="mock-scene s2">
+            <div class="mock">
+              <div class="mock-top"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mock-title">RFQ #257 · Bakı → Berlin, DE</span></div>
+              <div class="mock-body">
+                <div class="m-radio on rv" style="--i:0"><i></i> Sorğunu BÜTÜN daşıyıcılara göndər</div>
+                <div class="m-radio rv" style="--i:1"><i></i> Seçilmiş KATEQORİYALARA göndər</div>
+                <div class="m-radio rv" style="--i:2"><i></i> Seçilmiş daşıyıcılara göndər</div>
+                <div class="m-row rv" style="--i:3"><div><div class="m-name">LogiTrans MMC</div><div class="m-sub">info@logitrans.az</div></div><span class="m-badge ok">Çatdırıldı</span></div>
+                <div class="m-row rv" style="--i:4"><div><div class="m-name">Caspian Cargo</div><div class="m-sub">office@caspiancargo.az</div></div><span class="m-badge ok">Çatdırıldı</span></div>
+                <div class="m-row rv" style="--i:5"><div><div class="m-name">TransEurasia</div><div class="m-sub">ops@transeurasia.com</div></div><span class="m-badge mute">Göndərilir...</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3: təkliflər -->
+          <div class="mock-scene s3">
+            <div class="mock">
+              <div class="mock-top"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mock-title">Analitika və Panel</span></div>
+              <div class="mock-body">
+                <div class="m-stats rv" style="--i:0;grid-template-columns:repeat(3,1fr)">
+                  <div class="m-stat a"><b>4</b><span>AKTİV RFQ SORĞULARI</span></div>
+                  <div class="m-stat b"><b>12</b><span>TAMAMLANMIŞ DAŞIMALAR</span></div>
+                  <div class="m-stat"><b>38</b><span>DAŞIYICI BAZASI</span></div>
+                </div>
+                <div class="m-label rv" style="--i:1;margin:2px 0 -2px">Son Gələn Təkliflər</div>
+                <div class="m-table rv" style="--i:2">
+                  <div class="m-tr head c4"><span>Sorğu</span><span>Daşıyıcı</span><span>Qiymət</span><span></span></div>
+                  <div class="m-tr c4"><b>RFQ #257</b><span>LogiTrans MMC</span><span class="m-price">1 250 USD</span><span class="m-btn ghost sm">Bax</span></div>
+                  <div class="m-tr c4"><b>RFQ #257</b><span>Caspian Cargo</span><span class="m-price">1 180 USD</span><span class="m-btn ghost sm">Bax</span></div>
+                  <div class="m-tr c4"><b>RFQ #256</b><span>TransEurasia</span><span class="m-price">940 EUR</span><span class="m-btn ghost sm">Bax</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 4: müqayisə -->
+          <div class="mock-scene s4">
+            <div class="mock">
+              <div class="mock-top"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mock-title">Təkliflər (3)</span></div>
+              <div class="mock-body">
+                <div class="m-table rv" style="--i:0">
+                  <div class="m-tr head c4b"><span>Daşıyıcı Şirkət</span><span>Qiymət</span><span>Müddət</span><span></span></div>
+                  <div class="m-tr c4b win"><b>Caspian Cargo</b><span class="m-price">1 180 USD</span><span>5 gün</span><span class="m-badge ok">Qalib</span></div>
+                  <div class="m-tr c4b"><b>LogiTrans MMC</b><span class="m-price" style="color:var(--ink)">1 250 USD</span><span>6 gün</span><span class="m-btn ghost sm">Qalib Seç</span></div>
+                  <div class="m-tr c4b"><b>TransEurasia</b><span class="m-price" style="color:var(--ink)">1 320 USD</span><span>4 gün</span><span class="m-btn ghost sm">Qalib Seç</span></div>
+                </div>
+                <div class="m-row win rv" style="--i:1"><div><div class="m-name">Caspian Cargo seçildi</div><div class="m-sub">Sorğu #257 bağlandı</div></div><span class="m-btn sm">Müştəriyə Göndər</span></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- FEATURES -->
+<!-- FEATURES: 3 kart -->
 <section>
   <div class="wrap">
     <div class="section-head center reveal">
@@ -784,16 +863,18 @@
           <p>Daşıyıcı bazanızı Excel və ya mətn siyahısından saniyələr içində yükləyin, əl ilə daxil etməyə vaxt itirməyin.</p>
         </div>
         <div class="card-art" aria-hidden="true">
-          <svg viewBox="0 0 400 130" xmlns="http://www.w3.org/2000/svg">
-            <rect x="20" y="18" width="360" height="94" rx="10" fill="rgba(255,255,255,.04)" stroke="rgba(255,255,255,.14)"/>
-            <rect x="20" y="18" width="360" height="22" rx="10" fill="rgba(95,224,183,.16)"/>
-            <path d="M140,18v94M260,18v94M20,58h360M20,85h360" stroke="rgba(255,255,255,.1)" stroke-width="1"/>
-            <rect x="34" y="26" width="60" height="6" rx="3" fill="#5FE0B7" opacity=".8"/><rect x="154" y="26" width="50" height="6" rx="3" fill="#5FE0B7" opacity=".8"/><rect x="274" y="26" width="40" height="6" rx="3" fill="#5FE0B7" opacity=".8"/>
-            <rect class="sc-bar" x="34" y="46" width="76" height="6" rx="3"/><rect class="sc-bar" x="154" y="46" width="88" height="6" rx="3"/><rect class="sc-bar" x="274" y="46" width="60" height="6" rx="3"/>
-            <rect class="sc-bar" x="34" y="72" width="58" height="6" rx="3"/><rect class="sc-bar" x="154" y="72" width="70" height="6" rx="3"/><rect class="sc-bar" x="274" y="72" width="72" height="6" rx="3"/>
-            <rect class="sc-bar" x="34" y="98" width="82" height="6" rx="3"/><rect class="sc-bar" x="154" y="98" width="64" height="6" rx="3"/><rect class="sc-bar" x="274" y="98" width="48" height="6" rx="3"/>
-            <rect class="winner-glow" x="20" y="60" width="360" height="24" rx="4" fill="rgba(108,141,255,.14)" stroke="rgba(142,168,255,.6)"/>
-          </svg>
+          <div class="mock">
+            <div class="mock-top"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mock-title">Daşıyıcı Bazasını İdarə Etmək</span></div>
+            <div class="mock-body">
+              <div class="m-drop"><div class="m-file">XLS</div><div><div class="m-name">daşıyıcılar.xlsx</div><div class="m-sub">Excel / CSV Faylı Yüklə · 38 sətir</div></div></div>
+              <div class="m-table">
+                <div class="m-tr head c3"><span>Şirkət</span><span>E-poçt</span><span></span></div>
+                <div class="m-tr c3"><b>LogiTrans MMC</b><span>info@logitrans.az</span><span class="m-badge ok">Hazır</span></div>
+                <div class="m-tr c3"><b>Caspian Cargo</b><span>office@caspiancargo.az</span><span class="m-badge ok">Hazır</span></div>
+              </div>
+              <div class="m-btn">Əlavə Et</div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="card reveal" style="--d:.12s">
@@ -805,11 +886,20 @@
           <p>Hər daşıyıcıya unikal təklif linki göndərilir; açılıb-açılmadığı və cavablanıb-cavablanmadığı real vaxtda görünür.</p>
         </div>
         <div class="card-art" aria-hidden="true">
-          <svg viewBox="0 0 400 130" xmlns="http://www.w3.org/2000/svg">
-            <rect class="sc-card" x="24" y="20" width="352" height="26" rx="10"/><circle cx="44" cy="33" r="6" fill="#5FE0B7"/><rect class="sc-bar" x="60" y="30" width="120" height="6" rx="3"/><rect x="316" y="26" width="46" height="14" rx="7" fill="rgba(95,224,183,.2)" stroke="#5FE0B7"/>
-            <rect class="sc-card" x="24" y="54" width="352" height="26" rx="10"/><circle cx="44" cy="67" r="6" fill="#8EA8FF"/><rect class="sc-bar" x="60" y="64" width="96" height="6" rx="3"/><rect x="316" y="60" width="46" height="14" rx="7" fill="rgba(142,168,255,.2)" stroke="#8EA8FF"/>
-            <rect class="sc-card" x="24" y="88" width="352" height="26" rx="10"/><circle cx="44" cy="101" r="6" fill="rgba(255,255,255,.35)"/><circle class="net-pulse" cx="44" cy="101" r="6" style="stroke:rgba(255,255,255,.5)"/><rect class="sc-bar" x="60" y="98" width="140" height="6" rx="3"/><rect x="316" y="94" width="46" height="14" rx="7" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.3)"/>
-          </svg>
+          <div class="mock">
+            <div class="mock-top"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mock-title">Göndərilmə statusu</span></div>
+            <div class="mock-body">
+              <div class="m-stats">
+                <div class="m-stat a"><b>12</b><span>GÖNDƏRİLDİ</span></div>
+                <div class="m-stat b"><b>11</b><span>ÇATDIRILDI</span></div>
+                <div class="m-stat"><b>7</b><span>BAXILDI</span></div>
+                <div class="m-stat d"><b>3</b><span>TƏKLİF ALINDI</span></div>
+                <div class="m-stat e"><b>1</b><span>ÇATDIRILMADI</span></div>
+              </div>
+              <div class="m-row"><div><div class="m-name">Caspian Cargo</div><div class="m-sub">office@caspiancargo.az</div></div><span class="m-badge ok">Təklif alındı</span></div>
+              <div class="m-row"><div><div class="m-name">TransEurasia</div><div class="m-sub">ops@transeurasia.com</div></div><span class="m-badge warn">Təklif yoxdur</span></div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="card reveal" style="--d:.24s">
@@ -821,15 +911,168 @@
           <p>Gələn təklifləri qiymət, müddət və şərtlərinə görə müqayisə edin, ən sərfəli daşıyıcını tək kliklə qalib elan edin.</p>
         </div>
         <div class="card-art" aria-hidden="true">
-          <svg viewBox="0 0 400 150" xmlns="http://www.w3.org/2000/svg">
-            <rect class="sc-card" x="24" y="18" width="352" height="34" rx="11"/><rect class="sc-bar grow" x="40" y="31" width="230" height="8" rx="4"/>
-            <rect class="sc-card" x="24" y="58" width="352" height="34" rx="11"/><rect class="sc-bar grow g2" x="40" y="71" width="186" height="8" rx="4"/>
-            <g class="winner-glow"><rect x="22" y="98" width="356" height="38" rx="12" fill="rgba(95,224,183,.12)" stroke="#5FE0B7" stroke-width="1.5"/></g>
-            <rect class="sc-bar mint grow g3" x="40" y="113" width="120" height="8" rx="4"/>
-            <circle cx="350" cy="117" r="12" fill="#5FE0B7"/><path d="M344,117 l4.2,4.2 l8,-8.6" fill="none" stroke="#04210F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
+          <div class="mock">
+            <div class="mock-top"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span class="mock-title">Təkliflər (3)</span></div>
+            <div class="mock-body">
+              <div class="m-table">
+                <div class="m-tr head c4b"><span>Daşıyıcı Şirkət</span><span>Qiymət</span><span>Müddət</span><span></span></div>
+                <div class="m-tr c4b"><b>LogiTrans MMC</b><span class="m-price" style="color:var(--ink)">1 250 USD</span><span>6 gün</span><span class="m-btn ghost sm">Qalib Seç</span></div>
+                <div class="m-tr c4b win"><b>Caspian Cargo</b><span class="m-price">1 180 USD</span><span>5 gün</span><span class="m-badge ok">Qalib</span></div>
+                <div class="m-tr c4b"><b>TransEurasia</b><span class="m-price" style="color:var(--ink)">1 320 USD</span><span>4 gün</span><span class="m-btn ghost sm">Qalib Seç</span></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+    </div>
+  </div>
+</section>
+
+<!-- İMKANLAR -->
+<section class="bg-ice-2" id="imkanlar">
+  <div class="wrap">
+    <div class="section-head center reveal">
+      <p class="kicker">İmkanlar</p>
+      <h2>Arachi ilə nələr edə bilərsiniz</h2>
+      <p>Sorğunun hazırlanmasından müştəriyə təklif göndərməyə qədər bütün addımlar bir paneldədir.</p>
+    </div>
+    <div class="feat-grid">
+
+      <div class="feat reveal" style="--d:0s">
+        <span class="feat-num">01</span>
+        <h3>Məlumatı Aİ ilə hazırlayın</h3>
+        <p>PDF, şəkil, Excel və ya yazılmış mətndən yük məlumatlarını formaya köçürün. Göndərməzdən əvvəl yoxlayıb tamamlayın.</p>
+        <div class="feat-art" aria-hidden="true">
+          <div class="mock">
+            <div class="mock-body">
+              <div class="m-text">“Bakıdan İstanbula 10 palet mal, çəki 1000 kq, maşın tentli olsun…”</div>
+              <div class="m-grid-2">
+                <div><div class="m-label">Yükləmə yeri</div><div class="m-input">Bakı, Azərbaycan</div></div>
+                <div><div class="m-label">Boşaltma yeri</div><div class="m-input">İstanbul, Türkiyə</div></div>
+                <div><div class="m-label">Həcm / Palet</div><div class="m-split"><div class="m-input">Palet</div><div class="m-input" style="flex:1">10</div></div></div>
+                <div><div class="m-label">Maşın növü</div><div class="m-input">Tentli</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat reveal" style="--d:.1s">
+        <span class="feat-num">02</span>
+        <h3>Daşıyıcılarınızı qruplaşdırın</h3>
+        <p>Daşıyıcıları Excel-dən gətirin və ya əllə əlavə edin. Kateqoriya və alt kateqoriyalara bölüb sorğunu yalnız uyğun qrupa göndərin.</p>
+        <div class="feat-art" aria-hidden="true">
+          <div class="mock">
+            <div class="mock-body">
+              <div class="m-label">Daşıyıcı Kateqoriyaları</div>
+              <div class="m-chips">
+                <span class="m-chip on">Quru nəqliyyat <small>24</small></span>
+                <span class="m-chip">Dəniz <small>9</small></span>
+                <span class="m-chip">Hava <small>6</small></span>
+              </div>
+              <div class="m-label" style="margin-top:4px">Alt kateqoriyalar</div>
+              <div class="m-chips">
+                <span class="m-chip">Türkiyə xətti</span>
+                <span class="m-chip">Avropa</span>
+                <span class="m-chip">Rusiya / MDB</span>
+              </div>
+              <div class="m-radio on" style="margin-top:2px"><i></i> Seçilmiş KATEQORİYALARA göndər</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat reveal" style="--d:.2s">
+        <span class="feat-num">03</span>
+        <h3>E-poçt, link və ya hər ikisi</h3>
+        <p>Sorğunu daşıyıcılara e-poçtla göndərin, ya da linki WhatsApp, Telegram kimi istədiyiniz yerdə paylaşın. İstəsəniz ikisini birlikdə edin.</p>
+        <div class="feat-art" aria-hidden="true">
+          <div class="mock">
+            <div class="mock-body">
+              <div class="m-menu">
+                <div class="m-menu-item on"><b>Daşıyıcılara göndər + Link yarat</b><small>Seçilmiş daşıyıcılara e-poçt göndərilir və paylaşmaq üçün link də yaradılır</small></div>
+                <div class="m-menu-item"><b>Yalnız link yarat</b><small>Linki özünüz istədiyiniz platformada paylaşırsınız</small></div>
+              </div>
+              <div class="m-link"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 007.5.5l3-3a5 5 0 00-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 00-7.5-.5l-3 3a5 5 0 007 7l1.7-1.7"/></svg><span>arachi.co/carrier_quote/quote?token=3f9a…</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat reveal" style="--d:0s">
+        <span class="feat-num">04</span>
+        <h3>Cavab verməyənləri xatırladın</h3>
+        <p>Hansı daşıyıcıya çatdırıldı, kim baxdı, kim təklif göndərdi? Cavab verməyənlərə bir kliklə xatırlatma göndərin.</p>
+        <div class="feat-art" aria-hidden="true">
+          <div class="mock">
+            <div class="mock-body">
+              <div class="m-row"><div><div class="m-name">Baku Freight</div><div class="m-sub">Çatdırıldı · Baxıldı</div></div><span class="m-btn ghost sm">Reminder göndər</span></div>
+              <div class="m-row"><div><div class="m-name">Silk Road Trans</div><div class="m-sub">Çatdırılmadı</div></div><span class="m-btn ghost sm">Yenidən göndər</span></div>
+              <div class="m-btn">Seçilənləri reminder göndər (2)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat reveal" style="--d:.1s">
+        <span class="feat-num">05</span>
+        <h3>Təklif tarixçəsinə qayıdın</h3>
+        <p>Daşıyıcı təklifini yenilədikdə əvvəlki versiyalar silinmir. Qiymətin necə dəyişdiyini bir baxışda görün.</p>
+        <div class="feat-art" aria-hidden="true">
+          <div class="mock">
+            <div class="mock-body">
+              <div class="m-label">Təklif Tarixçəsi</div>
+              <div class="m-ver"><span><b>Təklif v1:</b> 1 320 USD</span><span style="color:var(--soft)">Tranzit 6 gün</span></div>
+              <div class="m-ver"><span><b>Təklif v2:</b> 1 250 USD</span><span style="color:var(--soft)">Tranzit 6 gün</span></div>
+              <div class="m-ver last"><span><b>Təklif v3 (Sonuncu):</b> 1 180 USD</span><span>Tranzit 5 gün</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="feat reveal" style="--d:.2s">
+        <span class="feat-num">06</span>
+        <h3>Rəsmi təklif və hesabat</h3>
+        <p>Seçdiyiniz təklifə xidmət haqqı əlavə edib müştəriyə PDF təklif hazırlayın. Sorğu və təklifləri Excel və ya PDF hesabat kimi endirin.</p>
+        <div class="feat-art" aria-hidden="true">
+          <div class="mock">
+            <div class="mock-body">
+              <div class="m-sum"><span>Daşıyıcıdan Alınan</span><b>1 180 USD</b></div>
+              <div class="m-sum"><span>Xidmət Haqqı Əlavə Et</span><b>+ 10 %</b></div>
+              <div class="m-sum total"><span>Müştəriyə Satılan</span><b>1 298 USD</b></div>
+              <div class="m-grid-2" style="margin-top:2px">
+                <div class="m-btn">Təsdiqlə və PDF Endir</div>
+                <div class="m-btn ghost">Excel hesabatı</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="suallar">
+  <div class="wrap">
+    <div class="section-head center reveal">
+      <p class="kicker">Sual-cavab</p>
+      <h2>Tez-tez verilən suallar</h2>
+    </div>
+    <div class="faq">
+      <details class="faq-item reveal">
+        <summary><span>Daşıyıcı necə cavab verir?</span><i class="faq-icon" aria-hidden="true"></i></summary>
+        <div class="faq-a"><p>Hər daşıyıcıya sorğuya özəl təklif linki göndərilir. Daşıyıcı linki açıb yükün məlumatlarını görür, qiymətini, tranzit müddətini, qeydlərini və lazım olarsa sənədini daxil edib təklifi göndərir. Qeydiyyat və ya şifrə tələb olunmur, səhifə telefondan da rahat açılır və Azərbaycan/ingilis dilində işləyir. Daşıyıcı sonradan təklifini yeniləyə və ya alternativ təklif göndərə bilər, bütün versiyalar sizdə saxlanılır.</p></div>
+      </details>
+      <details class="faq-item reveal" style="--d:.08s">
+        <summary><span>Aİ sorğunu mənim əvəzimə göndərir?</span><i class="faq-icon" aria-hidden="true"></i></summary>
+        <div class="faq-a"><p>Xeyr. Aİ yalnız yükün məlumatlarını (PDF, şəkil, Excel və ya yazılmış mətn) oxuyub sorğu formasını sizin üçün doldurur. Doldurulan sahələri siz yoxlayıb düzəldə bilərsiniz, sorğunu göndərmək qərarı və düyməsi isə həmişə sizdədir. Aİ heç bir sorğunu özbaşına göndərmir.</p></div>
+      </details>
+      <details class="faq-item reveal" style="--d:.16s">
+        <summary><span>Arachi mənə daşıyıcı tapır?</span><i class="faq-icon" aria-hidden="true"></i></summary>
+        <div class="faq-a"><p>Xeyr. Arachi daşıyıcı axtarış platforması deyil, sizin öz daşıyıcılarınızla işləməyi sürətləndirən alətdir. Daşıyıcı bazanızı Excel-dən yükləyir və ya əllə əlavə edib kateqoriyalara bölürsünüz; Arachi sorğunu onlara çatdırır, təklifləri toplayır və müqayisə etməyə kömək edir.</p></div>
+      </details>
     </div>
   </div>
 </section>
@@ -844,7 +1087,8 @@
         <div class="cta-band-actions">
           <a href="/login" class="btn btn-ghost-dark btn-lg">Daxil olun</a>
           <!-- Dəyişiklik edildi: info@arachi.co -->
-          <a href="mailto:info@arachi.co?subject=Arachi%20-%20Qeydiyyat" class="btn btn-on-dark btn-lg">Qeydiyyat üçün bizə yazın</a>
+          <a href="mailto:info@arachi.co?subject=Arachi%20-%20Qeydiyyat" class="btn btn-ghost-dark btn-lg">Qeydiyyat üçün bizə yazın</a>
+          <a href="mailto:info@arachi.co?subject=Arachi%20-%20Demo%20ist%C9%99yi" class="btn btn-on-dark btn-lg" id="demoBtn">Demo istəyin</a>
         </div>
       </div>
     </div>
@@ -901,8 +1145,8 @@
     var titleEl = document.getElementById('flowTitle');
     var descEl = document.getElementById('flowDesc');
     var iconEl = document.getElementById('flowIcon');
-    var current = 1, timer = null, userTouched = false, inView = false;
-    var AUTO_MS = 6000;
+    var current = 1, timer = null, userTouched = false;
+    var AUTO_MS = 6500;
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     function activate(n){
@@ -930,7 +1174,6 @@
       list.classList.add('autoplay');
       timer = setInterval(function(){
         var next = current % 4 + 1;
-        // animasiyanı yenidən başlatmaq üçün aktiv sinfi yenidən tətbiq edirik
         list.classList.remove('autoplay'); void list.offsetWidth; list.classList.add('autoplay');
         activate(next);
       }, AUTO_MS);
@@ -940,14 +1183,14 @@
     if ('IntersectionObserver' in window) {
       new IntersectionObserver(function(entries){
         entries.forEach(function(e){
-          inView = e.isIntersecting;
-          if (inView) startAuto(); else { stopAuto(); if (!userTouched) list.classList.remove('autoplay'); }
+          if (e.isIntersecting) startAuto();
+          else { stopAuto(); if (!userTouched) list.classList.remove('autoplay'); }
         });
       }, {threshold:0.35}).observe(detail);
     }
   })();
 
-  // Yalnız görünüş: scroll animasiyası, naviqasiya, kursor işıqlandırması, səhnənin yüngül 3D meyli
+  // Görünüş: scroll animasiyası, naviqasiya, kursor işıqlandırması, səhnənin yüngül 3D meyli
   (function(){
     var nav = document.getElementById('siteNav');
     function onScroll(){ if (nav) nav.classList.toggle('scrolled', window.scrollY > 8); }
@@ -982,7 +1225,7 @@
           var r = stage.getBoundingClientRect();
           var x = (e.clientX - r.left) / r.width - .5;
           var y = (e.clientY - r.top) / r.height - .5;
-          stage.style.transform = 'perspective(1200px) rotateY(' + (x * 5) + 'deg) rotateX(' + (-y * 4) + 'deg)';
+          stage.style.transform = 'perspective(1200px) rotateY(' + (x * 4) + 'deg) rotateX(' + (-y * 3) + 'deg)';
         });
         stage.addEventListener('pointerleave', function(){ stage.style.transform = ''; });
       }
