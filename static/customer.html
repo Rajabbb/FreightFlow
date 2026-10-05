@@ -700,6 +700,50 @@
         .alert-light { background: #fff; border-color: var(--brand-line) !important; }
         .alert-primary { background: var(--brand-tint); border-color: var(--brand-line-2); color: var(--primary-blue); }
 
+        /* --- Aktiv tab: üzərinə gələndə / toxunanda mətn həmişə ağ qalır (oxunmaz tündləşmə düzəlişi) --- */
+        .main-app-tabs .nav-link.active,
+        .main-app-tabs .nav-link.active:hover,
+        .main-app-tabs .nav-link.active:focus,
+        .main-app-tabs .nav-link.active:focus-visible,
+        .main-app-tabs .nav-link.active:active {
+            color: #ffffff !important;
+            background: linear-gradient(135deg, #0037B8 0%, #2F63E0 100%) !important;
+            border-color: transparent !important;
+        }
+        .main-app-tabs .nav-link.active:hover { background: linear-gradient(135deg, #0A44CC 0%, #3A6CE8 100%) !important; transform: translateY(-1px); }
+        .main-app-tabs .nav-link.active i,
+        .main-app-tabs .nav-link.active:hover i { color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; }
+        .main-app-tabs .nav-link { outline: none; }
+        .main-app-tabs .nav-link:focus-visible { box-shadow: 0 0 0 3px rgba(0, 55, 184, 0.25); }
+        /* Telefonda "hover" toxunuşdan sonra ilişib qalır: aktiv olmayan tablara bu təsir etməsin */
+        @media (hover: none) {
+            .main-app-tabs .nav-link:not(.active):hover { background: transparent; color: var(--text-muted); }
+        }
+
+        /* --- Daşıyıcı bazası: toplu əməliyyat sətri (kateqoriya seçiciləri) --- */
+        #bulkCategorySelect, #bulk_sub_category { min-width: 0 !important; flex: 1 1 150px; width: auto; max-width: 100%; }
+        #bulkCategorySelect ~ .btn-primary { width: auto; flex: 0 0 auto; white-space: nowrap; }
+        div:has(> #bulkCategorySelect) { flex-wrap: wrap; min-width: 0; max-width: 100%; }
+        .bg-light:has(#selectAllManageCarriers) { min-width: 0; max-width: 100%; }
+
+        /* --- Aİ ilə doldurma: fayl seçimi sahəsi və "Analiz Et" düyməsi --- */
+        #aiDocumentInput { min-width: 0; flex: 1 1 220px; }
+        #aiParseBtn { flex: 0 0 auto; width: auto; }
+        div:has(> #aiDocumentInput) { flex-wrap: wrap; }
+
+        @media (max-width: 576px) {
+            /* Fayl seçimi və düymə alt-alta, tam eninə */
+            #aiDocumentInput { flex: 1 1 100%; }
+            #aiParseBtn { flex: 1 1 100%; width: 100%; justify-content: center; }
+            /* Kateqoriya seçiciləri və "Tətbiq et" tam eninə */
+            #bulkCategorySelect, #bulk_sub_category { flex: 1 1 100%; }
+            #bulkCategorySelect ~ .btn-primary { flex: 1 1 100%; width: 100%; }
+            div:has(> #bulkCategorySelect) { width: 100%; }
+            /* Fayl yükləmə sahələrində düymə mətni sığsın */
+            input[type="file"].form-control { font-size: 12.5px; }
+            input[type="file"].form-control::file-selector-button { margin-right: 10px; }
+        }
+
         /* --- Altbilgi --- */
         .border-top { border-color: var(--brand-line) !important; }
 
@@ -719,13 +763,13 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-<div class="position-relative d-inline-flex align-items-center">
-    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-        <option value="az">AZ</option>
-        <option value="en">EN</option>
-    </select>
-</div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
