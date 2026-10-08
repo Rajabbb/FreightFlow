@@ -4,118 +4,228 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Qeydiyyat - Arachi</title>
+    <link rel="icon" type="image/png" href="/static/arachi-logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --brand: #0037B8; --brand-2: #2F63E0; --tint: #E7EEFF; --ice: #F4F7FF; --line: #DCE4F7; --line-2: #C5D3F5;
+            --text: #0B1433; --muted: #56627F; --ok: #12A06E;
+        }
         body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(145deg, #f0f4f8 0%, #e2e8f0 100%);
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text); min-height: 100vh;
+            display: flex; align-items: center; justify-content: center; padding: 24px 12px;
+            background:
+                radial-gradient(900px 480px at 100% -10%, rgba(77, 124, 242, 0.12), transparent 65%),
+                radial-gradient(800px 420px at -10% 110%, rgba(201, 187, 255, 0.18), transparent 65%), #F6F8FE;
         }
         .register-card {
-            background: #fff;
-            border-radius: 20px;
-            padding: 40px;
-            width: 100%;
-            max-width: 450px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.05);
+            background: #fff; border-radius: 26px; padding: 36px; width: 100%; max-width: 560px;
+            border: 1px solid var(--line); box-shadow: 0 30px 60px -36px rgba(0, 55, 184, 0.5);
         }
+        .logo { height: 44px; width: 44px; object-fit: cover; border-radius: 13px; box-shadow: 0 0 0 1px var(--line), 0 10px 20px -10px rgba(0,55,184,.6); }
+        .form-label { font-weight: 600; font-size: 13px; color: var(--text); }
+        .form-control {
+            padding: 11px 14px; border-radius: 13px; border: 1px solid var(--line); background: #F8FAFF; font-size: 14px; font-weight: 500;
+        }
+        .form-control:focus { background: #fff; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(0, 55, 184, 0.10); }
         .btn-primary {
-            background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
-            border: none;
-            padding: 12px;
-            border-radius: 10px;
-            font-weight: 600;
+            background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%); border: none; padding: 13px; border-radius: 14px; font-weight: 700;
+            box-shadow: 0 12px 24px -12px rgba(0, 55, 184, 0.8), inset 0 1px 0 rgba(255,255,255,.2); transition: transform .2s ease, box-shadow .2s ease;
         }
+        .btn-primary:hover, .btn-primary:focus { background: linear-gradient(135deg, #002C93 0%, var(--brand) 100%); transform: translateY(-2px); }
+        .btn-primary:disabled { background: linear-gradient(135deg, #7F96D6, #9AB0EA); box-shadow: none; transform: none; }
+
+        .step-label { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; color: var(--brand); text-transform: uppercase; margin-bottom: 10px; }
+
+        /* seçim kartları */
+        .opt { position: relative; display: block; margin: 0; }
+        .opt input { position: absolute; opacity: 0; pointer-events: none; }
+        .opt-body {
+            display: flex; gap: 12px; align-items: flex-start; border: 1.5px solid var(--line); border-radius: 16px; padding: 14px 16px; background: #fff; cursor: pointer;
+            transition: border-color .2s ease, background .2s ease, box-shadow .2s ease, transform .2s ease;
+        }
+        .opt-body:hover { border-color: var(--line-2); transform: translateY(-1px); }
+        .opt input:checked + .opt-body { border-color: var(--brand); background: linear-gradient(135deg, var(--tint), #fff 75%); box-shadow: 0 14px 26px -20px rgba(0, 55, 184, .8); }
+        .opt input:focus-visible + .opt-body { box-shadow: 0 0 0 4px rgba(0, 55, 184, .18); }
+        .opt input:disabled + .opt-body { opacity: .55; cursor: not-allowed; background: var(--ice); transform: none; }
+        .opt-ico { width: 40px; height: 40px; min-width: 40px; border-radius: 12px; background: var(--tint); color: var(--brand); display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid var(--line-2); }
+        .opt input:checked + .opt-body .opt-ico { background: linear-gradient(135deg, var(--brand), var(--brand-2)); color: #fff; border-color: transparent; }
+        .opt-title { font-weight: 800; font-size: 14.5px; line-height: 1.25; }
+        .opt-desc { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.45; }
+        .badge-free { font-size: 10.5px; font-weight: 800; color: var(--ok); background: #E3F7EF; border: 1px solid rgba(18,160,110,.3); border-radius: 999px; padding: 1px 8px; margin-left: 6px; white-space: nowrap; }
+        .badge-link { font-size: 10.5px; font-weight: 800; color: #8A5A12; background: #FFF4DB; border: 1px solid rgba(183,121,31,.3); border-radius: 999px; padding: 1px 8px; margin-left: 6px; white-space: nowrap; }
+        .notice { background: #FFF4DB; border: 1px solid rgba(183,121,31,.3); color: #8A5A12; border-radius: 14px; padding: 10px 14px; font-size: 12.5px; font-weight: 600; }
+        .panel-opts { display: grid; gap: 8px; }
+        @media (max-width: 576px) { .register-card { padding: 24px 18px; border-radius: 22px; } }
     </style>
 </head>
 <body>
 
     <div class="register-card">
         <div class="text-center mb-4">
-            <img src="/static/arachi-logo.png" alt="Arachi" height="40" onerror="this.style.display='none'">
-            <h4 class="fw-bold text-dark mt-3">Hesabınızı Yaradın</h4>
-            <p class="text-muted small">Təhlükəsiz qeydiyyat paneli</p>
+            <img src="/static/arachi-logo.png" alt="Arachi" class="logo" onerror="this.style.display='none'">
+            <h4 class="fw-bold mt-3 mb-1">Hesabınızı Yaradın</h4>
+            <p class="text-muted small mb-0">Təhlükəsiz qeydiyyat paneli</p>
         </div>
 
-        <form id="registerForm" onsubmit="submitRegistration(event)">
+        <form id="registerForm" onsubmit="submitRegistration(event)" novalidate>
             <input type="hidden" id="token" value="{{ token }}">
-            
-            <div class="mb-3">
-                <label class="form-label text-muted fw-bold small">Şirkətin Adı</label>
-                <input type="text" class="form-control" id="company_name" required placeholder="Məs: Arachi Logistics">
+
+            <!-- 1. Hesab növü -->
+            <div class="step-label">1. Hesab növü</div>
+            <div class="panel-opts mb-4">
+                <label class="opt">
+                    <input type="radio" name="account_type" value="importer_exporter" id="type_importer">
+                    <span class="opt-body">
+                        <span class="opt-ico"><i class="bi bi-box-seam-fill"></i></span>
+                        <span><span class="opt-title">İdxalçı / İxracçı şirkət</span><span class="badge-link link-only">Link lazımdır</span>
+                        <span class="opt-desc d-block">Yük sorğuları göndərin, daşıyıcılardan təklifləri toplayın və müqayisə edin.</span></span>
+                    </span>
+                </label>
+                <label class="opt">
+                    <input type="radio" name="account_type" value="forwarder" id="type_forwarder">
+                    <span class="opt-body">
+                        <span class="opt-ico"><i class="bi bi-truck-front-fill"></i></span>
+                        <span><span class="opt-title">Freight forwarder</span>
+                        <span class="opt-desc d-block">Şirkət profili yaradın ki, idxalçı və ixracçılar sizi tapıb daşıyıcı bazalarına əlavə edə bilsin.</span></span>
+                    </span>
+                </label>
             </div>
-            
-            <div class="mb-3">
-                <label class="form-label text-muted fw-bold small">E-poçt (Giriş üçün)</label>
-                <input type="email" class="form-control" id="email" required placeholder="info@shirketiniz.com">
+
+            <!-- 2. Panel seçimi (yalnız forwarder üçün) -->
+            <div id="panelStep" class="mb-4 d-none">
+                <div class="step-label">2. Hansı panelə giriş istəyirsiniz?</div>
+                <div class="panel-opts">
+                    <label class="opt">
+                        <input type="radio" name="panel_access" value="forwarder" id="panel_forwarder">
+                        <span class="opt-body">
+                            <span class="opt-ico"><i class="bi bi-person-badge-fill"></i></span>
+                            <span><span class="opt-title">Yalnız Freight forwarder paneli</span><span class="badge-free">Pulsuz · linksiz</span>
+                            <span class="opt-desc d-block">Profilinizi yaradın və idxalçılara görünün.</span></span>
+                        </span>
+                    </label>
+                    <label class="opt">
+                        <input type="radio" name="panel_access" value="both" id="panel_both">
+                        <span class="opt-body">
+                            <span class="opt-ico"><i class="bi bi-layout-split"></i></span>
+                            <span><span class="opt-title">Hər iki panel</span><span class="badge-link link-only">Link lazımdır</span>
+                            <span class="opt-desc d-block">Forwarder paneli və yük sorğuları göndərə biləcəyiniz müştəri paneli, eyni girişlə.</span></span>
+                        </span>
+                    </label>
+                    <label class="opt">
+                        <input type="radio" name="panel_access" value="customer" id="panel_customer">
+                        <span class="opt-body">
+                            <span class="opt-ico"><i class="bi bi-box-seam"></i></span>
+                            <span><span class="opt-title">Yalnız müştəri paneli</span><span class="badge-link link-only">Link lazımdır</span>
+                            <span class="opt-desc d-block">Yalnız yük sorğuları göndərmək üçün.</span></span>
+                        </span>
+                    </label>
+                </div>
             </div>
-            
+
+            <div id="linkNotice" class="notice mb-4 d-none">
+                <i class="bi bi-info-circle me-1"></i> "Link lazımdır" qeydi olan seçimlər üçün sizə göndərilmiş qeydiyyat linki ilə daxil olmalısınız. Linkiniz yoxdursa <strong>info@arachi.co</strong> ünvanına yazın.
+            </div>
+
+            <!-- 3. Məlumatlar -->
+            <div class="step-label" id="detailsLabel">2. Məlumatlarınız</div>
+            <div class="mb-3">
+                <label class="form-label" for="company_name">Şirkətin Adı</label>
+                <input type="text" class="form-control" id="company_name" required maxlength="150" placeholder="Məs: Arachi Logistics">
+            </div>
+            <div class="mb-3">
+                <label class="form-label" for="email">E-poçt (Giriş üçün)</label>
+                <input type="email" class="form-control" id="email" required placeholder="info@shirketiniz.com" autocomplete="email">
+            </div>
             <div class="mb-4">
-                <label class="form-label text-muted fw-bold small">Şifrə təyin edin</label>
-                <input type="password" class="form-control" id="password" required placeholder="••••••••">
-                <!-- YENİ: Müştəriyə şifrə tələbləri göstərilir -->
+                <label class="form-label" for="password">Şifrə təyin edin</label>
+                <input type="password" class="form-control" id="password" required placeholder="••••••••" autocomplete="new-password">
                 <small class="text-secondary d-block mt-2" style="font-size: 11px;">
                     <strong>Tələb olunur:</strong> Ən azı 8 simvol, 1 böyük hərf, 1 kiçik hərf və 1 rəqəm.
                 </small>
             </div>
-            
+
             <button type="submit" class="btn btn-primary w-100" id="submitBtn">Qeydiyyatı Tamamla</button>
             <div id="errorMsg" class="text-danger small mt-3 text-center d-none"></div>
+            <div class="text-center mt-3 small text-muted">Artıq hesabınız var? <a href="/login" class="fw-semibold text-decoration-none" style="color: var(--brand);">Daxil olun</a></div>
         </form>
     </div>
 
     <script>
+        // Server linki ({{ token }}) yerləşdirir. Link yoxdursa dəyər boş qalır.
+        let token = (document.getElementById('token').value || '').trim();
+        if (token.indexOf('{{') !== -1) token = '';
+        const hasToken = token.length > 0;
+
+        const $ = id => document.getElementById(id);
+        const typeRadios = () => document.querySelectorAll('input[name="account_type"]');
+        const panelRadios = () => document.querySelectorAll('input[name="panel_access"]');
+        const checked = name => { const el = document.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : ''; };
+
+        // Link olmadan yalnız "Yalnız Freight forwarder paneli" mümkündür
+        function applyRules() {
+            const type = checked('account_type');
+            // idxalçı/ixracçı və forwarder-in "hər iki / yalnız müştəri" seçimi link tələb edir
+            $('type_importer').disabled = !hasToken;
+            $('panel_both').disabled = !hasToken;
+            $('panel_customer').disabled = !hasToken;
+            $('panelStep').classList.toggle('d-none', type !== 'forwarder');
+            $('detailsLabel').textContent = (type === 'forwarder' ? '3' : '2') + '. Məlumatlarınız';
+            const needsLink = (type === 'importer_exporter') || (type === 'forwarder' && checked('panel_access') !== 'forwarder');
+            // Linki olmayan istifadəçiyə niyə bəzi seçimlərin bağlı olduğu göstərilir
+            $('linkNotice').classList.toggle('d-none', hasToken);
+            return needsLink;
+        }
+        document.addEventListener('change', function (e) {
+            if (e.target.name === 'account_type' && e.target.value === 'forwarder' && !checked('panel_access')) {
+                $(hasToken ? 'panel_both' : 'panel_forwarder').checked = true;
+            }
+            applyRules();
+        });
+        // Başlanğıc seçim: link varsa idxalçı/ixracçı, yoxdursa forwarder + yalnız forwarder paneli
+        if (hasToken) { $('type_importer').checked = true; }
+        else { $('type_forwarder').checked = true; $('panel_forwarder').checked = true; }
+        applyRules();
+
         async function submitRegistration(e) {
             e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            const errorMsg = document.getElementById('errorMsg');
-            const password = document.getElementById('password').value;
-            
-            // YENİ: Brauzer tərəfində şifrənin dərhal yoxlanılması (Regex)
-            const passRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
-            if (!passRegex.test(password)) {
-                errorMsg.innerText = "Şifrə tələblərə cavab vermir. Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm yazın.";
-                errorMsg.classList.remove('d-none');
-                return;
-            }
-            
-            btn.disabled = true;
-            btn.innerText = "Gözləyin...";
-            errorMsg.classList.add('d-none');
+            const btn = $('submitBtn');
+            const errorMsg = $('errorMsg');
+            const fail = msg => { errorMsg.innerText = msg; errorMsg.classList.remove('d-none'); btn.disabled = false; btn.innerText = 'Qeydiyyatı Tamamla'; };
 
-            const payload = {
-                token: document.getElementById('token').value,
-                company_name: document.getElementById('company_name').value,
-                email: document.getElementById('email').value,
-                password: password
-            };
+            const accountType = checked('account_type');
+            if (!accountType) { fail('Hesab növünü seçin.'); return; }
+            const panelAccess = accountType === 'forwarder' ? checked('panel_access') : 'customer';
+            if (accountType === 'forwarder' && !panelAccess) { fail('Panel seçimini edin.'); return; }
+            const needsLink = applyRules();
+            if (needsLink && !hasToken) { fail('Bu seçim üçün sizə göndərilmiş qeydiyyat linki lazımdır.'); return; }
+
+            const company = $('company_name').value.trim();
+            const email = $('email').value.trim();
+            const password = $('password').value;
+            if (!company) { fail('Şirkətin adını yazın.'); return; }
+            if (!email || email.indexOf('@') === -1) { fail('E-poçt ünvanını düzgün yazın.'); return; }
+            const passRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
+            if (!passRegex.test(password)) { fail('Şifrə tələblərə cavab vermir. Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm yazın.'); return; }
+
+            btn.disabled = true; btn.innerText = 'Gözləyin...'; errorMsg.classList.add('d-none');
+
+            const payload = { company_name: company, email: email, password: password, account_type: accountType, panel_access: panelAccess };
+            if (needsLink && hasToken) payload.token = token;
 
             try {
-                const res = await fetch('/api/register', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-
+                const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const data = await res.json().catch(() => ({}));
                 if (res.ok) {
-                    alert("Hesabınız uğurla yaradıldı! İndi daxil ola bilərsiniz.");
-                    window.location.href = "/login"; 
+                    alert('Hesabınız uğurla yaradıldı! İndi daxil ola bilərsiniz.');
+                    window.location.href = '/login';
                 } else {
-                    errorMsg.innerText = data.detail || "Xəta baş verdi";
-                    errorMsg.classList.remove('d-none');
-                    btn.disabled = false;
-                    btn.innerText = "Qeydiyyatı Tamamla";
+                    fail(typeof data.detail === 'string' ? data.detail : 'Xəta baş verdi');
                 }
             } catch (err) {
-                errorMsg.innerText = "Sistemlə əlaqə kəsildi. İnterneti yoxlayın.";
-                errorMsg.classList.remove('d-none');
-                btn.disabled = false;
-                btn.innerText = "Qeydiyyatı Tamamla";
+                fail('Sistemlə əlaqə kəsildi. İnterneti yoxlayın.');
             }
         }
     </script>
