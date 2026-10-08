@@ -49,6 +49,12 @@
             </form>
         </div>
 
+        <!-- Freight forwarder qeydiyyatı -->
+        <div class="text-center mt-6 text-sm text-gray-600">
+            Freight forwarder-siniz?
+            <a href="/register" class="font-semibold text-indigo-600 hover:text-indigo-800 transition-colors">Pulsuz qeydiyyatdan keçin</a>
+        </div>
+
         <!-- Legal Notice (İstifadə Şərtləri) -->
         <div class="text-center mt-6 text-[13px] text-slate-500 leading-relaxed">
             Daxil olmaqla, siz Arachi-nin <br>
@@ -91,13 +97,17 @@
                     
                     // YENİ TƏHLÜKƏSİZLİK: Tokeni yadda saxlamaq
                     localStorage.setItem('token', result.token);
+                    // Hesab növü və panel giriş hüquqları
+                    localStorage.setItem('account_type', result.account_type || 'importer_exporter');
+                    localStorage.setItem('customer_access', String(result.customer_access !== false));
+                    localStorage.setItem('forwarder_access', String(result.forwarder_access === true));
                     
                     if (result.user && result.user.id) {
                         localStorage.setItem('customer_id', result.user.id);
                     }
 
-                    // Uğurlu giriş zamanı customer səhifəsinə yönləndiririk
-                    window.location.href = '/customer';
+                    // Uğurlu giriş: yalnız forwarder paneli olan hesab /forwarder-ə, qalanlar /customer-ə yönləndirilir
+                    window.location.href = (result.home === '/forwarder') ? '/forwarder' : '/customer';
                 } else {
                     // Backend-dən gələn xəta mesajını göstər
                     errorDiv.textContent = result.detail || "E-poçt və ya şifrə yanlışdır.";
