@@ -87,14 +87,32 @@ def create_access_token(data: dict):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def _decode_token(credentials: HTTPAuthorizationCredentials):
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        return payload
+        return jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Sessiyanın vaxtı bitib. Zəhmət olmasa yenidən giriş edin.")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Etibarsız token. Sistemə giriş qadağandır!")
+
+def verify_any_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Hər hansı etibarlı token (şifrə / e-poçt dəyişmə kimi ortaq əməliyyatlar üçün)."""
+    return _decode_token(credentials)
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Müştəri paneli endpointləri. Köhnə tokenlərdə 'customer_access' yoxdur - onlar müştəri sayılır.
+    Yalnız forwarder paneli hüququ olan hesablar müştəri panelinin məlumatlarına çıxış əldə edə bilmir."""
+    payload = _decode_token(credentials)
+    if payload.get("customer_access") is False:
+        raise HTTPException(status_code=403, detail="Bu hesabın müştəri panelinə girişi yoxdur.")
+    return payload
+
+def verify_forwarder_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Freight forwarder paneli endpointləri."""
+    payload = _decode_token(credentials)
+    if payload.get("forwarder_access") is not True:
+        raise HTTPException(status_code=403, detail="Bu hesabın forwarder panelinə girişi yoxdur.")
+    return payload
 
 def check_ownership(requested_customer_id: int, current_user: dict):
     if str(requested_customer_id) != str(current_user.get("sub")):
@@ -518,10 +536,12 @@ class CarrierBulkSetCategory(BaseModel):
     sub_category_id: Optional[int] = None # YENİ ƏLAVƏ
     
 class RegisterRequest(BaseModel):
-    token: str
+    token: Optional[str] = None
     email: EmailStr
     password: str
     company_name: str
+    account_type: str = "importer_exporter"   # importer_exporter | forwarder
+    panel_access: str = "customer"            # forwarder üçün: both | customer | forwarder
 
 class ChangePasswordRequest(BaseModel):
     current_password: str
@@ -564,7 +584,16 @@ def get_customer_dashboard():
     response.headers["Expires"] = "0"
     return response
 
+@app.get("/forwarder")
+def get_forwarder_dashboard():
+    response = FileResponse("static/forwarder.html")
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 @app.get("/carrier_quote/quote")
+
 def get_carrier_quote_page(token: str):
     file_path = BASE_DIR / "static" / "carrier_quote.html"
     response = FileResponse(file_path)
@@ -884,6 +913,187 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==========================================
+# FREIGHT FORWARDER: PROFİL, KƏŞF, BAZAYA ƏLAVƏ
+# ==========================================
+FORWARDER_SERVICES = {"road", "sea", "air", "rail", "multimodal", "customs", "warehouse"}
+PROFILE_PHOTO_DIR = os.path.join(UPLOAD_DIR, "profiles")
+os.makedirs(PROFILE_PHOTO_DIR, exist_ok=True)
+MAX_PROFILE_PHOTO_BYTES = 2 * 1024 * 1024
+PROFILE_PUBLIC_COLUMNS = "id, company_name, about, services, countries, country, city, website, contact_email, phone, whatsapp, telegram, photo_url, is_verified"
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+class ForwarderProfileUpdate(BaseModel):
+    company_name: Optional[str] = None
+    about: Optional[str] = None
+    services: Optional[List[str]] = None
+    countries: Optional[str] = None
+    country: Optional[str] = None
+    city: Optional[str] = None
+    website: Optional[str] = None
+    contact_email: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    telegram: Optional[str] = None
+    is_public: Optional[bool] = None
+
+def _clean_text(value: Optional[str], max_len: int) -> str:
+    return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", (value or "")).strip()[:max_len]
+
+def _get_or_create_profile(customer_id: int) -> Dict[str, Any]:
+    res = supabase.table("forwarder_profiles").select("*").eq("customer_id", customer_id).execute()
+    if res.data:
+        return res.data[0]
+    cust = supabase.table("customers").select("name").eq("id", customer_id).execute()
+    name = (cust.data[0].get("name") if cust.data else "") or ""
+    ins = supabase.table("forwarder_profiles").insert({"customer_id": customer_id, "company_name": name}).execute()
+    return ins.data[0]
+
+def _require_importer(current_user: dict):
+    """Kəşf yalnız idxalçı/ixracçı hesabları üçündür (forwarder hesablarında bu bölmə yoxdur)."""
+    if (current_user.get("account_type") or "importer_exporter") != "importer_exporter":
+        raise HTTPException(status_code=403, detail="Daşıyıcıları kəşf et bölməsi yalnız idxalçı/ixracçı hesabları üçündür.")
+
+@app.get("/forwarder/profile")
+def get_my_forwarder_profile(current_user: dict = Depends(verify_forwarder_token)):
+    try:
+        return {"status": "success", "profile": _get_or_create_profile(int(current_user["sub"]))}
+    except HTTPException as he: raise he
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Profil yüklənmədi: {str(e)}")
+
+@app.put("/forwarder/profile")
+def update_my_forwarder_profile(payload: ForwarderProfileUpdate, current_user: dict = Depends(verify_forwarder_token)):
+    try:
+        customer_id = int(current_user["sub"])
+        _get_or_create_profile(customer_id)
+        upd: Dict[str, Any] = {}
+
+        if payload.company_name is not None:
+            name = _clean_text(payload.company_name, 150)
+            if not name: raise HTTPException(status_code=400, detail="Şirkət adı boş ola bilməz.")
+            upd["company_name"] = name
+        if payload.about is not None: upd["about"] = _clean_text(payload.about, 2000)
+        if payload.countries is not None: upd["countries"] = _clean_text(payload.countries, 300)
+        if payload.country is not None: upd["country"] = _clean_text(payload.country, 80)
+        if payload.city is not None: upd["city"] = _clean_text(payload.city, 80)
+        if payload.phone is not None: upd["phone"] = _clean_text(payload.phone, 40)
+        if payload.whatsapp is not None: upd["whatsapp"] = _clean_text(payload.whatsapp, 60)
+        if payload.telegram is not None: upd["telegram"] = _clean_text(payload.telegram, 80)
+        if payload.services is not None:
+            upd["services"] = [s for s in dict.fromkeys(payload.services) if s in FORWARDER_SERVICES]
+        if payload.website is not None:
+            site = _clean_text(payload.website, 200)
+            if re.match(r"^s*(javascript|data|vbscript|file|blob|ftp)s*:", site, re.I):
+                raise HTTPException(status_code=400, detail="Veb sayt ünvanı düzgün deyil.")
+            if site and not re.match(r"^https?://", site, re.I): site = "https://" + site
+            if site and not re.match(r"^https?://[^\s<>\"']+$", site, re.I):
+                raise HTTPException(status_code=400, detail="Veb sayt ünvanı düzgün deyil.")
+            upd["website"] = site
+        if payload.contact_email is not None:
+            em = _clean_text(payload.contact_email, 150).lower()
+            if em and not _EMAIL_RE.match(em):
+                raise HTTPException(status_code=400, detail="Əlaqə e-poçtu düzgün deyil.")
+            upd["contact_email"] = em
+        if payload.is_public is not None: upd["is_public"] = bool(payload.is_public)
+
+        if not upd: raise HTTPException(status_code=400, detail="Dəyişiklik göndərilməyib.")
+        upd["updated_at"] = datetime.utcnow().isoformat()
+        res = supabase.table("forwarder_profiles").update(upd).eq("customer_id", customer_id).execute()
+        return {"status": "success", "message": "Profil yadda saxlanıldı.", "profile": res.data[0] if res.data else None}
+    except HTTPException as he: raise he
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Profil yadda saxlanmadı: {str(e)}")
+
+def _delete_profile_photo_file(photo_url: Optional[str]):
+    try:
+        if photo_url and photo_url.startswith("/uploads/profiles/"):
+            path = os.path.join(PROFILE_PHOTO_DIR, os.path.basename(photo_url))
+            if os.path.isfile(path): os.remove(path)
+    except Exception:
+        traceback.print_exc()
+
+@app.post("/forwarder/profile/photo")
+@limiter.limit("10/minute")
+async def upload_forwarder_photo(request: Request, file: UploadFile = File(...), current_user: dict = Depends(verify_forwarder_token)):
+    customer_id = int(current_user["sub"])
+    data = await file.read(MAX_PROFILE_PHOTO_BYTES + 1)
+    if len(data) > MAX_PROFILE_PHOTO_BYTES:
+        raise HTTPException(status_code=400, detail="Şəkil çox böyükdür (maksimum 2 MB).")
+    # Fayl tipi uzantıya yox, real məzmuna görə təyin olunur
+    if data[:8] == b"\x89PNG\r\n\x1a\n": ext = ".png"
+    elif data[:3] == b"\xff\xd8\xff": ext = ".jpg"
+    elif data[:4] == b"RIFF" and data[8:12] == b"WEBP": ext = ".webp"
+    else: raise HTTPException(status_code=400, detail="Yalnız PNG, JPG və ya WEBP şəkil yükləyə bilərsiniz.")
+    try:
+        profile = _get_or_create_profile(customer_id)
+        filename = f"{uuid.uuid4().hex}{ext}"
+        with open(os.path.join(PROFILE_PHOTO_DIR, filename), "wb") as f: f.write(data)
+        new_url = f"/uploads/profiles/{filename}"
+        supabase.table("forwarder_profiles").update({"photo_url": new_url, "updated_at": datetime.utcnow().isoformat()}).eq("customer_id", customer_id).execute()
+        _delete_profile_photo_file(profile.get("photo_url"))
+        return {"status": "success", "photo_url": new_url}
+    except HTTPException as he: raise he
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Şəkil yüklənmədi: {str(e)}")
+
+@app.delete("/forwarder/profile/photo")
+def delete_forwarder_photo(current_user: dict = Depends(verify_forwarder_token)):
+    customer_id = int(current_user["sub"])
+    profile = _get_or_create_profile(customer_id)
+    supabase.table("forwarder_profiles").update({"photo_url": None, "updated_at": datetime.utcnow().isoformat()}).eq("customer_id", customer_id).execute()
+    _delete_profile_photo_file(profile.get("photo_url"))
+    return {"status": "success"}
+
+@app.get("/forwarders/discover")
+def discover_forwarders(q: str = "", service: str = "", limit: int = 24, offset: int = 0, current_user: dict = Depends(verify_token)):
+    _require_importer(current_user)
+    try:
+        limit = max(1, min(int(limit), 50)); offset = max(0, int(offset))
+        query = supabase.table("forwarder_profiles").select(PROFILE_PUBLIC_COLUMNS).eq("is_public", True).neq("company_name", "")
+        if service in FORWARDER_SERVICES:
+            query = query.contains("services", [service])
+        # axtarış sözündən PostgREST filtrini pozan simvollar təmizlənir
+        q_clean = re.sub(r"[^\w\s\.\-]", " ", q or "", flags=re.UNICODE).strip()[:60]
+        if q_clean:
+            like = f"%{q_clean}%"
+            query = query.or_(f"company_name.ilike.{like},about.ilike.{like},countries.ilike.{like},city.ilike.{like},country.ilike.{like}")
+        res = query.order("is_verified", desc=True).order("id", desc=True).range(offset, offset + limit - 1).execute()
+        items = res.data or []
+
+        # Artıq müştərinin bazasında olanlar işarələnir
+        in_base = set()
+        base = supabase.table("carriers").select("email").eq("customer_id", int(current_user["sub"])).range(0, 9999).execute()
+        for row in (base.data or []):
+            em = extract_clean_email(row.get("email"))
+            if em: in_base.add(em)
+        for it in items:
+            em = extract_clean_email(it.get("contact_email"))
+            it["can_add"] = bool(em)
+            it["already_in_base"] = bool(em and em in in_base)
+        return {"status": "success", "forwarders": items, "has_more": len(items) == limit}
+    except HTTPException as he: raise he
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Axtarış xətası: {str(e)}")
+
+@app.post("/forwarders/{profile_id}/add-to-base")
+@limiter.limit("30/minute")
+def add_forwarder_to_base(request: Request, profile_id: int, current_user: dict = Depends(verify_token)):
+    _require_importer(current_user)
+    res = supabase.table("forwarder_profiles").select("company_name, contact_email, is_public").eq("id", profile_id).execute()
+    prof = res.data[0] if res.data else None
+    if not prof or not prof.get("is_public"):
+        raise HTTPException(status_code=404, detail="Forwarder tapılmadı.")
+    email = extract_clean_email(prof.get("contact_email"))
+    if not email:
+        raise HTTPException(status_code=400, detail="Bu forwarder əlaqə e-poçtu göstərməyib, ona görə bazaya əlavə etmək mümkün deyil.")
+    return filter_and_insert_carriers(int(current_user["sub"]), [{"name": prof.get("company_name") or "Daşıyıcı", "email": email}])
 
 @app.post("/carriers/manual")
 async def add_carriers_manual(request: Request, current_user: dict = Depends(verify_token)):
@@ -1689,21 +1899,22 @@ def generate_invite_link(secret: str = None):
 
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request, token: str = None):
-    if not token:
-        return HTMLResponse("<h1>Xəta: Token tapılmadı. Zəhmət olmasa etibarlı linkdən istifadə edin.</h1>", status_code=400)
     try:
-        res = supabase.table("registration_tokens").select("*").eq("token", token).execute()
-        token_record = res.data[0] if res.data else None
-        
-        if not token_record:
-            return HTMLResponse("<h1>Xəta: Bu link mövcud deyil və ya səhvdir.</h1>", status_code=404)
-        if token_record.get('is_used'):
-            return HTMLResponse("<h1>Xəta: Bu qeydiyyat linki artıq istifadə edilib! Hər link yalnız 1 dəfə keçərlidir.</h1>", status_code=403)
-            
+        # Link (token) olmadan da açılır: yalnız "Freight forwarder paneli" üçün açıq qeydiyyat mümkündür.
+        safe_token = ""
+        if token:
+            res = supabase.table("registration_tokens").select("*").eq("token", token).execute()
+            token_record = res.data[0] if res.data else None
+            if not token_record:
+                return HTMLResponse("<h1>Xəta: Bu link mövcud deyil və ya səhvdir.</h1>", status_code=404)
+            if token_record.get('is_used'):
+                return HTMLResponse("<h1>Xəta: Bu qeydiyyat linki artıq istifadə edilib! Hər link yalnız 1 dəfə keçərlidir.</h1>", status_code=403)
+            safe_token = token
+
         file_path = os.path.join("static", "register.html")
         with open(file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
-        html_content = html_content.replace("{{ token }}", token)
+        html_content = html_content.replace("{{ token }}", safe_token)
         return HTMLResponse(content=html_content)
     except Exception as e:
         traceback.print_exc()
@@ -1719,18 +1930,55 @@ def process_registration(request: Request, data: RegisterRequest):
         )
 
     try:
-        res = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
-        valid_token = res.data[0] if res.data else None
-        if not valid_token:
-            raise HTTPException(status_code=400, detail="Qeydiyyat linki etibarsızdır və ya artıq istifadə edilib.")
-            
+        # Hesab növü və panel hüquqları
+        account_type = (data.account_type or "importer_exporter").strip()
+        panel_access = (data.panel_access or "customer").strip()
+        if account_type not in ("importer_exporter", "forwarder"):
+            raise HTTPException(status_code=400, detail="Etibarsız hesab növü.")
+        if account_type == "importer_exporter":
+            customer_access, forwarder_access = True, False
+        else:
+            if panel_access == "both": customer_access, forwarder_access = True, True
+            elif panel_access == "customer": customer_access, forwarder_access = True, False
+            elif panel_access == "forwarder": customer_access, forwarder_access = False, True
+            else: raise HTTPException(status_code=400, detail="Etibarsız panel seçimi.")
+
+        company_name = (data.company_name or "").strip()
+        if not company_name or len(company_name) > 150:
+            raise HTTPException(status_code=400, detail="Şirkət adı boş ola bilməz (maks. 150 simvol).")
+
+        # Müştəri paneli hüququ (idxalçı/ixracçı və ya forwarder-in müştəri paneli) yalnız admin linki ilə verilir.
+        # Yalnız forwarder paneli üçün qeydiyyat linksizdir.
+        needs_token = customer_access
+        valid_token = None
+        if needs_token:
+            if not data.token:
+                raise HTTPException(status_code=400, detail="Bu qeydiyyat növü üçün sizə göndərilmiş qeydiyyat linki lazımdır.")
+            res = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
+            valid_token = res.data[0] if res.data else None
+            if not valid_token:
+                raise HTTPException(status_code=400, detail="Qeydiyyat linki etibarsızdır və ya artıq istifadə edilib.")
+
         existing = supabase.table("customers").select("id").eq("email", data.email).execute()
         if existing.data:
             raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq mövcuddur.")
-        
+
         hashed_password = pwd_context.hash(data.password)
-        supabase.table("customers").insert({"email": data.email, "password": hashed_password, "name": data.company_name}).execute()
-        supabase.table("registration_tokens").update({"is_used": True}).eq("token", data.token).execute()
+        ins = supabase.table("customers").insert({
+            "email": data.email, "password": hashed_password, "name": company_name,
+            "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access
+        }).execute()
+        new_id = ins.data[0]["id"] if ins.data else None
+
+        # Forwarder panelinə girişi olan hesab üçün boş profil yaradılır (şirkət adı ilə)
+        if forwarder_access and new_id:
+            try:
+                supabase.table("forwarder_profiles").insert({"customer_id": new_id, "company_name": company_name}).execute()
+            except Exception:
+                traceback.print_exc()
+
+        if needs_token and valid_token:
+            supabase.table("registration_tokens").update({"is_used": True}).eq("token", data.token).execute()
         return {"message": "Qeydiyyat uğurla tamamlandı!"}
     except HTTPException as he: raise he
     except Exception as e:
@@ -1744,23 +1992,33 @@ async def login(request: Request, data: LoginRequest):
     if customer.data:
         user = customer.data[0]
         if pwd_context.verify(data.password, user.get("password", "")):
-            token = create_access_token({"sub": str(user["id"]), "role": "customer", "email": user["email"]})
-            return {"status": "success", "role": "customer", "token": token, "user": user}
+            account_type = user.get("account_type") or "importer_exporter"
+            customer_access = user.get("customer_access") is not False
+            forwarder_access = user.get("forwarder_access") is True
+            token = create_access_token({
+                "sub": str(user["id"]), "role": "customer", "email": user["email"],
+                "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access
+            })
+            safe_user = {k: v for k, v in user.items() if k != "password"}   # parol heş-i brauzerə göndərilmir
+            home = "/forwarder" if (forwarder_access and not customer_access) else "/customer"
+            return {"status": "success", "role": "customer", "token": token, "user": safe_user, "home": home,
+                    "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access}
         else: raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
-    
+
     carrier = supabase.table("carriers").select("*").eq("email", data.email).execute()
     if carrier.data:
         user = carrier.data[0]
         if pwd_context.verify(data.password, user.get("password", "")):
             token = create_access_token({"sub": str(user["id"]), "role": "carrier", "email": user["email"]})
-            return {"status": "success", "role": "carrier", "token": token, "user": user}
+            safe_user = {k: v for k, v in user.items() if k != "password"}
+            return {"status": "success", "role": "carrier", "token": token, "user": safe_user}
         else: raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
 
     raise HTTPException(status_code=404, detail="Bu e-poçt ilə qeydiyyatlı hesab tapılmadı.")
 
 @app.post("/api/change-password")
 @limiter.limit("5/minute")
-def change_password(request: Request, data: ChangePasswordRequest, current_user: dict = Depends(verify_token)):
+def change_password(request: Request, data: ChangePasswordRequest, current_user: dict = Depends(verify_any_token)):
     user_id = current_user.get("sub")
     role = current_user.get("role")
     
@@ -1788,7 +2046,7 @@ def change_password(request: Request, data: ChangePasswordRequest, current_user:
 
 @app.post("/api/change-email")
 @limiter.limit("5/minute")
-def change_email(request: Request, data: ChangeEmailRequest, current_user: dict = Depends(verify_token)):
+def change_email(request: Request, data: ChangeEmailRequest, current_user: dict = Depends(verify_any_token)):
     user_id = current_user.get("sub")
     role = current_user.get("role")
     
