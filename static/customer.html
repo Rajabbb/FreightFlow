@@ -786,6 +786,16 @@
         #forwarderDetailFooter .btn { min-width: 150px; }
         @media (max-width: 576px) { #forwarderDetailFooter { flex-wrap: wrap; flex-direction: column-reverse; align-items: stretch !important; } #forwarderDetailFooter .btn { width: 100%; } .fwd-actions .btn { flex: 1 1 100%; } }
 
+        /* --- Aİ istifadə et düyməsi --- */
+        .ai-launch-btn {
+            color: #fff; border: none;
+            background: linear-gradient(135deg, #0037B8 0%, #5B5BE6 55%, #8B5CF6 100%);
+            box-shadow: 0 10px 22px -10px rgba(91, 91, 230, 0.9), inset 0 1px 0 rgba(255,255,255,.25);
+            transition: transform .2s ease, box-shadow .2s ease, filter .2s ease;
+        }
+        .ai-launch-btn:hover, .ai-launch-btn:focus { color: #fff; transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 16px 28px -12px rgba(91, 91, 230, 1); }
+        .ai-launch-btn:disabled { opacity: .7; transform: none; }
+
         /* --- Altbilgi --- */
         .border-top { border-color: var(--brand-line) !important; }
 
@@ -805,13 +815,16 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-<div class="position-relative d-inline-flex align-items-center">
-    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-        <option value="az">AZ</option>
-        <option value="en">EN</option>
-    </select>
-</div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
+                <button id="aiLaunchBtn" type="button" onclick="launchAI()" class="btn btn-sm px-3 py-1.5 rounded-pill text-nowrap d-none fw-bold ai-launch-btn" style="font-size: 12.5px;">
+                    <i class="bi bi-stars me-1"></i> Aİ istifadə et
+                </button>
                 <a id="panelSwitchLink" href="/forwarder" class="btn btn-outline-primary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap d-none" style="font-size: 12.5px;">
                     <i class="bi bi-diagram-3 me-1"></i> Forwarder paneli
                 </a>
@@ -4782,6 +4795,44 @@ function copyPublicLinkText() {
         if (tabBtn) tabBtn.addEventListener("shown.bs.tab", function () { if (!loadedOnce) loadDiscover(true); });
     })();
     </script>
+    <script id="arachi-ai">
+    // ===== Aİ (arachi v2) =====
+    // Düymə yalnız müştəri paneli olan və Pro planda olan hesablarda görünür. Əsl yoxlama serverdədir (/api/ai/launch).
+    (function () {
+        let u = null;
+        try { u = JSON.parse(localStorage.getItem("user")); } catch (e) {}
+        if (u && u.plan === "pro" && u.customer_access !== false) {
+            const b = document.getElementById("aiLaunchBtn"); if (b) b.classList.remove("d-none");
+        }
+    })();
+
+    async function launchAI() {
+        const btn = document.getElementById("aiLaunchBtn");
+        const original = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Gözləyin...';
+        // Pəncərəni kliklə eyni anda açırıq ki, brauzer onu "popup" kimi bloklamasın
+        const win = window.open("", "_blank");
+        if (win) { try { win.opener = null; } catch (e) {} }
+        try {
+            const res = await fetch("/api/ai/launch", { method: "POST", headers: getAuthHeaders() });
+            if (res.status === 401) { if (win) win.close(); logout(); return; }
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || !data.url) {
+                if (win) win.close();
+                alert(typeof data.detail === "string" ? data.detail : "Aİ açıla bilmədi.");
+                return;
+            }
+            if (win) win.location.href = data.url; else window.location.href = data.url;
+        } catch (e) {
+            if (win) win.close();
+            alert("Serverlə əlaqə qurulmadı!");
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+    </script>
     <!-- ===================== DİL TƏRCÜMƏSİ (AZ / EN) ===================== -->
     <script>
     (function () {
@@ -4789,6 +4840,10 @@ function copyPublicLinkText() {
         const DICT = {
             // --- Daşıyıcıları kəşf et ---
             "Forwarder paneli": "Forwarder Panel",
+            "Aİ istifadə et": "Use AI",
+            "Aİ açıla bilmədi.": "AI could not be opened.",
+            "Aİ funksiyası yalnız Pro plan üçün aktivdir.": "The AI feature is only available on the Pro plan.",
+            "Aİ inteqrasiyası hələ qurulmayıb.": "AI integration is not set up yet.",
             "Ətraflı bax": "View details",
             "Forwarder haqqında": "About the forwarder",
             "Şirkət haqqında": "About the company",
