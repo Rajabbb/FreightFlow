@@ -3,6 +3,7 @@ import uuid
 import traceback
 import io
 import json
+import hmac
 import re
 import csv
 import asyncio
@@ -81,9 +82,9 @@ if not JWT_SECRET:
     
 JWT_ALGORITHM = "HS256"
 
-def create_access_token(data: dict):
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=7) 
+    expire = datetime.utcnow() + (expires_delta or timedelta(days=7))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
@@ -1095,6 +1096,78 @@ def add_forwarder_to_base(request: Request, profile_id: int, current_user: dict 
         raise HTTPException(status_code=400, detail="Bu forwarder əlaqə e-poçtu göstərməyib, ona görə bazaya əlavə etmək mümkün deyil.")
     return filter_and_insert_carriers(int(current_user["sub"]), [{"name": prof.get("company_name") or "Daşıyıcı", "email": email}])
 
+# ==========================================
+# Aİ (ARACHI V2) İNTEQRASİYASI: SSO
+# ==========================================
+V2_BASE_URL = os.getenv("V2_BASE_URL", "https://app.v2.arachi.co").rstrip("/")
+V2_SSO_SECRET = os.getenv("V2_SSO_SECRET", "")      # arachi.co və v2 arasında ortaq gizli açar (.env-də saxlanır)
+AI_SSO_AUDIENCE = "arachi-v2"
+AI_SSO_TTL_SECONDS = 60          # bilet yalnız 1 dəqiqə etibarlıdır və bir dəfə istifadə olunur
+AI_SESSION_HOURS = 12            # v2-nin arachi.co API-sinə girişi üçün verilən token ömrü
+
+def _require_ai_customer(customer_id: int) -> Dict[str, Any]:
+    """Aİ yalnız müştəri paneli olan və 'pro' planda olan hesablar üçündür. Plan hər dəfə bazadan təzədən yoxlanılır."""
+    res = supabase.table("customers").select("id, email, name, plan, customer_access, forwarder_access, account_type").eq("id", customer_id).execute()
+    user = res.data[0] if res.data else None
+    if not user:
+        raise HTTPException(status_code=404, detail="Hesab tapılmadı.")
+    if user.get("customer_access") is False:
+        raise HTTPException(status_code=403, detail="Bu hesabın müştəri panelinə girişi yoxdur.")
+    if (user.get("plan") or "basic") != "pro":
+        raise HTTPException(status_code=403, detail="Aİ funksiyası yalnız Pro plan üçün aktivdir.")
+    return user
+
+@app.post("/api/ai/launch")
+@limiter.limit("20/minute")
+def ai_launch(request: Request, current_user: dict = Depends(verify_token)):
+    """'Aİ istifadə et' düyməsi: qısa ömürlü, birdəfəlik imzalı bilet yaradır və v2-nin giriş ünvanını qaytarır."""
+    if not V2_SSO_SECRET:
+        raise HTTPException(status_code=503, detail="Aİ inteqrasiyası hələ qurulmayıb.")
+    user = _require_ai_customer(int(current_user["sub"]))
+    now = datetime.utcnow()
+    ticket = jwt.encode({
+        "iss": "arachi.co", "aud": AI_SSO_AUDIENCE, "typ": "v2-sso",
+        "sub": str(user["id"]), "email": user["email"], "name": user.get("name") or "",
+        "jti": uuid.uuid4().hex, "iat": now, "exp": now + timedelta(seconds=AI_SSO_TTL_SECONDS),
+    }, V2_SSO_SECRET, algorithm="HS256")
+    return {"status": "success", "url": f"{V2_BASE_URL}/sso?ticket={ticket}"}
+
+class AiExchangeRequest(BaseModel):
+    ticket: str
+
+@app.post("/api/ai/exchange")
+@limiter.limit("60/minute")
+def ai_exchange(request: Request, body: AiExchangeRequest):
+    """Yalnız v2 SERVERİ çağırır (brauzer yox): biletdə imzanı, vaxtı, istifadə olunmamasını və planı yoxlayır,
+    sonra istifadəçi adından arachi.co API-sinə giriş üçün adi token qaytarır."""
+    if not V2_SSO_SECRET:
+        raise HTTPException(status_code=503, detail="Aİ inteqrasiyası hələ qurulmayıb.")
+    supplied = (request.headers.get("x-service-secret") or "").encode()
+    if not hmac.compare_digest(supplied, V2_SSO_SECRET.encode()):
+        raise HTTPException(status_code=403, detail="İcazə yoxdur.")
+    try:
+        claims = jwt.decode(body.ticket, V2_SSO_SECRET, algorithms=["HS256"], audience=AI_SSO_AUDIENCE,
+                            issuer="arachi.co", options={"require": ["exp", "jti", "sub"]})
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Giriş biletinin vaxtı bitib. arachi.co-dan yenidən 'Aİ istifadə et' basın.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Etibarsız giriş bileti.")
+    if claims.get("typ") != "v2-sso":
+        raise HTTPException(status_code=401, detail="Etibarsız giriş bileti.")
+    user = _require_ai_customer(int(claims["sub"]))
+    try:   # birdəfəlik: eyni bilet ikinci dəfə bazaya yazıla bilmir (jti unikaldır)
+        supabase.table("ai_sso_jti").insert({"jti": claims["jti"], "customer_id": user["id"]}).execute()
+    except Exception:
+        raise HTTPException(status_code=401, detail="Bu giriş bileti artıq istifadə edilib.")
+    token = create_access_token({
+        "sub": str(user["id"]), "role": "customer", "email": user["email"],
+        "account_type": user.get("account_type") or "importer_exporter",
+        "customer_access": True, "forwarder_access": user.get("forwarder_access") is True,
+        "plan": "pro", "via": "ai",
+    }, expires_delta=timedelta(hours=AI_SESSION_HOURS))
+    return {"status": "success", "token": token, "expires_in": AI_SESSION_HOURS * 3600,
+            "user": {"id": user["id"], "email": user["email"], "name": user.get("name") or "", "plan": "pro"}}
+
 @app.post("/carriers/manual")
 async def add_carriers_manual(request: Request, current_user: dict = Depends(verify_token)):
     try:
@@ -1457,6 +1530,10 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
                 "request_details": shipment_data
             }
 
+        # --- YENİ: yalnız sorğunu yarat, heç nə göndərmə (Aİ agent göndərməni ayrıca təsdiqlə edir) ---
+        if send_opt == "none":
+            return {"status": "success", "message": f"Sorğu #{request_id} yaradıldı.", "emailed_count": 0, "request_details": shipment_data}
+
         # --- KÖHNƏ: STANDART EMAİL GÖNDƏRMƏ REJİMİ ---
         if send_opt == "category":
             cat_ids = set(payload.category_ids or [])
@@ -1500,6 +1577,69 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+class SendRequestPayload(BaseModel):
+    carrier_ids: Optional[List[int]] = []
+    category_ids: Optional[List[int]] = []
+    send_to_all: bool = False
+    also_create_link: Optional[bool] = False
+
+
+def _own_request(request_id: int, current_user: dict) -> dict:
+    res = supabase.table("shipment_requests").select("*").eq("id", request_id).execute()
+    if not res.data: raise HTTPException(status_code=404, detail="Sorğu tapılmadı.")
+    check_ownership(res.data[0]["customer_id"], current_user)
+    return res.data[0]
+
+
+def _own_quote(quote_id: int, current_user: dict) -> dict:
+    res = supabase.table("quotes").select("*").eq("id", quote_id).execute()
+    if not res.data: raise HTTPException(status_code=404, detail="Təklif qeydi tapılmadı.")
+    _own_request(res.data[0]["request_id"], current_user)
+    return res.data[0]
+
+
+@app.post("/requests/{request_id}/send")
+async def send_existing_request(request_id: int, payload: SendRequestPayload, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
+    """Əvvəl yaradılmış sorğunu daşıyıcılara göndərir (Aİ agent üçün). Artıq göndərilmiş daşıyıcılara təkrar getmir."""
+    shipment = _own_request(request_id, current_user)
+    customer_id = shipment["customer_id"]
+    cust = (supabase.table("customers").select("*").eq("id", customer_id).execute().data or [{}])[0]
+    sender_company = cust.get("company_name") or cust.get("name") or "Arachi"
+    customer_email = cust.get("email")
+    all_carriers = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute().data or []
+    real = [c for c in all_carriers if "public_link_" not in (c.get("email") or "")]
+    if payload.send_to_all: targets = real
+    elif payload.category_ids: targets = [c for c in real if c.get("category_id") in set(payload.category_ids)]
+    else: targets = [c for c in real if c.get("id") in set(payload.carrier_ids or [])]
+    already = {q["carrier_id"] for q in (supabase.table("quotes").select("carrier_id").eq("request_id", request_id).execute().data or [])}
+    skipped = [c for c in targets if c["id"] in already]
+    targets = [c for c in targets if c["id"] not in already]
+    if not targets and not payload.also_create_link:
+        raise HTTPException(status_code=400, detail="Göndəriləcək yeni daşıyıcı tapılmadı (seçilənlərə artıq göndərilib və ya seçim boşdur).")
+    sent = []
+    for carrier in targets:
+        unique_token = str(uuid.uuid4())
+        email = carrier.get("email")
+        supabase.table("quotes").insert({"request_id": request_id, "carrier_id": carrier["id"], "token": unique_token, "mail_status": "pending" if email else "failed", "is_viewed": False}).execute()
+        if email:
+            background_tasks.add_task(
+                send_carrier_email_link, carrier_email=email, carrier_name=carrier.get("company_name") or "Daşıyıcı",
+                origin=shipment["origin"], destination=shipment["destination"], token=unique_token,
+                sender_company=sender_company, reply_to_email=customer_email)
+        sent.append({"carrier_id": carrier["id"], "company_name": carrier.get("company_name"), "email": email, "token": unique_token})
+    result = {"status": "success", "request_id": request_id, "sent": sent, "skipped_already_sent": [c["id"] for c in skipped]}
+    if payload.also_create_link:
+        result["public_link"] = create_public_link_quote(customer_id, request_id, all_carriers)
+    return result
+
+
+@app.post("/requests/{request_id}/public-link")
+def create_request_public_link(request_id: int, current_user: dict = Depends(verify_token)):
+    shipment = _own_request(request_id, current_user)
+    all_carriers = supabase.table("carriers").select("*").eq("customer_id", shipment["customer_id"]).range(0, 9999).execute().data or []
+    return {"status": "success", "public_link": create_public_link_quote(shipment["customer_id"], request_id, all_carriers)}
+
+
 @app.get("/requests/customer/{customer_id}")
 def get_customer_requests(customer_id: int, current_user: dict = Depends(verify_token)):
     check_ownership(customer_id, current_user)
@@ -1513,6 +1653,7 @@ def get_customer_requests(customer_id: int, current_user: dict = Depends(verify_
 
 @app.get("/requests/carriers-status/{request_id}")
 def get_request_carriers_status(request_id: int, current_user: dict = Depends(verify_token)):
+    _own_request(request_id, current_user)
     try:
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
         result_carriers = []
@@ -1670,6 +1811,7 @@ def track_email_view(token: str):
 
 @app.post("/quotes/resend/{quote_id}")
 async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
+    _own_quote(quote_id, current_user)
     try:
         res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").eq("id", quote_id).execute()
         if not res.data: raise HTTPException(status_code=404, detail="Təklif qeydi tapılmadı.")
@@ -1688,6 +1830,7 @@ async def resend_carrier_email(quote_id: int, background_tasks: BackgroundTasks,
 
 @app.post("/quotes/reminder/{quote_id}")
 async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
+    _own_quote(quote_id, current_user)
     try:
         res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").eq("id", quote_id).execute()
         if not res.data: raise HTTPException(status_code=404, detail="Qeyd tapılmadı.")
@@ -1711,6 +1854,7 @@ async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: 
         res = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").in_("id", payload.quote_ids).execute()
         count = 0
         for quote in (res.data or []):
+            if str((quote.get("shipment_requests") or {}).get("customer_id")) != str(current_user.get("sub")): continue
             if quote.get("carriers", {}).get("email"):
                 sender_company, customer_email = get_sender_info_from_shipment(quote.get("shipment_requests"))
                 background_tasks.add_task(
@@ -1830,6 +1974,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
 
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int, current_user: dict = Depends(verify_token)):
+    _own_request(request_id, current_user)
     try:
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
         quotes_list = []
@@ -1853,6 +1998,7 @@ def get_request_quotes(request_id: int, current_user: dict = Depends(verify_toke
 def select_winner_path(quote_id: int, current_user: dict = Depends(verify_token)):
     quote_res = supabase.table("quotes").select("request_id").eq("id", quote_id).execute()
     if not quote_res.data: raise HTTPException(status_code=404, detail="Təklif tapılmadı.")
+    _own_request(quote_res.data[0]["request_id"], current_user)
     request_id = quote_res.data[0]["request_id"]
     supabase.table("quotes").update({"is_winner": False}).eq("request_id", request_id).execute()
     supabase.table("quotes").update({"is_winner": True}).eq("id", quote_id).execute()
@@ -1863,6 +2009,7 @@ def select_winner_path(quote_id: int, current_user: dict = Depends(verify_token)
 def cancel_winner_path(quote_id: int, current_user: dict = Depends(verify_token)):
     quote_res = supabase.table("quotes").select("request_id").eq("id", quote_id).execute()
     if not quote_res.data: raise HTTPException(status_code=404, detail="Təklif tapılmadı.")
+    _own_request(quote_res.data[0]["request_id"], current_user)
     
     request_id = quote_res.data[0]["request_id"]
     
@@ -1873,6 +2020,9 @@ def cancel_winner_path(quote_id: int, current_user: dict = Depends(verify_token)
 
 @app.post("/quotes/select-winner")
 async def select_winner_body(payload: SelectWinnerRequest, current_user: dict = Depends(verify_token)):
+    _own_request(payload.request_id, current_user)
+    q = supabase.table("quotes").select("request_id").eq("id", payload.quote_id).execute()
+    if not q.data or q.data[0]["request_id"] != payload.request_id: raise HTTPException(status_code=404, detail="Bu sorğuda belə təklif yoxdur.")
     supabase.table("quotes").update({"is_winner": False}).eq("request_id", payload.request_id).execute()
     supabase.table("quotes").update({"is_winner": True}).eq("id", payload.quote_id).execute()
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
@@ -1995,14 +2145,16 @@ async def login(request: Request, data: LoginRequest):
             account_type = user.get("account_type") or "importer_exporter"
             customer_access = user.get("customer_access") is not False
             forwarder_access = user.get("forwarder_access") is True
+            plan = user.get("plan") or "basic"
             token = create_access_token({
                 "sub": str(user["id"]), "role": "customer", "email": user["email"],
-                "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access
+                "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access, "plan": plan
             })
             safe_user = {k: v for k, v in user.items() if k != "password"}   # parol heş-i brauzerə göndərilmir
             home = "/forwarder" if (forwarder_access and not customer_access) else "/customer"
             return {"status": "success", "role": "customer", "token": token, "user": safe_user, "home": home,
-                    "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access}
+                    "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access,
+                    "plan": plan, "ai_enabled": bool(customer_access and plan == "pro")}
         else: raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
 
     carrier = supabase.table("carriers").select("*").eq("email", data.email).execute()
