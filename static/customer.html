@@ -775,7 +775,16 @@
         .fwd-contacts a, .fwd-contacts span { color: var(--text-main); word-break: break-all; }
         .fwd-contacts a:hover { color: var(--primary-blue); }
         .fwd-contacts i { color: var(--primary-blue); margin-right: 6px; }
-        #discoverGrid .btn { width: 100%; }
+        .fwd-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .fwd-actions .btn, #forwarderDetailFooter .btn { width: auto; white-space: nowrap; }
+        .fwd-actions .btn { flex: 1 1 auto; }
+        #forwarderDetailFooter { flex-wrap: nowrap; justify-content: space-between; gap: 10px; }
+        .fwd-photo-lg { width: 84px; height: 84px; min-width: 84px; border-radius: 22px; font-size: 32px; }
+        .fwd-sec { margin-bottom: 20px; }
+        .fwd-sec-title { font-size: 11.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--primary-blue); margin-bottom: 8px; }
+        .fwd-sec-text { font-size: 14px; line-height: 1.7; color: var(--text-main); white-space: pre-line; word-break: break-word; }
+        #forwarderDetailFooter .btn { min-width: 150px; }
+        @media (max-width: 576px) { #forwarderDetailFooter { flex-wrap: wrap; flex-direction: column-reverse; align-items: stretch !important; } #forwarderDetailFooter .btn { width: 100%; } .fwd-actions .btn { flex: 1 1 100%; } }
 
         /* --- Altbilgi --- */
         .border-top { border-color: var(--brand-line) !important; }
@@ -4581,6 +4590,20 @@ function copyPublicLinkText() {
         }
         
     </script>
+    <!-- Forwarder haqqında ətraflı məlumat pəncərəsi -->
+    <div class="modal fade" id="forwarderDetailModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-badge text-primary me-2"></i> Forwarder haqqında</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="forwarderDetailBody"></div>
+                <div class="modal-footer d-flex justify-content-between" id="forwarderDetailFooter"></div>
+            </div>
+        </div>
+    </div>
+
     <script id="arachi-forwarders">
     // ===== Daşıyıcıları kəşf et (yalnız idxalçı/ixracçı hesabları) və panel keçidi =====
     (function () {
@@ -4597,6 +4620,7 @@ function copyPublicLinkText() {
         const SERVICE_LABELS = { road: "Quru", sea: "Dəniz", air: "Hava", rail: "Dəmiryolu", multimodal: "Multimodal", customs: "Gömrük", warehouse: "Anbar" };
         const PAGE = 24;
         let offset = 0, service = "", loadedOnce = false, searchTimer = null, reqSeq = 0;
+        const cache = new Map();   // id -> forwarder (ətraflı pəncərə üçün)
 
         const grid = () => document.getElementById("discoverGrid");
         const statusEl = () => document.getElementById("discoverStatus");
@@ -4641,8 +4665,60 @@ function copyPublicLinkText() {
                 ${chips ? `<div class="fwd-chips">${chips}</div>` : ""}
                 ${f.countries ? `<div class="small"><span class="text-muted">Əhatə:</span> ${escapeHTML(f.countries)}</div>` : ""}
                 <div class="fwd-contacts">${contacts}</div>
-                ${action}
+                <div class="fwd-actions">
+                    <button type="button" class="btn btn-outline-primary btn-sm fw-bold" data-detail-id="${Number(f.id)}"><i class="bi bi-person-lines-fill me-1"></i> Ətraflı bax</button>
+                    ${action}
+                </div>
             </div></div>`;
+        }
+
+        function addButtonHtml(f) {
+            if (f.already_in_base) return `<button type="button" class="btn btn-light border btn-sm fw-bold" disabled><i class="bi bi-check2-circle me-1 text-success"></i> Bazada var</button>`;
+            if (!f.can_add) return `<button type="button" class="btn btn-light border btn-sm fw-bold" disabled title="Bu forwarder əlaqə e-poçtu göstərməyib"><i class="bi bi-plus-circle me-1"></i> Bazama əlavə et</button>`;
+            return `<button type="button" class="btn btn-primary btn-sm" data-add-id="${Number(f.id)}"><i class="bi bi-plus-circle me-1"></i> Bazama əlavə et</button>`;
+        }
+
+        function showDetail(id) {
+            const f = cache.get(Number(id));
+            if (!f) return;
+            const name = f.company_name || "";
+            const photo = f.photo_url && /^\/uploads\/profiles\/[A-Za-z0-9._-]+$/.test(f.photo_url)
+                ? `<img class="fwd-photo fwd-photo-lg" src="${escapeHTML(f.photo_url)}" alt="">`
+                : `<div class="fwd-photo fwd-photo-lg">${escapeHTML(name.trim().charAt(0).toUpperCase() || "F")}</div>`;
+            const loc = [f.city, f.country].filter(Boolean).join(", ");
+            const chips = (f.services || []).filter(s => SERVICE_LABELS[s]).map(s => `<span class="fwd-chip">${SERVICE_LABELS[s]}</span>`).join("");
+            const contacts = (f.contact_email ? contactLine("bi-envelope", f.contact_email, "mailto:" + f.contact_email) : "")
+                + contactLine("bi-telephone", f.phone, telHref(f.phone))
+                + contactLine("bi-whatsapp", f.whatsapp, waLink(f.whatsapp))
+                + contactLine("bi-telegram", f.telegram, tgLink(f.telegram))
+                + contactLine("bi-globe2", f.website ? f.website.replace(/^https?:\/\//i, "") : "", safeHref(f.website));
+            document.getElementById("forwarderDetailBody").innerHTML = `
+                <div class="d-flex gap-3 align-items-center mb-4">
+                    ${photo}
+                    <div style="min-width:0;">
+                        <div class="fwd-name" style="font-size:19px;">${escapeHTML(name)}${f.is_verified ? '<span class="fwd-verified">Təsdiqlənib</span>' : ""}</div>
+                        ${loc ? `<div class="fwd-loc" style="font-size:13px;"><i class="bi bi-geo-alt me-1"></i>${escapeHTML(loc)}</div>` : ""}
+                    </div>
+                </div>
+                <div class="fwd-sec"><div class="fwd-sec-title">Şirkət haqqında</div>
+                    <div class="fwd-sec-text">${f.about ? escapeHTML(f.about) : '<span class="text-muted">Təsvir əlavə edilməyib.</span>'}</div></div>
+                ${chips ? `<div class="fwd-sec"><div class="fwd-sec-title">Xidmətlər</div><div class="fwd-chips">${chips}</div></div>` : ""}
+                ${f.countries ? `<div class="fwd-sec"><div class="fwd-sec-title">Əhatə</div><div class="fwd-sec-text">${escapeHTML(f.countries)}</div></div>` : ""}
+                <div class="fwd-sec mb-0"><div class="fwd-sec-title">Əlaqə vasitələri</div>
+                    ${contacts ? `<div class="fwd-contacts border-0 pt-0 mt-0" style="font-size:14px; gap:8px;">${contacts}</div>` : '<span class="text-muted">Əlaqə məlumatı göstərilməyib.</span>'}</div>`;
+            document.getElementById("forwarderDetailFooter").innerHTML =
+                `<button type="button" class="btn btn-secondary px-3 fw-semibold rounded-pill" data-bs-dismiss="modal">Bağla</button>` + addButtonHtml(f);
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("forwarderDetailModal")).show();
+        }
+
+        function markAdded(id) {
+            const f = cache.get(Number(id)); if (f) f.already_in_base = true;
+            document.querySelectorAll(`[data-add-id="${Number(id)}"]`).forEach(b => {
+                b.removeAttribute("data-add-id");
+                b.className = "btn btn-light border btn-sm fw-bold";
+                b.disabled = true;
+                b.innerHTML = '<i class="bi bi-check2-circle me-1 text-success"></i> Əlavə olundu';
+            });
         }
 
         window.loadDiscover = async function (reset) {
@@ -4659,6 +4735,7 @@ function copyPublicLinkText() {
                 if (seq !== reqSeq) return;   // daha yeni axtarış gedib
                 if (!res.ok) { statusEl().textContent = data.detail || "Axtarış zamanı xəta baş verdi."; return; }
                 const list = data.forwarders || [];
+                list.forEach(f => cache.set(Number(f.id), f));
                 grid().insertAdjacentHTML("beforeend", list.map(renderCard).join(""));
                 offset += list.length;
                 moreBtn().classList.toggle("d-none", !data.has_more);
@@ -4677,8 +4754,7 @@ function copyPublicLinkText() {
                 const res = await fetch(`/forwarders/${encodeURIComponent(id)}/add-to-base`, { method: "POST", headers: getAuthHeaders() });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok) {
-                    btn.className = "btn btn-light border btn-sm fw-bold";
-                    btn.innerHTML = '<i class="bi bi-check2-circle me-1 text-success"></i> Əlavə olundu';
+                    markAdded(id);
                     // Daşıyıcı Bazası və RFQ siyahılarını yeniləyirik
                     try { if (typeof initData === "function") initData(); } catch (e) {}
                 } else {
@@ -4689,6 +4765,8 @@ function copyPublicLinkText() {
         }
 
         document.addEventListener("click", function (e) {
+            const det = e.target.closest && e.target.closest("[data-detail-id]");
+            if (det) { showDetail(det.getAttribute("data-detail-id")); return; }
             const add = e.target.closest && e.target.closest("[data-add-id]");
             if (add) { addToBase(add); return; }
             const pill = e.target.closest && e.target.closest("#discoverServicePills .filter-pill");
@@ -4711,6 +4789,12 @@ function copyPublicLinkText() {
         const DICT = {
             // --- Daşıyıcıları kəşf et ---
             "Forwarder paneli": "Forwarder Panel",
+            "Ətraflı bax": "View details",
+            "Forwarder haqqında": "About the forwarder",
+            "Şirkət haqqında": "About the company",
+            "Xidmətlər": "Services",
+            "Təsvir əlavə edilməyib.": "No description provided.",
+            "Əlaqə məlumatı göstərilməyib.": "No contact details provided.",
             "Daşıyıcıları kəşf et": "Discover Carriers",
             "Arachi-də qeydiyyatdan keçmiş freight forwarder şirkətlərini tapın, əlaqə məlumatlarına baxın və bir kliklə öz daşıyıcı bazanıza əlavə edin.": "Find freight forwarder companies registered on Arachi, view their contact details and add them to your carrier base with one click.",
             "Şirkət adı, ölkə və ya şəhər üzrə axtar...": "Search by company name, country or city...",
