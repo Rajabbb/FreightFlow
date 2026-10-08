@@ -20,7 +20,13 @@
             if (!token || !user) {
                 localStorage.clear();
                 window.location.replace("/login");
+                return;
             }
+            // Yalnız forwarder paneli olan hesabın müştəri panelinə girişi yoxdur
+            try {
+                var u = JSON.parse(user);
+                if (u && u.customer_access === false) window.location.replace("/forwarder");
+            } catch (e) {}
         }
         checkAuthStatus();
         window.addEventListener('pageshow', function(event) {
@@ -744,6 +750,33 @@
             input[type="file"].form-control::file-selector-button { margin-right: 10px; }
         }
 
+        /* --- Daşıyıcıları kəşf et: forwarder kartları --- */
+        .fwd-card {
+            height: 100%; display: flex; flex-direction: column; gap: 12px;
+            background: #fff; border: 1px solid var(--brand-line); border-radius: 20px; padding: 18px;
+            box-shadow: var(--brand-shadow);
+            transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+        }
+        .fwd-card:hover { transform: translateY(-3px); border-color: var(--brand-line-2); box-shadow: 0 26px 48px -32px rgba(0, 55, 184, 0.65); }
+        .fwd-head { display: flex; gap: 12px; align-items: center; min-width: 0; }
+        .fwd-photo {
+            width: 56px; height: 56px; min-width: 56px; border-radius: 16px; object-fit: cover;
+            background: var(--brand-tint); border: 1px solid var(--brand-line-2);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 20px; color: var(--primary-blue);
+        }
+        .fwd-name { font-weight: 800; font-size: 15px; color: var(--text-main); line-height: 1.2; word-break: break-word; }
+        .fwd-loc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .fwd-about { font-size: 13px; color: var(--text-muted); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+        .fwd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .fwd-chip { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--brand-tint); color: var(--primary-blue); border: 1px solid var(--brand-line-2); }
+        .fwd-verified { font-size: 10.5px; font-weight: 700; color: #12A06E; background: #E3F7EF; border: 1px solid rgba(18,160,110,.3); border-radius: 999px; padding: 1px 8px; margin-left: 6px; white-space: nowrap; }
+        .fwd-contacts { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; margin-top: auto; padding-top: 10px; border-top: 1px dashed var(--brand-line); }
+        .fwd-contacts a, .fwd-contacts span { color: var(--text-main); word-break: break-all; }
+        .fwd-contacts a:hover { color: var(--primary-blue); }
+        .fwd-contacts i { color: var(--primary-blue); margin-right: 6px; }
+        #discoverGrid .btn { width: 100%; }
+
         /* --- Altbilgi --- */
         .border-top { border-color: var(--brand-line) !important; }
 
@@ -763,13 +796,16 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-<div class="position-relative d-inline-flex align-items-center">
-    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-        <option value="az">AZ</option>
-        <option value="en">EN</option>
-    </select>
-</div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
+                <a id="panelSwitchLink" href="/forwarder" class="btn btn-outline-primary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap d-none" style="font-size: 12.5px;">
+                    <i class="bi bi-diagram-3 me-1"></i> Forwarder paneli
+                </a>
                 <span id="userCompanyName" class="fw-bold text-dark small px-2 px-md-3 py-1.5 rounded-pill text-truncate" style="background: #f1f5f9; max-width: 130px;">Şirkət</span>
                 
                 <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
@@ -807,6 +843,11 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="tab-tracking-btn" data-bs-toggle="tab" data-bs-target="#tab-tracking" type="button" role="tab" aria-controls="tab-tracking" aria-selected="false">
                     <i class="bi bi-ui-checks-grid me-1"></i> Sorğular və Müqayisə
+                </button>
+            </li>
+            <li class="nav-item d-none" role="presentation" id="discoverTabItem">
+                <button class="nav-link" id="tab-discover-btn" data-bs-toggle="tab" data-bs-target="#tab-discover" type="button" role="tab" aria-controls="tab-discover" aria-selected="false">
+                    <i class="bi bi-compass-fill me-1"></i> Daşıyıcıları kəşf et
                 </button>
             </li>
         </ul>
@@ -1491,6 +1532,38 @@ Best regards,
 
         </div>
         <!-- ================= /TAB 4 ================= -->
+
+        <!-- ================= TAB 5: DAŞIYICILARI KƏŞF ET (yalnız idxalçı/ixracçı hesabları) ================= -->
+        <div class="tab-pane fade" id="tab-discover" role="tabpanel" aria-labelledby="tab-discover-btn">
+            <div class="card">
+                <div class="section-title"><i class="bi bi-compass-fill"></i> Daşıyıcıları kəşf et</div>
+                <div class="section-desc">Arachi-də qeydiyyatdan keçmiş freight forwarder şirkətlərini tapın, əlaqə məlumatlarına baxın və bir kliklə öz daşıyıcı bazanıza əlavə edin.</div>
+
+                <div class="d-flex flex-column flex-lg-row gap-2 align-items-lg-center mb-4">
+                    <div class="input-group flex-grow-1" style="max-width: 520px;">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" id="discoverSearch" class="form-control border-start-0" placeholder="Şirkət adı, ölkə və ya şəhər üzrə axtar..." autocomplete="off" maxlength="60">
+                    </div>
+                    <div class="filter-pills-wrapper" id="discoverServicePills">
+                        <span class="filter-pill active" data-service="">Hamısı</span>
+                        <span class="filter-pill" data-service="road">Quru</span>
+                        <span class="filter-pill" data-service="sea">Dəniz</span>
+                        <span class="filter-pill" data-service="air">Hava</span>
+                        <span class="filter-pill" data-service="rail">Dəmiryolu</span>
+                        <span class="filter-pill" data-service="multimodal">Multimodal</span>
+                        <span class="filter-pill" data-service="customs">Gömrük</span>
+                        <span class="filter-pill" data-service="warehouse">Anbar</span>
+                    </div>
+                </div>
+
+                <div id="discoverGrid" class="row g-3"></div>
+                <div id="discoverStatus" class="text-center text-muted small p-4 d-none"></div>
+                <div class="text-center mt-4">
+                    <button id="discoverMoreBtn" type="button" class="btn btn-outline-primary btn-sm rounded-pill px-4 d-none" onclick="loadDiscover(false)">Daha çox göstər</button>
+                </div>
+            </div>
+        </div>
+        <!-- ================= /TAB 5 ================= -->
 
         </div>
         <!-- /mainAppTabsContent -->
@@ -4508,11 +4581,153 @@ function copyPublicLinkText() {
         }
         
     </script>
+    <script id="arachi-forwarders">
+    // ===== Daşıyıcıları kəşf et (yalnız idxalçı/ixracçı hesabları) və panel keçidi =====
+    (function () {
+        let user = null;
+        try { user = JSON.parse(localStorage.getItem("user")); } catch (e) {}
+        const accountType = (user && user.account_type) || "importer_exporter";
+        if (accountType === "importer_exporter") {
+            const it = document.getElementById("discoverTabItem"); if (it) it.classList.remove("d-none");
+        }
+        if (user && user.forwarder_access === true) {
+            const sw = document.getElementById("panelSwitchLink"); if (sw) sw.classList.remove("d-none");
+        }
+
+        const SERVICE_LABELS = { road: "Quru", sea: "Dəniz", air: "Hava", rail: "Dəmiryolu", multimodal: "Multimodal", customs: "Gömrük", warehouse: "Anbar" };
+        const PAGE = 24;
+        let offset = 0, service = "", loadedOnce = false, searchTimer = null, reqSeq = 0;
+
+        const grid = () => document.getElementById("discoverGrid");
+        const statusEl = () => document.getElementById("discoverStatus");
+        const moreBtn = () => document.getElementById("discoverMoreBtn");
+
+        function safeHref(url) { return /^https?:\/\/[^\s<>"']+$/i.test(url || "") ? url : null; }
+        function waLink(v) { const d = String(v || "").replace(/[^\d]/g, ""); return d.length >= 7 ? "https://wa.me/" + d : null; }
+        function tgLink(v) { const m = String(v || "").trim().replace(/^@/, "").match(/^[A-Za-z0-9_]{3,40}$/); return m ? "https://t.me/" + m[0] : null; }
+        function telHref(v) { const d = String(v || "").replace(/[^\d+]/g, ""); return d.length >= 5 ? "tel:" + d : null; }
+
+        function contactLine(icon, text, href) {
+            if (!text) return "";
+            const inner = href ? `<a href="${escapeHTML(href)}" target="_blank" rel="noopener noreferrer nofollow">${escapeHTML(text)}</a>` : `<span>${escapeHTML(text)}</span>`;
+            return `<div><i class="bi ${icon}"></i>${inner}</div>`;
+        }
+
+        function renderCard(f) {
+            const name = f.company_name || "";
+            const photo = f.photo_url && /^\/uploads\/profiles\/[A-Za-z0-9._-]+$/.test(f.photo_url)
+                ? `<img class="fwd-photo" src="${escapeHTML(f.photo_url)}" alt="" loading="lazy">`
+                : `<div class="fwd-photo">${escapeHTML(name.trim().charAt(0).toUpperCase() || "F")}</div>`;
+            const loc = [f.city, f.country].filter(Boolean).join(", ");
+            const chips = (f.services || []).filter(s => SERVICE_LABELS[s]).map(s => `<span class="fwd-chip">${SERVICE_LABELS[s]}</span>`).join("");
+            const email = f.contact_email ? contactLine("bi-envelope", f.contact_email, "mailto:" + f.contact_email) : "";
+            const contacts = email
+                + contactLine("bi-telephone", f.phone, telHref(f.phone))
+                + contactLine("bi-whatsapp", f.whatsapp, waLink(f.whatsapp))
+                + contactLine("bi-telegram", f.telegram, tgLink(f.telegram))
+                + contactLine("bi-globe2", f.website ? f.website.replace(/^https?:\/\//i, "") : "", safeHref(f.website));
+
+            let action;
+            if (f.already_in_base) action = `<button type="button" class="btn btn-light border btn-sm fw-bold" disabled><i class="bi bi-check2-circle me-1 text-success"></i> Bazada var</button>`;
+            else if (!f.can_add) action = `<button type="button" class="btn btn-light border btn-sm fw-bold" disabled title="Bu forwarder əlaqə e-poçtu göstərməyib"><i class="bi bi-plus-circle me-1"></i> Bazama əlavə et</button>`;
+            else action = `<button type="button" class="btn btn-primary btn-sm" data-add-id="${Number(f.id)}"><i class="bi bi-plus-circle me-1"></i> Bazama əlavə et</button>`;
+
+            return `<div class="col-12 col-md-6 col-xl-4"><div class="fwd-card">
+                <div class="fwd-head">${photo}<div style="min-width:0;">
+                    <div class="fwd-name">${escapeHTML(name)}${f.is_verified ? '<span class="fwd-verified">Təsdiqlənib</span>' : ""}</div>
+                    ${loc ? `<div class="fwd-loc"><i class="bi bi-geo-alt me-1"></i>${escapeHTML(loc)}</div>` : ""}
+                </div></div>
+                ${f.about ? `<div class="fwd-about">${escapeHTML(f.about)}</div>` : ""}
+                ${chips ? `<div class="fwd-chips">${chips}</div>` : ""}
+                ${f.countries ? `<div class="small"><span class="text-muted">Əhatə:</span> ${escapeHTML(f.countries)}</div>` : ""}
+                <div class="fwd-contacts">${contacts}</div>
+                ${action}
+            </div></div>`;
+        }
+
+        window.loadDiscover = async function (reset) {
+            const seq = ++reqSeq;
+            if (reset) { offset = 0; grid().innerHTML = ""; moreBtn().classList.add("d-none"); }
+            statusEl().classList.remove("d-none");
+            statusEl().innerHTML = '<span class="spinner-border spinner-border-sm text-primary me-2"></span>Forwarder-lər yüklənir...';
+            const q = document.getElementById("discoverSearch").value.trim();
+            try {
+                const params = new URLSearchParams({ q, service, limit: PAGE, offset });
+                const res = await fetch("/forwarders/discover?" + params.toString(), { headers: getAuthHeaders() });
+                if (res.status === 401) { logout(); return; }
+                const data = await res.json();
+                if (seq !== reqSeq) return;   // daha yeni axtarış gedib
+                if (!res.ok) { statusEl().textContent = data.detail || "Axtarış zamanı xəta baş verdi."; return; }
+                const list = data.forwarders || [];
+                grid().insertAdjacentHTML("beforeend", list.map(renderCard).join(""));
+                offset += list.length;
+                moreBtn().classList.toggle("d-none", !data.has_more);
+                if (offset === 0) statusEl().textContent = "Heç bir forwarder tapılmadı.";
+                else statusEl().classList.add("d-none");
+                loadedOnce = true;
+            } catch (e) {
+                if (seq === reqSeq) statusEl().textContent = "Axtarış zamanı xəta baş verdi.";
+            }
+        };
+
+        async function addToBase(btn) {
+            const id = btn.getAttribute("data-add-id");
+            btn.disabled = true;
+            try {
+                const res = await fetch(`/forwarders/${encodeURIComponent(id)}/add-to-base`, { method: "POST", headers: getAuthHeaders() });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    btn.className = "btn btn-light border btn-sm fw-bold";
+                    btn.innerHTML = '<i class="bi bi-check2-circle me-1 text-success"></i> Əlavə olundu';
+                    // Daşıyıcı Bazası və RFQ siyahılarını yeniləyirik
+                    try { if (typeof initData === "function") initData(); } catch (e) {}
+                } else {
+                    btn.disabled = false;
+                    alert("Xəta: " + (typeof data.detail === "string" ? data.detail : "Əlavə etmək mümkün olmadı."));
+                }
+            } catch (e) { btn.disabled = false; alert("Serverlə əlaqə qurulmadı!"); }
+        }
+
+        document.addEventListener("click", function (e) {
+            const add = e.target.closest && e.target.closest("[data-add-id]");
+            if (add) { addToBase(add); return; }
+            const pill = e.target.closest && e.target.closest("#discoverServicePills .filter-pill");
+            if (pill) {
+                document.querySelectorAll("#discoverServicePills .filter-pill").forEach(p => p.classList.toggle("active", p === pill));
+                service = pill.getAttribute("data-service") || "";
+                loadDiscover(true);
+            }
+        });
+        const search = document.getElementById("discoverSearch");
+        if (search) search.addEventListener("input", function () { clearTimeout(searchTimer); searchTimer = setTimeout(() => loadDiscover(true), 350); });
+        const tabBtn = document.getElementById("tab-discover-btn");
+        if (tabBtn) tabBtn.addEventListener("shown.bs.tab", function () { if (!loadedOnce) loadDiscover(true); });
+    })();
+    </script>
     <!-- ===================== DİL TƏRCÜMƏSİ (AZ / EN) ===================== -->
     <script>
     (function () {
         // Səhifənin əsas dili Azərbaycan dilidir. İngilis dili seçiləndə mətnlər bu lüğət vasitəsilə tərcümə olunur.
         const DICT = {
+            // --- Daşıyıcıları kəşf et ---
+            "Forwarder paneli": "Forwarder Panel",
+            "Daşıyıcıları kəşf et": "Discover Carriers",
+            "Arachi-də qeydiyyatdan keçmiş freight forwarder şirkətlərini tapın, əlaqə məlumatlarına baxın və bir kliklə öz daşıyıcı bazanıza əlavə edin.": "Find freight forwarder companies registered on Arachi, view their contact details and add them to your carrier base with one click.",
+            "Şirkət adı, ölkə və ya şəhər üzrə axtar...": "Search by company name, country or city...",
+            "Dəniz": "Sea",
+            "Multimodal": "Multimodal",
+            "Gömrük": "Customs",
+            "Anbar": "Warehouse",
+            "Daha çox göstər": "Show more",
+            "Bazama əlavə et": "Add to my base",
+            "Bazada var": "In your base",
+            "Əlavə olundu": "Added",
+            "Təsdiqlənib": "Verified",
+            "Əhatə": "Coverage",
+            "Bu forwarder əlaqə e-poçtu göstərməyib": "This forwarder has not provided a contact email",
+            "Forwarder-lər yüklənir...": "Loading forwarders...",
+            "Heç bir forwarder tapılmadı.": "No forwarders found.",
+            "Axtarış zamanı xəta baş verdi.": "An error occurred while searching.",
             // --- Navbar və əsas tablar ---
             "Müştəri paneli": "Customer Panel",
             "Müştəri": "Customer",
