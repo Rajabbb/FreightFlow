@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forwarder Paneli - Arachi</title>
+    <meta name="robots" content="noindex, nofollow, nosnippet">
+    <link rel="icon" type="image/png" href="/static/arachi-logo.png">
+
+    <script>
+        // Giriş yoxlaması: token yoxdursa və ya bu hesabın forwarder paneli yoxdursa yönləndirilir
+        (function () {
+            function check() {
+                var token = localStorage.getItem("token");
+                var user = null;
+                try { user = JSON.parse(localStorage.getItem("user")); } catch (e) {}
+                if (!token || !user) { localStorage.clear(); window.location.replace("/login"); return; }
+                if (user.forwarder_access !== true) { window.location.replace("/customer"); }
+            }
+            check();
+            window.addEventListener("pageshow", function (e) { if (e.persisted || !localStorage.getItem("token")) check(); });
+        })();
+    </script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+
+    <style>
+        :root {
+            --primary-blue: #0037B8;
+            --primary-hover: #002C93;
+            --secondary-color: #4D7CF2;
+            --brand-tint: #E7EEFF;
+            --brand-ice: #F4F7FF;
+            --brand-line: #DCE4F7;
+            --brand-line-2: #C5D3F5;
+            --text-main: #0B1433;
+            --text-muted: #56627F;
+            --ok: #12A06E;
+            --radius-lg: 22px;
+            --radius-md: 13px;
+            --brand-shadow: 0 18px 40px -30px rgba(0, 55, 184, 0.55);
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px; color: var(--text-main); min-height: 100vh; overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            background:
+                radial-gradient(900px 480px at 100% -10%, rgba(77, 124, 242, 0.10), transparent 65%),
+                radial-gradient(800px 420px at -10% 110%, rgba(201, 187, 255, 0.16), transparent 65%),
+                #F6F8FE;
+            background-attachment: fixed;
+        }
+        .navbar {
+            background: rgba(255, 255, 255, 0.82); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--brand-line); box-shadow: 0 10px 30px -24px rgba(0, 55, 184, 0.6);
+            position: sticky; top: 0; z-index: 1020;
+        }
+        .navbar-brand { background: linear-gradient(45deg, var(--primary-blue), var(--secondary-color)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 1.15rem; }
+        #userCompanyName { background: var(--brand-tint); color: var(--primary-blue); border: 1px solid var(--brand-line-2); max-width: 150px; }
+        .card {
+            background: #fff; border: 1px solid var(--brand-line); border-radius: var(--radius-lg);
+            box-shadow: var(--brand-shadow); padding: 24px; margin-bottom: 20px; width: 100%; word-break: break-word;
+        }
+        .section-title { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; letter-spacing: -0.02em; }
+        .section-title i {
+            display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 11px;
+            background: var(--brand-tint); color: var(--primary-blue); border: 1px solid var(--brand-line-2); font-size: 16px;
+        }
+        .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 18px; font-weight: 500; }
+        .form-label { color: var(--text-main); font-weight: 600; font-size: 13px; }
+        .form-control, .form-select {
+            padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid var(--brand-line); background-color: #F8FAFF;
+            font-size: 13.5px; font-weight: 500; color: var(--text-main);
+        }
+        .form-control::placeholder { color: #9AA4BE; }
+        .form-control:focus, .form-select:focus { background: #fff; border-color: var(--primary-blue); box-shadow: 0 0 0 4px rgba(0, 55, 184, 0.10); }
+        .form-text { font-size: 11.5px; color: var(--text-muted); }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #2F63E0 100%); border: none; padding: 11px 20px;
+            border-radius: var(--radius-md); font-weight: 700; font-size: 13.5px;
+            box-shadow: 0 10px 20px -10px rgba(0, 55, 184, 0.75), inset 0 1px 0 rgba(255,255,255,0.2);
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .btn-primary:hover, .btn-primary:focus { background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary-blue) 100%); transform: translateY(-2px); }
+        .btn-primary:disabled { background: linear-gradient(135deg, #7F96D6, #9AB0EA); box-shadow: none; transform: none; }
+        .btn-outline-primary { color: var(--primary-blue); border-color: var(--brand-line-2); }
+        .btn-outline-primary:hover { background: var(--primary-blue); border-color: var(--primary-blue); color: #fff; }
+        .btn-outline-secondary { border-color: var(--brand-line); color: var(--text-muted); }
+        .btn-outline-secondary:hover { background: var(--brand-tint); border-color: var(--brand-line-2); color: var(--primary-blue); }
+        .form-check-input:checked { background-color: var(--primary-blue); border-color: var(--primary-blue); }
+        .form-check-input:focus { box-shadow: 0 0 0 3px rgba(0, 55, 184, 0.15); border-color: var(--primary-blue); }
+        .modal-content { border: none; border-radius: 24px; box-shadow: 0 40px 80px -30px rgba(0, 30, 110, 0.45); overflow: hidden; }
+        .modal-header { background: linear-gradient(180deg, var(--brand-ice), #fff); border-bottom: 1px solid var(--brand-line); }
+
+        /* --- Profil şəkli --- */
+        .avatar-wrap { position: relative; width: 116px; height: 116px; margin: 0 auto 14px; }
+        .avatar-img {
+            width: 116px; height: 116px; border-radius: 30px; object-fit: cover; background: var(--brand-tint);
+            border: 1px solid var(--brand-line-2); box-shadow: 0 20px 36px -22px rgba(0, 55, 184, 0.7);
+            display: flex; align-items: center; justify-content: center; font-size: 42px; font-weight: 800; color: var(--primary-blue);
+        }
+        .avatar-edit {
+            position: absolute; right: -6px; bottom: -6px; width: 38px; height: 38px; border-radius: 50%; border: 3px solid #fff; cursor: pointer;
+            background: linear-gradient(135deg, var(--primary-blue), #2F63E0); color: #fff; display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 18px -8px rgba(0, 55, 184, 0.8); transition: transform .2s ease;
+        }
+        .avatar-edit:hover { transform: scale(1.08); }
+        .meter { height: 8px; background: var(--brand-tint); border-radius: 999px; overflow: hidden; }
+        .meter > span { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--primary-blue), var(--secondary-color)); transition: width .5s ease; }
+
+        /* --- Xidmət seçimləri --- */
+        .svc-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+        .svc-opt { position: relative; }
+        .svc-opt input { position: absolute; opacity: 0; pointer-events: none; }
+        .svc-opt label {
+            cursor: pointer; margin: 0; padding: 8px 14px; border-radius: 999px; border: 1.5px solid var(--brand-line); background: #fff;
+            font-weight: 700; font-size: 12.5px; color: var(--text-muted); transition: all .2s ease; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .svc-opt label:hover { border-color: var(--brand-line-2); color: var(--primary-blue); }
+        .svc-opt input:checked + label { background: var(--brand-tint); border-color: var(--primary-blue); color: var(--primary-blue); }
+        .svc-opt input:focus-visible + label { box-shadow: 0 0 0 3px rgba(0, 55, 184, 0.2); }
+
+        /* --- Nümunə kart (idxalçılar sizi belə görəcək) --- */
+        .fwd-card { display: flex; flex-direction: column; gap: 12px; background: #fff; border: 1px solid var(--brand-line); border-radius: 20px; padding: 18px; box-shadow: var(--brand-shadow); }
+        .fwd-head { display: flex; gap: 12px; align-items: center; min-width: 0; }
+        .fwd-photo { width: 56px; height: 56px; min-width: 56px; border-radius: 16px; object-fit: cover; background: var(--brand-tint); border: 1px solid var(--brand-line-2); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; color: var(--primary-blue); }
+        .fwd-name { font-weight: 800; font-size: 15px; line-height: 1.2; word-break: break-word; }
+        .fwd-loc { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+        .fwd-about { font-size: 13px; color: var(--text-muted); line-height: 1.55; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+        .fwd-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .fwd-chip { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--brand-tint); color: var(--primary-blue); border: 1px solid var(--brand-line-2); }
+        .fwd-contacts { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; padding-top: 10px; border-top: 1px dashed var(--brand-line); }
+        .fwd-contacts i { color: var(--primary-blue); margin-right: 6px; }
+        .fwd-contacts span { word-break: break-all; }
+        .hidden-note { background: #FFF4DB; border: 1px solid rgba(183, 121, 31, .3); color: #8A5A12; border-radius: 12px; padding: 8px 12px; font-size: 12px; font-weight: 600; }
+
+        .toast-box { position: fixed; left: 50%; bottom: 96px; transform: translate(-50%, 30px); opacity: 0; pointer-events: none; z-index: 2000; transition: all .35s ease;
+            background: #0B1433; color: #fff; padding: 12px 20px; border-radius: 14px; font-weight: 600; font-size: 13.5px; box-shadow: 0 20px 40px -16px rgba(0,0,0,.5); max-width: calc(100vw - 32px); }
+        .toast-box.show { opacity: 1; transform: translate(-50%, 0); }
+        .toast-box.err { background: #C7373C; }
+        .save-bar { position: sticky; bottom: 0; z-index: 10; background: rgba(255,255,255,.92); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border: 1px solid var(--brand-line); border-radius: 18px; padding: 12px 14px; box-shadow: 0 -10px 30px -24px rgba(0,55,184,.5); }
+        @media (max-width: 576px) { .card { padding: 18px; } body { font-size: 13.5px; } }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-light py-2">
+        <div class="container-fluid px-3 px-md-4">
+            <a class="navbar-brand fw-bold text-truncate d-flex align-items-center" href="#">
+                <img src="/static/arachi-logo.png" alt="Arachi" style="height: 26px; width: auto; border-radius: 8px;" class="me-1">
+                <span class="text-muted fs-6 fw-normal ms-1 d-none d-sm-inline" style="color: #64748b !important;">Forwarder paneli</span>
+            </a>
+            <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
+                <!-- DİL SEÇİMİ (Language Selector) -->
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
+                <a id="panelSwitchLink" href="/customer" class="btn btn-outline-primary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap d-none" style="font-size: 12.5px;">
+                    <i class="bi bi-box-seam me-1"></i> Müştəri paneli
+                </a>
+                <span id="userCompanyName" class="fw-bold small px-2 px-md-3 py-1.5 rounded-pill text-truncate">Şirkət</span>
+                <button onclick="openChangeEmailModal()" class="btn btn-outline-secondary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
+                    <i class="bi bi-envelope me-1"></i> E-poçtu Dəyiş
+                </button>
+                <button onclick="openChangePasswordModal()" class="btn btn-outline-primary btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
+                    <i class="bi bi-key me-1"></i> Şifrəni Dəyiş
+                </button>
+                <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
+                    <i class="bi bi-box-arrow-right me-1"></i> Çıxış
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-2 px-sm-3 px-md-4 py-3 py-md-4" style="max-width: 1180px;">
+        <div class="mb-4">
+            <div class="section-title" style="font-size: 20px;"><i class="bi bi-person-badge"></i> Şirkət profili</div>
+            <div class="section-desc mb-0">Profilinizi doldurun, idxalçı və ixracçı şirkətlər sizi Arachi-də tapa bilsin.</div>
+        </div>
+
+        <div id="loadError" class="alert alert-danger d-none"></div>
+
+        <div class="row g-3 g-lg-4">
+            <!-- Sol: şəkil, görünürlük, nümunə kart -->
+            <div class="col-12 col-lg-4 order-lg-1">
+                <div class="card text-center">
+                    <div class="avatar-wrap">
+                        <div id="avatarImg" class="avatar-img">F</div>
+                        <label class="avatar-edit" for="photoInput" title="Şəkli dəyiş"><i class="bi bi-camera-fill"></i></label>
+                        <input type="file" id="photoInput" accept="image/png,image/jpeg,image/webp" class="d-none">
+                    </div>
+                    <div class="fw-bold" id="sideName" style="font-size: 16px;">—</div>
+                    <button type="button" id="removePhotoBtn" class="btn btn-link btn-sm text-danger text-decoration-none d-none" onclick="removePhoto()">Şəkli sil</button>
+                    <div class="form-text mt-1">PNG, JPG və ya WEBP, maksimum 2 MB.</div>
+
+                    <hr class="my-3" style="border-color: var(--brand-line);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="fw-bold small">Profil doluluğu</span><span class="fw-bold small" id="meterText">0%</span>
+                    </div>
+                    <div class="meter"><span id="meterBar"></span></div>
+
+                    <hr class="my-3" style="border-color: var(--brand-line);">
+                    <div class="form-check form-switch text-start d-flex align-items-center gap-2 ps-0 mb-0">
+                        <input class="form-check-input ms-0 mt-0 flex-shrink-0" style="width: 2.6em; height: 1.4em;" type="checkbox" role="switch" id="is_public" checked>
+                        <label class="form-check-label fw-bold small" for="is_public">Kataloqda görünsün</label>
+                    </div>
+                    <div class="form-text text-start mt-2">Söndürsəniz, profiliniz idxalçı və ixracçıların "Daşıyıcıları kəşf et" siyahısında görünməyəcək.</div>
+                </div>
+
+                <div class="card">
+                    <div class="fw-bold small mb-3"><i class="bi bi-eye me-1 text-primary"></i> İdxalçılar sizi belə görəcək</div>
+                    <div id="previewCard"></div>
+                    <div id="hiddenNote" class="hidden-note mt-3 d-none">Profil hazırda gizlidir: kataloqda görünmür.</div>
+                </div>
+            </div>
+
+            <!-- Sağ: forma -->
+            <div class="col-12 col-lg-8 order-lg-2">
+                <form id="profileForm" onsubmit="saveProfile(event)" novalidate>
+                    <div class="card">
+                        <div class="section-title"><i class="bi bi-building"></i> Şirkət haqqında</div>
+                        <div class="section-desc">Şirkətinizi qısa təqdim edin.</div>
+                        <div class="mb-3">
+                            <label class="form-label" for="company_name">Şirkətin adı <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="company_name" maxlength="150" required placeholder="Məs: Qarsel Trans MMC">
+                        </div>
+                        <div class="mb-1">
+                            <label class="form-label d-flex justify-content-between" for="about"><span>Təsvir</span><span class="text-muted fw-normal" id="aboutCount">0 / 2000</span></label>
+                            <textarea class="form-control" id="about" rows="5" maxlength="2000" placeholder="Fəaliyyətiniz, təcrübəniz, üstünlükləriniz..."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title"><i class="bi bi-truck"></i> Xidmətlər və əhatə</div>
+                        <div class="section-desc">Hansı növ daşımalarla məşğulsunuz?</div>
+                        <div class="svc-grid mb-3" id="svcGrid">
+                            <div class="svc-opt"><input type="checkbox" id="svc_road" value="road"><label for="svc_road"><i class="bi bi-truck"></i> Quru</label></div>
+                            <div class="svc-opt"><input type="checkbox" id="svc_sea" value="sea"><label for="svc_sea"><i class="bi bi-water"></i> Dəniz</label></div>
+                            <div class="svc-opt"><input type="checkbox" id="svc_air" value="air"><label for="svc_air"><i class="bi bi-airplane"></i> Hava</label></div>
+                            <div class="svc-opt"><input type="checkbox" id="svc_rail" value="rail"><label for="svc_rail"><i class="bi bi-train-front"></i> Dəmiryolu</label></div>
+                            <div class="svc-opt"><input type="checkbox" id="svc_multimodal" value="multimodal"><label for="svc_multimodal"><i class="bi bi-diagram-3"></i> Multimodal</label></div>
+                            <div class="svc-opt"><input type="checkbox" id="svc_customs" value="customs"><label for="svc_customs"><i class="bi bi-file-earmark-check"></i> Gömrük</label></div>
+                            <div class="svc-opt"><input type="checkbox" id="svc_warehouse" value="warehouse"><label for="svc_warehouse"><i class="bi bi-box-seam"></i> Anbar</label></div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="countries">Xidmət göstərdiyiniz ölkələr / istiqamətlər</label>
+                                <input type="text" class="form-control" id="countries" maxlength="300" placeholder="Məs: Türkiyə, Gürcüstan, Çin, Avropa">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="country">Ölkə</label>
+                                <input type="text" class="form-control" id="country" maxlength="80" placeholder="Məs: Azərbaycan">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="city">Şəhər</label>
+                                <input type="text" class="form-control" id="city" maxlength="80" placeholder="Məs: Bakı">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="section-title"><i class="bi bi-telephone"></i> Əlaqə vasitələri</div>
+                        <div class="section-desc">Yalnız doldurduğunuz əlaqə vasitələri idxalçılara göstərilir. Hamısı ixtiyaridir.</div>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="contact_email">E-poçt</label>
+                                <input type="email" class="form-control" id="contact_email" maxlength="150" placeholder="office@sirketiniz.com">
+                                <div class="form-text"><i class="bi bi-info-circle me-1"></i>Bu e-poçt boşdursa, idxalçılar sizi öz daşıyıcı bazalarına əlavə edə bilməz. Əlavə etdikdə RFQ sorğuları məhz bu ünvana göndəriləcək.</div>
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="phone">Telefon</label>
+                                <input type="text" class="form-control" id="phone" maxlength="40" placeholder="+994 12 000 00 00">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="whatsapp">WhatsApp</label>
+                                <input type="text" class="form-control" id="whatsapp" maxlength="60" placeholder="+994 50 000 00 00">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="telegram">Telegram</label>
+                                <input type="text" class="form-control" id="telegram" maxlength="80" placeholder="@istifadəçi_adı">
+                            </div>
+                            <div class="col-12 col-sm-6">
+                                <label class="form-label" for="website">Veb sayt</label>
+                                <input type="text" class="form-control" id="website" maxlength="200" placeholder="www.sirketiniz.com">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="save-bar d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+                        <span class="small text-muted" id="saveHint">Dəyişikliklər yadda saxlanılmayıb.</span>
+                        <button type="submit" class="btn btn-primary px-4" id="saveBtn"><i class="bi bi-check2-circle me-1"></i> Yadda saxla</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center py-4 mt-4 border-top" style="border-color: var(--brand-line) !important;">
+        <p class="text-muted small mb-0">
+            &copy; 2026 Arachi Logistics. Bütün hüquqlar qorunur. <br>
+            <a href="/static/terms.html" class="text-decoration-none text-muted fw-semibold me-2">İstifadə Şərtləri</a> |
+            <a href="/static/privacy.html" class="text-decoration-none text-muted fw-semibold ms-2">Məxfilik Siyasəti</a>
+        </p>
+    </div>
+
+    <div id="toast" class="toast-box" role="status" aria-live="polite"></div>
+
+    <!-- Şifrəni dəyiş -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-shield-lock text-primary me-2"></i> Şifrəni Dəyiş</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="changePasswordForm" onsubmit="submitPasswordChange(event)">
+                        <div class="mb-3"><label class="form-label">Cari Şifrə</label><input type="password" class="form-control" id="cp_current" required placeholder="Hazırkı şifrənizi yazın"></div>
+                        <div class="mb-3"><label class="form-label">Yeni Şifrə</label><input type="password" class="form-control" id="cp_new" required placeholder="Yeni şifrə yaradın">
+                            <small class="text-secondary d-block mt-1" style="font-size: 11px;">Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm.</small></div>
+                        <div class="mb-3"><label class="form-label">Yeni Şifrə (Təkrar)</label><input type="password" class="form-control" id="cp_confirm" required placeholder="Yeni şifrəni təkrar yazın"></div>
+                        <div id="cp_errorMsg" class="text-danger small mb-3 d-none"></div>
+                        <button type="submit" class="btn btn-primary w-100" id="cp_submitBtn">Şifrəni Yenilə</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- E-poçtu dəyiş -->
+    <div class="modal fade" id="changeEmailModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-envelope text-primary me-2"></i> E-poçtu Dəyiş</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="changeEmailForm" onsubmit="submitEmailChange(event)">
+                        <div class="mb-3"><label class="form-label">Yeni E-poçt</label><input type="email" class="form-control" id="ce_new" required placeholder="Yeni e-poçt ünvanınızı yazın"></div>
+                        <div class="mb-3"><label class="form-label">Cari Şifrə (Təsdiq üçün)</label><input type="password" class="form-control" id="ce_current_pass" required placeholder="Təhlükəsizlik üçün hazırkı şifrənizi daxil edin"></div>
+                        <div id="ce_errorMsg" class="text-danger small mb-3 d-none"></div>
+                        <button type="submit" class="btn btn-primary w-100" id="ce_submitBtn">E-poçtu Yenilə</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let activeUser = null;
+        try { activeUser = JSON.parse(localStorage.getItem("user")); } catch (e) {}
+        let currentProfile = null;
+
+        const SERVICE_LABELS = { road: "Quru", sea: "Dəniz", air: "Hava", rail: "Dəmiryolu", multimodal: "Multimodal", customs: "Gömrük", warehouse: "Anbar" };
+        const FIELDS = ["company_name", "about", "countries", "country", "city", "contact_email", "phone", "whatsapp", "telegram", "website"];
+
+        function $(id) { return document.getElementById(id); }
+        function escapeHTML(str) {
+            if (str === null || str === undefined) return "";
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+        function logout() { localStorage.clear(); sessionStorage.clear(); window.location.replace("/login"); }
+        function authHeaders(isForm) {
+            const token = localStorage.getItem("token");
+            if (!token) { logout(); throw new Error("Sessiyanız bitmişdir."); }
+            const h = { "Authorization": "Bearer " + token };
+            if (!isForm) h["Content-Type"] = "application/json";
+            return h;
+        }
+        let toastTimer = null;
+        function toast(msg, isErr) {
+            const t = $("toast"); t.textContent = msg; t.className = "toast-box show" + (isErr ? " err" : "");
+            clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.className = "toast-box"; }, 3200);
+        }
+
+        // ----- Yuxarı panel -----
+        (function initTop() {
+            if (activeUser) {
+                $("userCompanyName").innerText = activeUser.company_name || activeUser.name || activeUser.email || "Şirkət";
+                if (activeUser.customer_access !== false) $("panelSwitchLink").classList.remove("d-none");
+            }
+        })();
+
+        // ----- Forma <-> profil -----
+        function readForm() {
+            const o = {};
+            FIELDS.forEach(f => { o[f] = $(f).value.trim(); });
+            o.services = Object.keys(SERVICE_LABELS).filter(s => $("svc_" + s).checked);
+            o.is_public = $("is_public").checked;
+            return o;
+        }
+        function fillForm(p) {
+            FIELDS.forEach(f => { $(f).value = p[f] || ""; });
+            Object.keys(SERVICE_LABELS).forEach(s => { $("svc_" + s).checked = (p.services || []).indexOf(s) !== -1; });
+            $("is_public").checked = p.is_public !== false;
+        }
+
+        // ----- Nümunə kart -----
+        function safeHref(url) { return /^https?:\/\/[^\s<>"']+$/i.test(url || "") ? url : null; }
+        function contactLine(icon, text) { return text ? `<div><i class="bi ${icon}"></i><span>${escapeHTML(text)}</span></div>` : ""; }
+        function renderPreview(d, photoUrl) {
+            const name = d.company_name || "Şirkət adı";
+            const photo = photoUrl && /^\/uploads\/profiles\/[A-Za-z0-9._-]+$/.test(photoUrl)
+                ? `<img class="fwd-photo" src="${escapeHTML(photoUrl)}" alt="">`
+                : `<div class="fwd-photo">${escapeHTML(name.trim().charAt(0).toUpperCase() || "F")}</div>`;
+            const loc = [d.city, d.country].filter(Boolean).join(", ");
+            const chips = (d.services || []).filter(s => SERVICE_LABELS[s]).map(s => `<span class="fwd-chip">${SERVICE_LABELS[s]}</span>`).join("");
+            const contacts = contactLine("bi-envelope", d.contact_email) + contactLine("bi-telephone", d.phone) + contactLine("bi-whatsapp", d.whatsapp)
+                + contactLine("bi-telegram", d.telegram) + contactLine("bi-globe2", (d.website || "").replace(/^https?:\/\//i, ""));
+            $("previewCard").innerHTML = `<div class="fwd-card">
+                <div class="fwd-head">${photo}<div style="min-width:0;"><div class="fwd-name">${escapeHTML(name)}</div>${loc ? `<div class="fwd-loc"><i class="bi bi-geo-alt me-1"></i>${escapeHTML(loc)}</div>` : ""}</div></div>
+                ${d.about ? `<div class="fwd-about">${escapeHTML(d.about)}</div>` : ""}
+                ${chips ? `<div class="fwd-chips">${chips}</div>` : ""}
+                ${d.countries ? `<div class="small"><span class="text-muted">Əhatə:</span> ${escapeHTML(d.countries)}</div>` : ""}
+                ${contacts ? `<div class="fwd-contacts">${contacts}</div>` : ""}
+            </div>`;
+        }
+        function setAvatar(name, photoUrl) {
+            const el = $("avatarImg");
+            if (photoUrl && /^\/uploads\/profiles\/[A-Za-z0-9._-]+$/.test(photoUrl)) {
+                el.outerHTML = `<img id="avatarImg" class="avatar-img" src="${escapeHTML(photoUrl)}?t=${Date.now()}" alt="">`;
+                $("removePhotoBtn").classList.remove("d-none");
+            } else {
+                el.outerHTML = `<div id="avatarImg" class="avatar-img">${escapeHTML((name || "F").trim().charAt(0).toUpperCase() || "F")}</div>`;
+                $("removePhotoBtn").classList.add("d-none");
+            }
+        }
+        function refreshDerived() {
+            const d = readForm();
+            const photoUrl = currentProfile ? currentProfile.photo_url : null;
+            $("sideName").textContent = d.company_name || "—";
+            $("aboutCount").textContent = d.about.length + " / 2000";
+            renderPreview(d, photoUrl);
+            $("hiddenNote").classList.toggle("d-none", d.is_public);
+            const checks = [!!photoUrl, d.about.length >= 40, d.services.length > 0, !!(d.country || d.city), !!d.countries,
+                            !!(d.contact_email || d.phone || d.whatsapp || d.telegram || d.website)];
+            const pct = Math.round(checks.filter(Boolean).length / checks.length * 100);
+            $("meterBar").style.width = pct + "%"; $("meterText").textContent = pct + "%";
+        }
+        let dirty = false;
+        function markDirty() { dirty = true; $("saveHint").textContent = "Dəyişikliklər yadda saxlanılmayıb."; refreshDerived(); }
+        document.addEventListener("input", function (e) { if (e.target.closest && e.target.closest("#profileForm")) markDirty(); });
+        document.addEventListener("change", function (e) { if (e.target.closest && e.target.closest("#profileForm")) markDirty(); });
+        window.addEventListener("beforeunload", function (e) { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+
+        // ----- Yükləmə / yadda saxlama -----
+        async function loadProfile() {
+            try {
+                const res = await fetch("/forwarder/profile", { headers: authHeaders() });
+                if (res.status === 401) { logout(); return; }
+                if (res.status === 403) { window.location.replace("/customer"); return; }
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || "Profil yüklənmədi.");
+                currentProfile = data.profile;
+                fillForm(currentProfile);
+                setAvatar(currentProfile.company_name, currentProfile.photo_url);
+                dirty = false; $("saveHint").textContent = "Bütün dəyişikliklər yadda saxlanılıb.";
+                refreshDerived();
+            } catch (e) {
+                const box = $("loadError"); box.textContent = e.message || "Serverlə əlaqə qurulmadı."; box.classList.remove("d-none");
+            }
+        }
+
+        async function saveProfile(e) {
+            e.preventDefault();
+            const d = readForm();
+            if (!d.company_name) { toast("Şirkət adı boş ola bilməz.", true); $("company_name").focus(); return; }
+            const btn = $("saveBtn"); btn.disabled = true;
+            try {
+                const res = await fetch("/forwarder/profile", { method: "PUT", headers: authHeaders(), body: JSON.stringify(d) });
+                if (res.status === 401) { logout(); return; }
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { toast(typeof data.detail === "string" ? data.detail : "Profil yadda saxlanmadı.", true); return; }
+                currentProfile = data.profile || currentProfile;
+                if (currentProfile) fillForm(currentProfile);
+                dirty = false; $("saveHint").textContent = "Bütün dəyişikliklər yadda saxlanılıb.";
+                // Yuxarıdakı şirkət adını da yeniləyirik
+                if (activeUser) { activeUser.company_name = d.company_name; localStorage.setItem("user", JSON.stringify(activeUser)); $("userCompanyName").innerText = d.company_name; }
+                refreshDerived();
+                toast("Profil yadda saxlanıldı.");
+            } catch (err) { toast("Serverlə əlaqə qurulmadı.", true); }
+            finally { btn.disabled = false; }
+        }
+
+        // ----- Şəkil -----
+        $("photoInput").addEventListener("change", async function () {
+            const file = this.files && this.files[0]; this.value = "";
+            if (!file) return;
+            if (!/^image\/(png|jpeg|webp)$/.test(file.type)) { toast("Yalnız PNG, JPG və ya WEBP şəkil yükləyə bilərsiniz.", true); return; }
+            if (file.size > 2 * 1024 * 1024) { toast("Şəkil çox böyükdür (maksimum 2 MB).", true); return; }
+            const fd = new FormData(); fd.append("file", file);
+            try {
+                const res = await fetch("/forwarder/profile/photo", { method: "POST", headers: authHeaders(true), body: fd });
+                if (res.status === 401) { logout(); return; }
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) { toast(typeof data.detail === "string" ? data.detail : "Şəkil yüklənmədi.", true); return; }
+                currentProfile.photo_url = data.photo_url;
+                setAvatar(readForm().company_name, data.photo_url); refreshDerived();
+                toast("Şəkil yeniləndi.");
+            } catch (e) { toast("Serverlə əlaqə qurulmadı.", true); }
+        });
+        async function removePhoto() {
+            try {
+                const res = await fetch("/forwarder/profile/photo", { method: "DELETE", headers: authHeaders() });
+                if (!res.ok) { toast("Şəkil silinmədi.", true); return; }
+                currentProfile.photo_url = null; setAvatar(readForm().company_name, null); refreshDerived(); toast("Şəkil silindi.");
+            } catch (e) { toast("Serverlə əlaqə qurulmadı.", true); }
+        }
+
+        // ----- Şifrə / e-poçt dəyişmə -----
+        function openChangePasswordModal() {
+            $("changePasswordForm").reset(); $("cp_errorMsg").classList.add("d-none");
+            new bootstrap.Modal($("changePasswordModal")).show();
+        }
+        async function submitPasswordChange(e) {
+            e.preventDefault();
+            const btn = $("cp_submitBtn"), err = $("cp_errorMsg");
+            const cur = $("cp_current").value, nw = $("cp_new").value, conf = $("cp_confirm").value;
+            if (nw !== conf) { err.innerText = "Yeni şifrələr bir-biri ilə eyni deyil!"; err.classList.remove("d-none"); return; }
+            if (!/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/.test(nw)) { err.innerText = "Yeni şifrə tələblərə cavab vermir. Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm yazın."; err.classList.remove("d-none"); return; }
+            btn.disabled = true; btn.innerText = "Gözləyin..."; err.classList.add("d-none");
+            try {
+                const res = await fetch("/api/change-password", { method: "POST", headers: authHeaders(), body: JSON.stringify({ current_password: cur, new_password: nw }) });
+                if (res.status === 401) { logout(); return; }
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) { toast(data.message || "Şifrəniz uğurla dəyişdirildi!"); bootstrap.Modal.getInstance($("changePasswordModal")).hide(); }
+                else { err.innerText = typeof data.detail === "string" ? data.detail : "Xəta baş verdi"; err.classList.remove("d-none"); }
+            } catch (x) { err.innerText = "Sistemlə əlaqə kəsildi."; err.classList.remove("d-none"); }
+            finally { btn.disabled = false; btn.innerText = "Şifrəni Yenilə"; }
+        }
+        function openChangeEmailModal() {
+            $("changeEmailForm").reset(); $("ce_errorMsg").classList.add("d-none");
+            new bootstrap.Modal($("changeEmailModal")).show();
+        }
+        async function submitEmailChange(e) {
+            e.preventDefault();
+            const btn = $("ce_submitBtn"), err = $("ce_errorMsg");
+            const ne = $("ce_new").value, cp = $("ce_current_pass").value;
+            btn.disabled = true; btn.innerText = "Gözləyin..."; err.classList.add("d-none");
+            try {
+                const res = await fetch("/api/change-email", { method: "POST", headers: authHeaders(), body: JSON.stringify({ new_email: ne, current_password: cp }) });
+                if (res.status === 401) { logout(); return; }
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    toast(data.message || "E-poçtunuz uğurla dəyişdirildi!");
+                    if (activeUser) { activeUser.email = ne; localStorage.setItem("user", JSON.stringify(activeUser)); }
+                    bootstrap.Modal.getInstance($("changeEmailModal")).hide();
+                } else { err.innerText = typeof data.detail === "string" ? data.detail : "Xəta baş verdi"; err.classList.remove("d-none"); }
+            } catch (x) { err.innerText = "Sistemlə əlaqə kəsildi."; err.classList.remove("d-none"); }
+            finally { btn.disabled = false; btn.innerText = "E-poçtu Yenilə"; }
+        }
+
+        loadProfile();
+    </script>
+
+    <!-- ===================== DİL TƏRCÜMƏSİ (AZ / EN) ===================== -->
+    <script>
+    (function () {
+        const DICT = {
+            "Forwarder paneli": "Forwarder Panel",
+            "Müştəri paneli": "Customer Panel",
+            "Şirkət": "Company",
+            "E-poçtu Dəyiş": "Change Email",
+            "Şifrəni Dəyiş": "Change Password",
+            "Çıxış": "Exit",
+            "Şirkət profili": "Company Profile",
+            "Profilinizi doldurun, idxalçı və ixracçı şirkətlər sizi Arachi-də tapa bilsin.": "Fill in your profile so importer and exporter companies can find you on Arachi.",
+            "Şəkli dəyiş": "Change photo",
+            "Şəkli sil": "Remove photo",
+            "PNG, JPG və ya WEBP, maksimum 2 MB.": "PNG, JPG or WEBP, maximum 2 MB.",
+            "Profil doluluğu": "Profile completeness",
+            "Kataloqda görünsün": "Show in directory",
+            "Söndürsəniz, profiliniz idxalçı və ixracçıların \"Daşıyıcıları kəşf et\" siyahısında görünməyəcək.": "If you turn this off, your profile will not appear in importers' and exporters' \"Discover Carriers\" list.",
+            "İdxalçılar sizi belə görəcək": "This is how importers will see you",
+            "Profil hazırda gizlidir: kataloqda görünmür.": "Your profile is currently hidden: it does not appear in the directory.",
+            "Şirkət haqqında": "About the company",
+            "Şirkətinizi qısa təqdim edin.": "Briefly introduce your company.",
+            "Şirkətin adı": "Company name",
+            "Məs: Qarsel Trans MMC": "e.g.: Qarsel Trans LLC",
+            "Təsvir": "Description",
+            "Fəaliyyətiniz, təcrübəniz, üstünlükləriniz...": "Your activities, experience, advantages...",
+            "Xidmətlər və əhatə": "Services and coverage",
+            "Hansı növ daşımalarla məşğulsunuz?": "Which types of transport do you handle?",
+            "Quru": "Road", "Dəniz": "Sea", "Hava": "Air", "Dəmiryolu": "Rail", "Multimodal": "Multimodal", "Gömrük": "Customs", "Anbar": "Warehouse",
+            "Xidmət göstərdiyiniz ölkələr / istiqamətlər": "Countries / routes you serve",
+            "Məs: Türkiyə, Gürcüstan, Çin, Avropa": "e.g.: Turkey, Georgia, China, Europe",
+            "Ölkə": "Country", "Şəhər": "City", "Məs: Azərbaycan": "e.g.: Azerbaijan", "Məs: Bakı": "e.g.: Baku",
+            "Əlaqə vasitələri": "Contact details",
+            "Yalnız doldurduğunuz əlaqə vasitələri idxalçılara göstərilir. Hamısı ixtiyaridir.": "Only the contact details you fill in are shown to importers. All are optional.",
+            "E-poçt": "Email",
+            "Bu e-poçt boşdursa, idxalçılar sizi öz daşıyıcı bazalarına əlavə edə bilməz. Əlavə etdikdə RFQ sorğuları məhz bu ünvana göndəriləcək.": "If this email is empty, importers cannot add you to their carrier base. Once added, RFQ requests will be sent to this address.",
+            "Telefon": "Phone", "Veb sayt": "Website",
+            "Dəyişikliklər yadda saxlanılmayıb.": "Changes have not been saved.",
+            "Bütün dəyişikliklər yadda saxlanılıb.": "All changes have been saved.",
+            "Yadda saxla": "Save",
+            "Profil yadda saxlanıldı.": "Profile saved.",
+            "Şirkət adı boş ola bilməz.": "Company name cannot be empty.",
+            "Şəkil yeniləndi.": "Photo updated.",
+            "Şəkil silindi.": "Photo removed.",
+            "Şəkil silinmədi.": "Photo could not be removed.",
+            "Şəkil çox böyükdür (maksimum 2 MB).": "The image is too large (maximum 2 MB).",
+            "Yalnız PNG, JPG və ya WEBP şəkil yükləyə bilərsiniz.": "You can only upload PNG, JPG or WEBP images.",
+            "Serverlə əlaqə qurulmadı.": "Could not connect to the server.",
+            "Profil yadda saxlanmadı.": "Profile could not be saved.",
+            "Əhatə": "Coverage",
+            "Cari Şifrə": "Current Password", "Hazırkı şifrənizi yazın": "Enter your current password",
+            "Yeni Şifrə": "New Password", "Yeni şifrə yaradın": "Create a new password",
+            "Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm.": "At least 8 characters, 1 uppercase, 1 lowercase letter and a digit.",
+            "Yeni Şifrə (Təkrar)": "New Password (Repeat)", "Yeni şifrəni təkrar yazın": "Repeat the new password",
+            "Şifrəni Yenilə": "Update Password", "Yeni E-poçt": "New Email",
+            "Yeni e-poçt ünvanınızı yazın": "Enter your new email address",
+            "Cari Şifrə (Təsdiq üçün)": "Current Password (for confirmation)",
+            "Təhlükəsizlik üçün hazırkı şifrənizi daxil edin": "Enter your current password for security",
+            "E-poçtu Yenilə": "Update Email", "Gözləyin...": "Please wait...",
+            "Yeni şifrələr bir-biri ilə eyni deyil!": "The new passwords do not match!",
+            "Yeni şifrə tələblərə cavab vermir. Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm yazın.": "The new password does not meet the requirements. Enter at least 8 characters, 1 uppercase, 1 lowercase letter and a digit.",
+            "Şifrəniz uğurla dəyişdirildi!": "Your password has been changed successfully!",
+            "E-poçtunuz uğurla dəyişdirildi!": "Your email has been changed successfully!",
+            "Sistemlə əlaqə kəsildi.": "Connection to the system was lost.",
+            "Xəta baş verdi": "An error occurred",
+            "© 2026 Arachi Logistics. Bütün hüquqlar qorunur.": "© 2026 Arachi Logistics. All rights reserved.",
+            "İstifadə Şərtləri": "Terms of Use", "Məxfilik Siyasəti": "Privacy Policy"
+        };
+        let lang = "az";
+        try { lang = localStorage.getItem("arachi_lang") === "en" ? "en" : "az"; } catch (e) {}
+        const norm = s => s.replace(/\s+/g, " ").trim();
+        const ND = {}; Object.keys(DICT).forEach(k => { ND[norm(k)] = DICT[k]; });
+        function lookup(core) {
+            if (ND[core] !== undefined) return ND[core];
+            const m = core.match(/^([\s\S]*?)(\s*[:：])$/);
+            if (m && ND[m[1]] !== undefined) return ND[m[1]] + m[2];
+            const pm = core.match(/^(\d+) \/ 2000$/); if (pm) return core;
+            return null;
+        }
+        function T(s) {
+            if (typeof s !== "string") return s;
+            const ws = s.match(/^(\s*)([\s\S]*?)(\s*)$/); const core = norm(ws[2]); if (!core) return s;
+            const out = lookup(core); return out === null ? s : ws[1] + out + ws[3];
+        }
+        const textRec = new WeakMap();
+        function syncText(n) {
+            let r = textRec.get(n);
+            if (!r || n.nodeValue !== r.out) { r = { src: n.nodeValue, out: n.nodeValue }; textRec.set(n, r); }
+            const want = lang === "en" ? T(r.src) : r.src;
+            if (n.nodeValue !== want) n.nodeValue = want; r.out = want;
+        }
+        const ATTRS = ["placeholder", "title"], attrRec = new WeakMap();
+        function syncAttrs(el) {
+            ATTRS.forEach(a => {
+                if (!el.hasAttribute(a)) return;
+                let all = attrRec.get(el); if (!all) { all = {}; attrRec.set(el, all); }
+                const cur = el.getAttribute(a); let r = all[a];
+                if (!r || cur !== r.out) { r = { src: cur, out: cur }; all[a] = r; }
+                const want = lang === "en" ? T(r.src) : r.src;
+                if (cur !== want) el.setAttribute(a, want); r.out = want;
+            });
+        }
+        const SKIP = { SCRIPT: 1, STYLE: 1, TEXTAREA: 1 };
+        function walk(root) {
+            if (root.nodeType === 3) { if (!(root.parentNode && SKIP[root.parentNode.nodeName])) syncText(root); return; }
+            if (root.nodeType !== 1) return;
+            syncAttrs(root);
+            if (SKIP[root.nodeName]) return;
+            for (let c = root.firstChild; c; c = c.nextSibling) walk(c);
+        }
+        const mo = new MutationObserver(ms => { ms.forEach(m => {
+            if (m.type === "childList") m.addedNodes.forEach(walk); else if (m.type === "characterData") walk(m.target); else if (m.type === "attributes") syncAttrs(m.target);
+        }); });
+        function apply() {
+            document.documentElement.lang = lang;
+            const t = lang === "en" ? "Forwarder Panel - Arachi" : "Forwarder Paneli - Arachi"; if (document.title !== t) document.title = t;
+            walk(document.body);
+            const sel = document.getElementById("langSelector"); if (sel && sel.value !== lang) sel.value = lang;
+        }
+        window.changeLanguage = function (l) { lang = l === "en" ? "en" : "az"; try { localStorage.setItem("arachi_lang", lang); } catch (e) {} apply(); };
+        const nativeAlert = window.alert.bind(window);
+        window.alert = m => nativeAlert(lang === "en" ? T(String(m)) : m);
+        // toast mesajları JS ilə textContent-ə yazılır; tərcümə üçün oxşar yoxlama:
+        const origToast = window.toast;
+        if (typeof origToast === "function") window.toast = function (msg, isErr) { return origToast(lang === "en" ? T(String(msg)) : msg, isErr); };
+        apply();
+        mo.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
+    })();
+    </script>
+</body>
+</html>
