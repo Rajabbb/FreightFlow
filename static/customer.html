@@ -796,6 +796,11 @@
         .ai-launch-btn:hover, .ai-launch-btn:focus { color: #fff; transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 16px 28px -12px rgba(91, 91, 230, 1); }
         .ai-launch-btn:disabled { opacity: .7; transform: none; }
 
+        /* --- Daşıyıcı kateqoriyaları (yığılan kart) --- */
+        .category-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: inherit; }
+        .category-toggle .category-chevron { transition: transform .2s ease; color: #64748b; }
+        .category-toggle[aria-expanded="true"] .category-chevron { transform: rotate(180deg); }
+
         /* --- Aİ paneli (arachi.co-nun içində) --- */
         #aiOverlay { position: fixed; inset: 0; z-index: 2000; background: #fff; display: none; flex-direction: column; }
         #aiOverlay.show { display: flex; }
@@ -830,7 +835,6 @@
         <option value="en">EN</option>
     </select>
 </div>
-                </div>
                 <button id="aiLaunchBtn" type="button" onclick="launchAI()" class="btn btn-sm px-3 py-1.5 rounded-pill text-nowrap d-none fw-bold ai-launch-btn" style="font-size: 12.5px;">
                     <i class="bi bi-stars me-1"></i> Aİ istifadə et
                 </button>
@@ -1016,47 +1020,46 @@
         <!-- ================= TAB 2: DAŞIYICI BAZASI ================= -->
         <div class="tab-pane fade" id="tab-vendors" role="tabpanel" aria-labelledby="tab-vendors-btn">
 
-        <div class="card shadow-sm border-0 mb-4 bg-light">
-            <div class="section-title mb-1">
-                <i class="bi bi-tags-fill text-primary"></i> Daşıyıcı Kateqoriyaları
-            </div>
-            <div class="section-desc mb-3">Daşıyıcılarınızı qruplaşdırmaq üçün kateqoriyalar yaradın.</div>
-            
-            <!-- ƏSAS KATEQORİYA YARATMAQ -->
-            <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-                <input type="text" id="newCategoryName" class="form-control form-control-sm" placeholder="Yeni əsas kateqoriya adı daxil edin..." style="max-width: 300px; width: 100%;">
-                <button class="btn btn-primary btn-sm px-4 fw-bold" style="width: max-content;" onclick="createCategory()">Yarat</button>
-            </div>
-            
-            <div id="categoryListContainer" class="d-flex flex-wrap gap-2">
-                <span class="text-muted small">Kateqoriyalar yüklənir...</span>
-            </div>
+        <div class="card shadow-sm border-0 mb-4 bg-light" id="categoryCard">
+            <button class="category-toggle" type="button" data-bs-toggle="collapse" data-bs-target="#categoryPanel" aria-expanded="false" aria-controls="categoryPanel">
+                <span class="section-title mb-0">
+                    <i class="bi bi-tags-fill text-primary"></i> Daşıyıcı Kateqoriyaları
+                    <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis ms-2" id="categoryCountBadge">0</span>
+                </span>
+                <i class="bi bi-chevron-down category-chevron"></i>
+            </button>
+            <div class="collapse" id="categoryPanel">
+                <div class="section-desc mt-3 mb-3">Daşıyıcılarınızı qruplaşdırmaq üçün kateqoriyalar yaradın.</div>
 
-            <hr class="my-4 text-muted opacity-25">
+                <!-- ƏSAS KATEQORİYA YARATMAQ -->
+                <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+                    <input type="text" id="newCategoryName" class="form-control form-control-sm" placeholder="Yeni əsas kateqoriya adı daxil edin..." style="max-width: 300px; width: 100%;">
+                    <button class="btn btn-primary btn-sm px-4 fw-bold" style="width: max-content;" onclick="createCategory()">Yarat</button>
+                </div>
 
+                <div id="categoryListContainer" class="d-flex flex-wrap gap-2">
+                    <span class="text-muted small">Kateqoriyalar yüklənir...</span>
+                </div>
 
-            <div id="categoryListContainer" class="d-flex flex-wrap gap-2">
-                <span class="text-muted small">Kateqoriyalar yüklənir...</span>
-            </div>
+                <hr class="my-4 text-muted opacity-25">
 
-            <hr class="my-4 text-muted opacity-25">
+                <!-- ALT KATEQORİYA YARATMAQ VƏ SİLMƏK -->
+                <div class="section-desc mb-2 fw-bold text-dark">
+                    <i class="bi bi-diagram-3-fill text-secondary me-1"></i> Alt Kateqoriya Yarat və İdarə Et
+                </div>
 
-            <!-- ALT KATEQORİYA YARATMAQ VƏ SİLMƏK (Sizin verdiyiniz kod bura gəlir) -->
-            <div class="section-desc mb-2 fw-bold text-dark">
-                <i class="bi bi-diagram-3-fill text-secondary me-1"></i> Alt Kateqoriya Yarat və İdarə Et
-            </div>
-            
-            <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
-                <select id="parentCategoryForSub" class="form-select form-select-sm" style="width: 230px; max-width: 100%;" onchange="loadSubCategoriesList(this.value)">
-                    <option value="">-- Əsas Kateqoriya --</option>
-                </select>
-                <input type="text" id="newSubCategoryName" class="form-control form-control-sm" placeholder="Yeni alt kateqoriya adı daxil edin..." style="max-width: 300px; width: 100%;">
-                <button class="btn btn-primary btn-sm px-4 fw-bold" style="width: max-content;" onclick="createSubCategory()">Yarat</button>
-            </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+                    <select id="parentCategoryForSub" class="form-select form-select-sm" style="width: 230px; max-width: 100%;" onchange="loadSubCategoriesList(this.value)">
+                        <option value="">-- Əsas Kateqoriya --</option>
+                    </select>
+                    <input type="text" id="newSubCategoryName" class="form-control form-control-sm" placeholder="Yeni alt kateqoriya adı daxil edin..." style="max-width: 300px; width: 100%;">
+                    <button class="btn btn-primary btn-sm px-4 fw-bold" style="width: max-content;" onclick="createSubCategory()">Yarat</button>
+                </div>
 
-            <!-- Seçilən ana kateqoriyanın alt kateqoriyalarının görünəcəyi yer -->
-            <div id="subCategoryListContainer" class="d-flex flex-wrap gap-2">
-                <span class="text-muted small">Alt kateqoriyaları görmək və silmək üçün soldan əsas kateqoriya seçin...</span>
+                <!-- Seçilən ana kateqoriyanın alt kateqoriyalarının görünəcəyi yer -->
+                <div id="subCategoryListContainer" class="d-flex flex-wrap gap-2">
+                    <span class="text-muted small">Alt kateqoriyaları görmək və silmək üçün yuxarıdan əsas kateqoriya seçin...</span>
+                </div>
             </div>
         </div> <!-- Bu bağlanış div-i Daşıyıcı Kateqoriyaları kartının sonudur -->
             
@@ -2678,6 +2681,8 @@ async function parseTextWithAI() {
                 const data = await res.json();
                 if (res.ok) {
                     globalCategoriesCache = data.categories || [];
+                    const countBadge = document.getElementById("categoryCountBadge");
+                    if (countBadge) countBadge.textContent = String(globalCategoriesCache.length);
                     renderCategoriesManage();
                     renderCategoryCheckboxList();
                     updateBulkCategoryDropdown();
@@ -4415,7 +4420,7 @@ function loadBulkSubCategories(categoryId) {
                 let tcHtml = tcTexts.map(t => `<li style="margin-bottom: 6px;">${escapeHTML(t)}</li>`).join("");
                 if (!tcHtml) tcHtml = "<li>Standart daşınma şərtləri tətbiq olunur.</li>";
 
-                let compName = (activeUser && activeUser.company_name) ? activeUser.company_name : "Arachi Forwarding";
+                let compName = (activeUser && (activeUser.company_name || activeUser.name)) ? (activeUser.company_name || activeUser.name) : "";
                 let dateStr = new Date().toLocaleDateString('az-AZ');
 
                 // Yeni gizli iframe yaradırıq
@@ -4434,10 +4439,11 @@ function loadBulkSubCategories(categoryId) {
                     <!DOCTYPE html>
                     <html>
                     <head>
-                        <title>Quotation_RFQ_${data.request_id}</title>
+                        <title> </title>
                         <style>
-                            @page { size: A4; margin: 15mm; }
-                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; margin: 0; padding: 0; background: #ffffff; }
+                            /* Kənar boşluq 0: brauzer çap zamanı səhifənin ünvanını, tarixi və başlığı (arachi.co linki) yazmır. Boşluğu səhifənin içində veririk. */
+                            @page { size: A4; margin: 0; }
+                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; margin: 0; padding: 15mm; background: #ffffff; }
                             .container { width: 100%; box-sizing: border-box; }
                         </style>
                     </head>
@@ -4445,7 +4451,7 @@ function loadBulkSubCategories(categoryId) {
                         <div class="container">
                             <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 15px; margin-bottom: 25px;">
                                 <div style="max-width: 55%; word-wrap: break-word;">
-                                    <h1 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase;">${escapeHTML(compName)}</h1>
+                                    ${compName ? `<h1 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase;">${escapeHTML(compName)}</h1>` : ""}
                                     <p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px; font-weight: bold;">OFFICIAL FREIGHT FORWARDER QUOTATION</p>
                                 </div>
                                 <div style="text-align: right; font-size: 12px; color: #475569; line-height: 1.4; max-width: 40%;">
@@ -4484,10 +4490,6 @@ function loadBulkSubCategories(categoryId) {
                                 </ul>
                             </div>
 
-                            <div style="margin-top: 40px; padding-top: 15px; border-top: 1px solid #cbd5e1; font-size: 9.5px; color: #94a3b8; text-align: center; line-height: 1.4;">
-                                This document is electronically generated and is strictly confidential.<br>
-                                Blind Shipment Protocol Active - All carrier operations are managed internally.
-                            </div>
                         </div>
                     </body>
                     </html>
@@ -4664,7 +4666,6 @@ function copyPublicLinkText() {
             const photo = f.photo_url && /^\/uploads\/profiles\/[A-Za-z0-9._-]+$/.test(f.photo_url)
                 ? `<img class="fwd-photo" src="${escapeHTML(f.photo_url)}" alt="" loading="lazy">`
                 : `<div class="fwd-photo">${escapeHTML(name.trim().charAt(0).toUpperCase() || "F")}</div>`;
-            const loc = [f.city, f.country].filter(Boolean).join(", ");
             const chips = (f.services || []).filter(s => SERVICE_LABELS[s]).map(s => `<span class="fwd-chip">${SERVICE_LABELS[s]}</span>`).join("");
             const email = f.contact_email ? contactLine("bi-envelope", f.contact_email, "mailto:" + f.contact_email) : "";
             const contacts = email
@@ -4681,7 +4682,6 @@ function copyPublicLinkText() {
             return `<div class="col-12 col-md-6 col-xl-4"><div class="fwd-card">
                 <div class="fwd-head">${photo}<div style="min-width:0;">
                     <div class="fwd-name">${escapeHTML(name)}${f.is_verified ? '<span class="fwd-verified">Təsdiqlənib</span>' : ""}</div>
-                    ${loc ? `<div class="fwd-loc"><i class="bi bi-geo-alt me-1"></i>${escapeHTML(loc)}</div>` : ""}
                 </div></div>
                 ${f.about ? `<div class="fwd-about">${escapeHTML(f.about)}</div>` : ""}
                 ${chips ? `<div class="fwd-chips">${chips}</div>` : ""}
@@ -4707,7 +4707,6 @@ function copyPublicLinkText() {
             const photo = f.photo_url && /^\/uploads\/profiles\/[A-Za-z0-9._-]+$/.test(f.photo_url)
                 ? `<img class="fwd-photo fwd-photo-lg" src="${escapeHTML(f.photo_url)}" alt="">`
                 : `<div class="fwd-photo fwd-photo-lg">${escapeHTML(name.trim().charAt(0).toUpperCase() || "F")}</div>`;
-            const loc = [f.city, f.country].filter(Boolean).join(", ");
             const chips = (f.services || []).filter(s => SERVICE_LABELS[s]).map(s => `<span class="fwd-chip">${SERVICE_LABELS[s]}</span>`).join("");
             const contacts = (f.contact_email ? contactLine("bi-envelope", f.contact_email, "mailto:" + f.contact_email) : "")
                 + contactLine("bi-telephone", f.phone, telHref(f.phone))
@@ -4719,7 +4718,6 @@ function copyPublicLinkText() {
                     ${photo}
                     <div style="min-width:0;">
                         <div class="fwd-name" style="font-size:19px;">${escapeHTML(name)}${f.is_verified ? '<span class="fwd-verified">Təsdiqlənib</span>' : ""}</div>
-                        ${loc ? `<div class="fwd-loc" style="font-size:13px;"><i class="bi bi-geo-alt me-1"></i>${escapeHTML(loc)}</div>` : ""}
                     </div>
                 </div>
                 <div class="fwd-sec"><div class="fwd-sec-title">Şirkət haqqında</div>
