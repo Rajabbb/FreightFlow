@@ -347,7 +347,7 @@ def extract_clean_email(val: Any) -> Optional[str]:
         if '@' in clean and '.' in clean: return clean
     return None
 
-def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, Any]]) -> Dict[str, Any]:
+def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, Any]], skip_duplicates: bool = False) -> Dict[str, Any]:
     if not raw_carriers: raise HTTPException(status_code=400, detail="Əlavə ediləcək daşıyıcı məlumatı tapılmadı.")
     existing_emails = set()
     try:
@@ -380,15 +380,18 @@ def filter_and_insert_carriers(customer_id: int, raw_carriers: List[Dict[str, An
         if not company or str(company).lower() == 'nan' or not str(company).strip(): company = "Daşıyıcı"
         carriers_to_insert.append({"customer_id": customer_id, "company_name": str(company).strip(), "email": clean_email})
 
-    if duplicate_emails:
+    if duplicate_emails and not skip_duplicates:
         unique_dups = ", ".join(list(set(duplicate_emails)))
         raise HTTPException(status_code=400, detail=f"Bu e-poçt ünvanı artıq bazada və ya siyahıda mövcuddur: {unique_dups}")
     if not carriers_to_insert:
         raise HTTPException(status_code=400, detail="Daxil edilən e-poçt ünvanı etibarsızdır və ya artıq mövcuddur.")
     supabase.table("carriers").insert(carriers_to_insert).execute()
-    return {"status": "success", "message": f"{len(carriers_to_insert)} yeni daşıyıcı uğurla əlavə edildi!"}
+    message = f"{len(carriers_to_insert)} yeni daşıyıcı uğurla əlavə edildi!"
+    skipped = len(set(duplicate_emails))
+    if skipped: message += f" ({skipped} təkrar email atlandı.)"
+    return {"status": "success", "message": message, "added": len(carriers_to_insert), "skipped_duplicates": skipped}
 
-def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int):
+def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int, skip_duplicates: bool = False):
     if df.empty: raise HTTPException(status_code=400, detail="Məlumat tapılmadı və ya cədvəl boşdur.")
     normalized_columns = {col: normalize_text(col) for col in df.columns}
     email_keywords = ['email', 'e-mail', 'e-poct', 'epoct', 'e poct', 'poct', 'elaqe', 'contact', 'mail']
@@ -403,7 +406,7 @@ def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int):
         if not clean_email: continue
         company = str(row[comp_col]).strip() if comp_col and pd.notna(row[comp_col]) else "Daşıyıcı"
         raw_list.append({"name": company, "email": clean_email})
-    return filter_and_insert_carriers(customer_id, raw_list)
+    return filter_and_insert_carriers(customer_id, raw_list, skip_duplicates)
 
 async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin: str, destination: str, token: str, custom_body: Optional[str] = None, custom_subject: Optional[str] = None, sender_company: str = "Arachi", is_reminder: bool = False, reply_to_email: Optional[str] = None):
     quote_link = f"{BASE_URL}/carrier_quote/quote?token={token}"
@@ -603,6 +606,22 @@ def get_carrier_quote_page(token: str):
     response.headers["Expires"] = "0"
     return response
 
+def _own_category(category_id, current_user: dict) -> None:
+    """Kateqoriya (və ya alt kateqoriyanın əsas kateqoriyası) bu müştəriyə aiddirmi."""
+    if not category_id: return
+    res = supabase.table("carrier_categories").select("customer_id").eq("id", category_id).execute()
+    if not res.data or str(res.data[0].get("customer_id")) != str(current_user.get("sub")):
+        raise HTTPException(status_code=403, detail="Təhlükəsizlik Xəbərdarlığı: İcazə rədd edildi! Bu kateqoriya sizə aid deyil.")
+
+
+def _own_sub_category(sub_id, current_user: dict) -> None:
+    if not sub_id: return
+    res = supabase.table("carrier_sub_categories").select("category_id").eq("id", sub_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Alt kateqoriya tapılmadı.")
+    _own_category(res.data[0].get("category_id"), current_user)
+
+
 @app.get("/categories/customer/{customer_id}")
 def get_customer_categories(customer_id: int, current_user: dict = Depends(verify_token)):
     check_ownership(customer_id, current_user)
@@ -633,6 +652,8 @@ def delete_category(payload: CategoryDelete, current_user: dict = Depends(verify
 @app.post("/carriers/set-category")
 def set_carrier_category(payload: CarrierSetCategory, current_user: dict = Depends(verify_token)):
     check_ownership(payload.customer_id, current_user)
+    _own_category(payload.category_id if payload.category_id and payload.category_id > 0 else None, current_user)
+    _own_sub_category(payload.sub_category_id if payload.sub_category_id and payload.sub_category_id > 0 else None, current_user)
     try:
         val_cat = payload.category_id if payload.category_id and payload.category_id > 0 else None
         val_sub = payload.sub_category_id if payload.sub_category_id and payload.sub_category_id > 0 else None
@@ -648,6 +669,8 @@ def set_carrier_category(payload: CarrierSetCategory, current_user: dict = Depen
 @app.post("/carriers/bulk-set-category")
 def bulk_set_carrier_category(payload: CarrierBulkSetCategory, current_user: dict = Depends(verify_token)):
     check_ownership(payload.customer_id, current_user)
+    _own_category(payload.category_id if payload.category_id and payload.category_id > 0 else None, current_user)
+    _own_sub_category(payload.sub_category_id if payload.sub_category_id and payload.sub_category_id > 0 else None, current_user)
     try:
         val_cat = payload.category_id if payload.category_id and payload.category_id > 0 else None
         val_sub = payload.sub_category_id if payload.sub_category_id and payload.sub_category_id > 0 else None
@@ -666,6 +689,7 @@ def bulk_set_carrier_category(payload: CarrierBulkSetCategory, current_user: dic
 
 @app.post("/carrier-sub-categories")
 def create_sub_category(payload: SubCategoryCreate, current_user: dict = Depends(verify_token)):
+    _own_category(payload.category_id, current_user)
     try:
         # Təhlükəsizlik: Əsas kateqoriyanın mövcudluğunu və icazələri yoxlamaq olar
         res = supabase.table("carrier_sub_categories").insert({
@@ -678,6 +702,7 @@ def create_sub_category(payload: SubCategoryCreate, current_user: dict = Depends
 
 @app.get("/carrier-sub-categories/{category_id}")
 def get_sub_categories(category_id: int, current_user: dict = Depends(verify_token)):
+    _own_category(category_id, current_user)
     try:
         res = supabase.table("carrier_sub_categories").select("*").eq("category_id", category_id).execute()
         return {"status": "success", "data": res.data or []}
@@ -686,6 +711,7 @@ def get_sub_categories(category_id: int, current_user: dict = Depends(verify_tok
 
 @app.delete("/carrier-sub-categories/{sub_id}")
 def delete_sub_category(sub_id: int, current_user: dict = Depends(verify_token)):
+    _own_sub_category(sub_id, current_user)
     try:
         supabase.table("carrier_sub_categories").delete().eq("id", sub_id).execute()
         return {"status": "success"}
@@ -1191,7 +1217,8 @@ async def add_carriers_manual(request: Request, current_user: dict = Depends(ver
             name = body.get("name") or body.get("company_name") or "Daşıyıcı"
             carriers = [{"name": name, "email": email}] if email else []
 
-        return filter_and_insert_carriers(int(customer_id), carriers)
+        skip = str(body.get("skip_duplicates") or request.query_params.get("skip_duplicates") or "").lower() in ("1", "true", "yes")
+        return filter_and_insert_carriers(int(customer_id), carriers, skip)
     except HTTPException as he: raise he
     except Exception as e:
         traceback.print_exc()
@@ -1209,7 +1236,8 @@ async def upload_carriers_excel(request: Request, current_user: dict = Depends(v
         contents = await file.read()
         filename = getattr(file, "filename", "file.xlsx")
         df = pd.read_csv(io.BytesIO(contents)) if filename.lower().endswith('.csv') else pd.read_excel(io.BytesIO(contents))
-        return process_dataframe_and_insert(df, int(customer_id))
+        skip = str(form.get("skip_duplicates") or request.query_params.get("skip_duplicates") or "").lower() in ("1", "true", "yes")
+        return process_dataframe_and_insert(df, int(customer_id), skip)
     except HTTPException as he: raise he
     except Exception as e: raise HTTPException(status_code=400, detail=f"Fayl oxunarkən xəta: {str(e)}")
 
@@ -2246,6 +2274,10 @@ class CustomerQuoteCreate(BaseModel):
 @app.post("/customer-quotes/create")
 def create_customer_quote(payload: CustomerQuoteCreate, current_user: dict = Depends(verify_token)):
     check_ownership(payload.customer_id, current_user)
+    _own_request(payload.request_id, current_user)
+    q = supabase.table("quotes").select("request_id").eq("id", payload.quote_id).execute()
+    if not q.data or q.data[0]["request_id"] != payload.request_id:
+        raise HTTPException(status_code=404, detail="Bu sorğuda belə təklif yoxdur.")
     try:
         res = supabase.table("customer_quotes").insert({
             "customer_id": payload.customer_id,
