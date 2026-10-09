@@ -1601,43 +1601,52 @@ def _own_quote(quote_id: int, current_user: dict) -> dict:
 @app.post("/requests/{request_id}/send")
 async def send_existing_request(request_id: int, payload: SendRequestPayload, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
     """Əvvəl yaradılmış sorğunu daşıyıcılara göndərir (Aİ agent üçün). Artıq göndərilmiş daşıyıcılara təkrar getmir."""
-    shipment = _own_request(request_id, current_user)
-    customer_id = shipment["customer_id"]
-    cust = (supabase.table("customers").select("*").eq("id", customer_id).execute().data or [{}])[0]
-    sender_company = cust.get("company_name") or cust.get("name") or "Arachi"
-    customer_email = cust.get("email")
-    all_carriers = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute().data or []
-    real = [c for c in all_carriers if "public_link_" not in (c.get("email") or "")]
-    if payload.send_to_all: targets = real
-    elif payload.category_ids: targets = [c for c in real if c.get("category_id") in set(payload.category_ids)]
-    else: targets = [c for c in real if c.get("id") in set(payload.carrier_ids or [])]
-    already = {q["carrier_id"] for q in (supabase.table("quotes").select("carrier_id").eq("request_id", request_id).execute().data or [])}
-    skipped = [c for c in targets if c["id"] in already]
-    targets = [c for c in targets if c["id"] not in already]
-    if not targets and not payload.also_create_link:
-        raise HTTPException(status_code=400, detail="Göndəriləcək yeni daşıyıcı tapılmadı (seçilənlərə artıq göndərilib və ya seçim boşdur).")
-    sent = []
-    for carrier in targets:
-        unique_token = str(uuid.uuid4())
-        email = carrier.get("email")
-        supabase.table("quotes").insert({"request_id": request_id, "carrier_id": carrier["id"], "token": unique_token, "mail_status": "pending" if email else "failed", "is_viewed": False}).execute()
-        if email:
-            background_tasks.add_task(
-                send_carrier_email_link, carrier_email=email, carrier_name=carrier.get("company_name") or "Daşıyıcı",
-                origin=shipment["origin"], destination=shipment["destination"], token=unique_token,
-                sender_company=sender_company, reply_to_email=customer_email)
-        sent.append({"carrier_id": carrier["id"], "company_name": carrier.get("company_name"), "email": email, "token": unique_token})
-    result = {"status": "success", "request_id": request_id, "sent": sent, "skipped_already_sent": [c["id"] for c in skipped]}
-    if payload.also_create_link:
-        result["public_link"] = create_public_link_quote(customer_id, request_id, all_carriers)
-    return result
+    try:
+        shipment = _own_request(request_id, current_user)
+        customer_id = shipment["customer_id"]
+        cust = (supabase.table("customers").select("*").eq("id", customer_id).execute().data or [{}])[0]
+        sender_company = cust.get("company_name") or cust.get("name") or "Arachi"
+        customer_email = cust.get("email")
+        all_carriers = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute().data or []
+        real = [c for c in all_carriers if "public_link_" not in (c.get("email") or "")]
+        if payload.send_to_all: targets = real
+        elif payload.category_ids: targets = [c for c in real if c.get("category_id") in set(payload.category_ids)]
+        else: targets = [c for c in real if c.get("id") in set(payload.carrier_ids or [])]
+        already = {q["carrier_id"] for q in (supabase.table("quotes").select("carrier_id").eq("request_id", request_id).execute().data or [])}
+        skipped = [c for c in targets if c["id"] in already]
+        targets = [c for c in targets if c["id"] not in already]
+        if not targets and not payload.also_create_link:
+            raise HTTPException(status_code=400, detail="Göndəriləcək yeni daşıyıcı tapılmadı (seçilənlərə artıq göndərilib və ya seçim boşdur).")
+        sent = []
+        for carrier in targets:
+            unique_token = str(uuid.uuid4())
+            email = carrier.get("email")
+            supabase.table("quotes").insert({"request_id": request_id, "carrier_id": carrier["id"], "token": unique_token, "mail_status": "pending" if email else "failed", "is_viewed": False}).execute()
+            if email:
+                background_tasks.add_task(
+                    send_carrier_email_link, carrier_email=email, carrier_name=carrier.get("company_name") or "Daşıyıcı",
+                    origin=shipment["origin"], destination=shipment["destination"], token=unique_token,
+                    sender_company=sender_company, reply_to_email=customer_email)
+            sent.append({"carrier_id": carrier["id"], "company_name": carrier.get("company_name"), "email": email, "token": unique_token})
+        result = {"status": "success", "request_id": request_id, "sent": sent, "skipped_already_sent": [c["id"] for c in skipped]}
+        if payload.also_create_link:
+            result["public_link"] = create_public_link_quote(customer_id, request_id, all_carriers)
+        return result
+    except HTTPException: raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Göndərmə xətası: {e}")
 
 
 @app.post("/requests/{request_id}/public-link")
 def create_request_public_link(request_id: int, current_user: dict = Depends(verify_token)):
     shipment = _own_request(request_id, current_user)
-    all_carriers = supabase.table("carriers").select("*").eq("customer_id", shipment["customer_id"]).range(0, 9999).execute().data or []
-    return {"status": "success", "public_link": create_public_link_quote(shipment["customer_id"], request_id, all_carriers)}
+    try:
+        all_carriers = supabase.table("carriers").select("*").eq("customer_id", shipment["customer_id"]).range(0, 9999).execute().data or []
+        return {"status": "success", "public_link": create_public_link_quote(shipment["customer_id"], request_id, all_carriers)}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Link yaratma xətası: {e}")
 
 
 @app.get("/requests/customer/{customer_id}")
