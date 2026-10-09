@@ -72,8 +72,13 @@
 
         <form id="registerForm" onsubmit="submitRegistration(event)" novalidate>
             <input type="hidden" id="token" value="{{ token }}">
+            <input type="hidden" id="invite_type" value="{{ invite_type }}">
+
+            <!-- Növü olan linklə gələnlər üçün: seçim əvəzinə hansı hesabın açıldığı göstərilir -->
+            <div id="inviteBanner" class="notice mb-4 d-none"></div>
 
             <!-- 1. Hesab növü -->
+            <div id="typeStep">
             <div class="step-label">1. Hesab növü</div>
             <div class="panel-opts mb-4">
                 <label class="opt">
@@ -92,6 +97,7 @@
                         <span class="opt-desc d-block">Şirkət profili yaradın ki, idxalçı və ixracçılar sizi tapıb daşıyıcı bazalarına əlavə edə bilsin.</span></span>
                     </span>
                 </label>
+            </div>
             </div>
 
             <!-- 2. Panel seçimi (yalnız forwarder üçün) -->
@@ -158,6 +164,9 @@
         let token = (document.getElementById('token').value || '').trim();
         if (token.indexOf('{{') !== -1) token = '';
         const hasToken = token.length > 0;
+        // Linkin növü (server yerləşdirir): importer | forwarder. Boşdursa seçimi istifadəçi edir.
+        let inviteType = (document.getElementById('invite_type') ? document.getElementById('invite_type').value : '').trim();
+        if (inviteType.indexOf('{{') !== -1 || !hasToken) inviteType = '';
 
         const $ = id => document.getElementById(id);
         const typeRadios = () => document.querySelectorAll('input[name="account_type"]');
@@ -166,6 +175,19 @@
 
         // Link olmadan yalnız "Yalnız Freight forwarder paneli" mümkündür
         function applyRules() {
+            if (inviteType) {
+                // Hesab növü linkdə bəllidir: seçim blokları gizlədilir, server də linkdəki növü məcburi tətbiq edir
+                $('typeStep').classList.add('d-none');
+                $('panelStep').classList.add('d-none');
+                $('linkNotice').classList.add('d-none');
+                $('detailsLabel').textContent = '1. Məlumatlarınız';
+                const banner = $('inviteBanner');
+                banner.classList.remove('d-none');
+                banner.innerHTML = inviteType === 'forwarder'
+                    ? '<i class="bi bi-truck-front-fill me-1"></i> <strong>Freight forwarder</strong> hesabı yaradırsınız: forwarder paneli və müştəri paneli eyni girişlə açılacaq.'
+                    : '<i class="bi bi-box-seam-fill me-1"></i> <strong>İdxalçı / İxracçı şirkət</strong> hesabı yaradırsınız: yük sorğuları göndərib daşıyıcılardan təklif ala biləcəksiniz.';
+                return true;
+            }
             const type = checked('account_type');
             // idxalçı/ixracçı və forwarder-in "hər iki / yalnız müştəri" seçimi link tələb edir
             $('type_importer').disabled = !hasToken;
@@ -179,13 +201,15 @@
             return needsLink;
         }
         document.addEventListener('change', function (e) {
+            if (inviteType) return;
             if (e.target.name === 'account_type' && e.target.value === 'forwarder' && !checked('panel_access')) {
                 $(hasToken ? 'panel_both' : 'panel_forwarder').checked = true;
             }
             applyRules();
         });
         // Başlanğıc seçim: link varsa idxalçı/ixracçı, yoxdursa forwarder + yalnız forwarder paneli
-        if (hasToken) { $('type_importer').checked = true; }
+        if (inviteType === 'forwarder') { $('type_forwarder').checked = true; $('panel_both').checked = true; }
+        else if (inviteType === 'importer' || hasToken) { $('type_importer').checked = true; }
         else { $('type_forwarder').checked = true; $('panel_forwarder').checked = true; }
         applyRules();
 
