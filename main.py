@@ -2065,22 +2065,29 @@ async def select_winner_body(payload: SelectWinnerRequest, current_user: dict = 
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
     return {"status": "success", "message": "Qalib təklif uğurla təsdiqləndi!"}
 
+INVITE_TYPES = {"importer": "İdxalçı / İxracçı", "forwarder": "Freight forwarder (müştəri paneli ilə)"}
+
 @app.get("/admin/generate-invite")
-def generate_invite_link(secret: str = None):
+def generate_invite_link(secret: str = None, type: str = None):
+    """Qeydiyyat linki yaradır. type=importer: idxalçı/ixracçı hesabı; type=forwarder: forwarder + müştəri paneli.
+    Hesab növü linkin özündə (bazada) saxlanılır, link sahibi onu dəyişə bilmir."""
     ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY")
     if not ADMIN_SECRET_KEY or secret != ADMIN_SECRET_KEY:
         raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir və ya təyin olunmayıb.")
-        
+    if type not in INVITE_TYPES:
+        raise HTTPException(status_code=400, detail="Link növünü yazın: &type=importer (idxalçı/ixracçı) və ya &type=forwarder (forwarder + müştəri paneli).")
+
     new_token = str(uuid.uuid4())
     try:
-        supabase.table("registration_tokens").insert({"token": new_token, "is_used": False}).execute()
+        supabase.table("registration_tokens").insert({"token": new_token, "is_used": False, "account_type": type}).execute()
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Baza xətası! registration_tokens cədvəlinin olduğuna əmin olun: {str(e)}")
-        
+        raise HTTPException(status_code=500, detail=f"Baza xətası! registration_tokens cədvəlində account_type sütunu olmalıdır (alter table registration_tokens add column account_type text;): {str(e)}")
+
     invite_link = f"{BASE_URL}/register?token={new_token}"
     return {
-        "mesaj": "Link yaradıldı! Bütün yazını kopyalayıb müştəriyə WhatsApp-da və ya E-poçtla göndərin:", 
+        "mesaj": f"{INVITE_TYPES[type]} üçün link yaradıldı! Bütün yazını kopyalayıb müştəriyə WhatsApp-da və ya E-poçtla göndərin:",
+        "novu": type,
         "musteri_linki": invite_link
     }
 
@@ -2089,6 +2096,7 @@ def register_page(request: Request, token: str = None):
     try:
         # Link (token) olmadan da açılır: yalnız "Freight forwarder paneli" üçün açıq qeydiyyat mümkündür.
         safe_token = ""
+        safe_invite_type = ""
         if token:
             res = supabase.table("registration_tokens").select("*").eq("token", token).execute()
             token_record = res.data[0] if res.data else None
@@ -2097,11 +2105,13 @@ def register_page(request: Request, token: str = None):
             if token_record.get('is_used'):
                 return HTMLResponse("<h1>Xəta: Bu qeydiyyat linki artıq istifadə edilib! Hər link yalnız 1 dəfə keçərlidir.</h1>", status_code=403)
             safe_token = token
+            if token_record.get("account_type") in INVITE_TYPES:
+                safe_invite_type = token_record["account_type"]
 
         file_path = os.path.join("static", "register.html")
         with open(file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
-        html_content = html_content.replace("{{ token }}", safe_token)
+        html_content = html_content.replace("{{ token }}", safe_token).replace("{{ invite_type }}", safe_invite_type)
         return HTMLResponse(content=html_content)
     except Exception as e:
         traceback.print_exc()
@@ -2120,6 +2130,12 @@ def process_registration(request: Request, data: RegisterRequest):
         # Hesab növü və panel hüquqları
         account_type = (data.account_type or "importer_exporter").strip()
         panel_access = (data.panel_access or "customer").strip()
+        # Linkin növü varsa, istifadəçinin seçdiyi deyil, linkdəki növ tətbiq olunur
+        if data.token:
+            inv = supabase.table("registration_tokens").select("*").eq("token", data.token).eq("is_used", False).execute()
+            invite_kind = (inv.data[0].get("account_type") if inv.data else None)
+            if invite_kind == "importer": account_type, panel_access = "importer_exporter", "customer"
+            elif invite_kind == "forwarder": account_type, panel_access = "forwarder", "both"
         if account_type not in ("importer_exporter", "forwarder"):
             raise HTTPException(status_code=400, detail="Etibarsız hesab növü.")
         if account_type == "importer_exporter":
