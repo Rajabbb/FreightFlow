@@ -253,14 +253,6 @@
                                 <label class="form-label" for="countries">Xidmət göstərdiyiniz ölkələr / istiqamətlər</label>
                                 <input type="text" class="form-control" id="countries" maxlength="300" placeholder="Məs: Türkiyə, Gürcüstan, Çin, Avropa">
                             </div>
-                            <div class="col-12 col-sm-6">
-                                <label class="form-label" for="country">Ölkə</label>
-                                <input type="text" class="form-control" id="country" maxlength="80" placeholder="Məs: Azərbaycan">
-                            </div>
-                            <div class="col-12 col-sm-6">
-                                <label class="form-label" for="city">Şəhər</label>
-                                <input type="text" class="form-control" id="city" maxlength="80" placeholder="Məs: Bakı">
-                            </div>
                         </div>
                     </div>
 
@@ -360,7 +352,7 @@
         let currentProfile = null;
 
         const SERVICE_LABELS = { road: "Quru", sea: "Dəniz", air: "Hava", rail: "Dəmiryolu", multimodal: "Multimodal", customs: "Gömrük", warehouse: "Anbar" };
-        const FIELDS = ["company_name", "about", "countries", "country", "city", "contact_email", "phone", "whatsapp", "telegram", "website"];
+        const FIELDS = ["company_name", "about", "countries", "contact_email", "phone", "whatsapp", "telegram", "website"];
 
         function $(id) { return document.getElementById(id); }
         function escapeHTML(str) {
@@ -411,12 +403,11 @@
             const photo = photoUrl && /^\/uploads\/profiles\/[A-Za-z0-9._-]+$/.test(photoUrl)
                 ? `<img class="fwd-photo" src="${escapeHTML(photoUrl)}" alt="">`
                 : `<div class="fwd-photo">${escapeHTML(name.trim().charAt(0).toUpperCase() || "F")}</div>`;
-            const loc = [d.city, d.country].filter(Boolean).join(", ");
             const chips = (d.services || []).filter(s => SERVICE_LABELS[s]).map(s => `<span class="fwd-chip">${SERVICE_LABELS[s]}</span>`).join("");
             const contacts = contactLine("bi-envelope", d.contact_email) + contactLine("bi-telephone", d.phone) + contactLine("bi-whatsapp", d.whatsapp)
                 + contactLine("bi-telegram", d.telegram) + contactLine("bi-globe2", (d.website || "").replace(/^https?:\/\//i, ""));
             $("previewCard").innerHTML = `<div class="fwd-card">
-                <div class="fwd-head">${photo}<div style="min-width:0;"><div class="fwd-name">${escapeHTML(name)}</div>${loc ? `<div class="fwd-loc"><i class="bi bi-geo-alt me-1"></i>${escapeHTML(loc)}</div>` : ""}</div></div>
+                <div class="fwd-head">${photo}<div style="min-width:0;"><div class="fwd-name">${escapeHTML(name)}</div></div></div>
                 ${d.about ? `<div class="fwd-about">${escapeHTML(d.about)}</div>` : ""}
                 ${chips ? `<div class="fwd-chips">${chips}</div>` : ""}
                 ${d.countries ? `<div class="small"><span class="text-muted">Əhatə:</span> ${escapeHTML(d.countries)}</div>` : ""}
@@ -440,7 +431,7 @@
             $("aboutCount").textContent = d.about.length + " / 2000";
             renderPreview(d, photoUrl);
             $("hiddenNote").classList.toggle("d-none", d.is_public);
-            const checks = [!!photoUrl, d.about.length >= 40, d.services.length > 0, !!(d.country || d.city), !!d.countries,
+            const checks = [!!photoUrl, d.about.length >= 40, d.services.length > 0, !!d.countries,
                             !!(d.contact_email || d.phone || d.whatsapp || d.telegram || d.website)];
             const pct = Math.round(checks.filter(Boolean).length / checks.length * 100);
             $("meterBar").style.width = pct + "%"; $("meterText").textContent = pct + "%";
