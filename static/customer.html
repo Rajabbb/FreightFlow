@@ -796,6 +796,14 @@
         .ai-launch-btn:hover, .ai-launch-btn:focus { color: #fff; transform: translateY(-2px); filter: brightness(1.08); box-shadow: 0 16px 28px -12px rgba(91, 91, 230, 1); }
         .ai-launch-btn:disabled { opacity: .7; transform: none; }
 
+        /* --- Aİ paneli (arachi.co-nun içində) --- */
+        #aiOverlay { position: fixed; inset: 0; z-index: 2000; background: #fff; display: none; flex-direction: column; }
+        #aiOverlay.show { display: flex; }
+        #aiOverlay .ai-bar { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-bottom: 1px solid var(--brand-line); background: #fff; }
+        #aiOverlay .ai-bar .ai-title { font-weight: 700; color: #0b1433; }
+        #aiFrame { flex: 1 1 auto; width: 100%; border: 0; background: #fff; }
+        body.ai-open { overflow: hidden; }
+
         /* --- Altbilgi --- */
         .border-top { border-color: var(--brand-line) !important; }
 
@@ -815,13 +823,13 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-<div class="position-relative d-inline-flex align-items-center">
-    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-        <option value="az">AZ</option>
-        <option value="en">EN</option>
-    </select>
-</div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
                 <button id="aiLaunchBtn" type="button" onclick="launchAI()" class="btn btn-sm px-3 py-1.5 rounded-pill text-nowrap d-none fw-bold ai-launch-btn" style="font-size: 12.5px;">
                     <i class="bi bi-stars me-1"></i> Aİ istifadə et
                 </button>
@@ -4806,26 +4814,33 @@ function copyPublicLinkText() {
         }
     })();
 
+    // Aİ panelin içində açılır (iframe): ilk açılışda birdəfəlik bilet alınır, sonra söhbət saxlanılır və yenidən açılır.
+    let aiLoaded = false;
+    function closeAI() {
+        document.getElementById("aiOverlay").classList.remove("show");
+        document.body.classList.remove("ai-open");
+    }
     async function launchAI() {
+        const overlay = document.getElementById("aiOverlay");
+        const frame = document.getElementById("aiFrame");
+        if (aiLoaded) { overlay.classList.add("show"); document.body.classList.add("ai-open"); return; }
         const btn = document.getElementById("aiLaunchBtn");
         const original = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Gözləyin...';
-        // Pəncərəni kliklə eyni anda açırıq ki, brauzer onu "popup" kimi bloklamasın
-        const win = window.open("", "_blank");
-        if (win) { try { win.opener = null; } catch (e) {} }
         try {
             const res = await fetch("/api/ai/launch", { method: "POST", headers: getAuthHeaders() });
-            if (res.status === 401) { if (win) win.close(); logout(); return; }
+            if (res.status === 401) { logout(); return; }
             const data = await res.json().catch(() => ({}));
             if (!res.ok || !data.url) {
-                if (win) win.close();
                 alert(typeof data.detail === "string" ? data.detail : "Aİ açıla bilmədi.");
                 return;
             }
-            if (win) win.location.href = data.url; else window.location.href = data.url;
+            frame.src = data.url;
+            aiLoaded = true;
+            overlay.classList.add("show");
+            document.body.classList.add("ai-open");
         } catch (e) {
-            if (win) win.close();
             alert("Serverlə əlaqə qurulmadı!");
         } finally {
             btn.disabled = false;
@@ -4841,6 +4856,7 @@ function copyPublicLinkText() {
             // --- Daşıyıcıları kəşf et ---
             "Forwarder paneli": "Forwarder Panel",
             "Aİ istifadə et": "Use AI",
+            "← Panelə qayıt": "← Back to panel",
             "Aİ açıla bilmədi.": "AI could not be opened.",
             "Aİ funksiyası yalnız Pro plan üçün aktivdir.": "The AI feature is only available on the Pro plan.",
             "Aİ inteqrasiyası hələ qurulmayıb.": "AI integration is not set up yet.",
@@ -5332,5 +5348,12 @@ function copyPublicLinkText() {
         observer.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRS });
     })();
     </script>
+    <div id="aiOverlay" role="dialog" aria-label="Arachi AI">
+        <div class="ai-bar">
+            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" onclick="closeAI()">← Panelə qayıt</button>
+            <span class="ai-title">Arachi AI</span>
+        </div>
+        <iframe id="aiFrame" title="Arachi AI" allow="clipboard-write"></iframe>
+    </div>
 </body>
 </html>
