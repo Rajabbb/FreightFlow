@@ -167,6 +167,8 @@
         // Linkin növü (server yerləşdirir): importer | forwarder. Boşdursa seçimi istifadəçi edir.
         let inviteType = (document.getElementById('invite_type') ? document.getElementById('invite_type').value : '').trim();
         if (inviteType.indexOf('{{') !== -1 || !hasToken) inviteType = '';
+        // Linksiz açılış = pulsuz forwarder qeydiyyatı: seçim ekranı yoxdur, birbaşa forma açılır
+        const lockedMode = inviteType || (hasToken ? '' : 'free');
 
         const $ = id => document.getElementById(id);
         const typeRadios = () => document.querySelectorAll('input[name="account_type"]');
@@ -175,15 +177,17 @@
 
         // Link olmadan yalnız "Yalnız Freight forwarder paneli" mümkündür
         function applyRules() {
-            if (inviteType) {
-                // Hesab növü linkdə bəllidir: seçim blokları gizlədilir, server də linkdəki növü məcburi tətbiq edir
+            if (lockedMode) {
+                // Hesab növü linkdə bəllidir (və ya linksiz açılışda pulsuz forwarder): seçim blokları gizlədilir, server də linkdəki növü məcburi tətbiq edir
                 $('typeStep').classList.add('d-none');
                 $('panelStep').classList.add('d-none');
                 $('linkNotice').classList.add('d-none');
                 $('detailsLabel').textContent = '1. Məlumatlarınız';
                 const banner = $('inviteBanner');
                 banner.classList.remove('d-none');
-                banner.innerHTML = inviteType === 'forwarder'
+                banner.innerHTML = lockedMode === 'free'
+                    ? '<i class="bi bi-person-badge-fill me-1"></i> <strong>Pulsuz Freight forwarder</strong> hesabı yaradırsınız: şirkət profiliniz idxalçı və ixracçılara görünəcək. Sorğu göndərmək üçün müştəri paneli də lazımdırsa, <a href="mailto:info@arachi.co?subject=Arachi%20-%20Forwarder%20(m%C3%BC%C5%9Ft%C9%99ri%20paneli%20il%C9%99)" class="fw-semibold">bizə yazın</a>.'
+                    : lockedMode === 'forwarder'
                     ? '<i class="bi bi-truck-front-fill me-1"></i> <strong>Freight forwarder</strong> hesabı yaradırsınız: forwarder paneli və müştəri paneli eyni girişlə açılacaq.'
                     : '<i class="bi bi-box-seam-fill me-1"></i> <strong>İdxalçı / İxracçı şirkət</strong> hesabı yaradırsınız: yük sorğuları göndərib daşıyıcılardan təklif ala biləcəksiniz.';
                 return true;
@@ -201,7 +205,7 @@
             return needsLink;
         }
         document.addEventListener('change', function (e) {
-            if (inviteType) return;
+            if (lockedMode) return;
             if (e.target.name === 'account_type' && e.target.value === 'forwarder' && !checked('panel_access')) {
                 $(hasToken ? 'panel_both' : 'panel_forwarder').checked = true;
             }
