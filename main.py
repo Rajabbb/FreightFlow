@@ -2068,7 +2068,7 @@ async def select_winner_body(payload: SelectWinnerRequest, current_user: dict = 
 INVITE_TYPES = {"importer": "İdxalçı / İxracçı", "forwarder": "Freight forwarder (müştəri paneli ilə)"}
 
 @app.get("/admin/generate-invite")
-def generate_invite_link(secret: str = None, type: str = None):
+def generate_invite_link(secret: str = None, type: str = None, plan: str = "basic"):
     """Qeydiyyat linki yaradır. type=importer: idxalçı/ixracçı hesabı; type=forwarder: forwarder + müştəri paneli.
     Hesab növü linkin özündə (bazada) saxlanılır, link sahibi onu dəyişə bilmir."""
     ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY")
@@ -2077,17 +2077,21 @@ def generate_invite_link(secret: str = None, type: str = None):
     if type not in INVITE_TYPES:
         raise HTTPException(status_code=400, detail="Link növünü yazın: &type=importer (idxalçı/ixracçı) və ya &type=forwarder (forwarder + müştəri paneli).")
 
+    if plan not in ("basic", "pro"):
+        raise HTTPException(status_code=400, detail="Plan yalnız basic və ya pro ola bilər (&plan=pro).")
+
     new_token = str(uuid.uuid4())
     try:
-        supabase.table("registration_tokens").insert({"token": new_token, "is_used": False, "account_type": type}).execute()
+        supabase.table("registration_tokens").insert({"token": new_token, "is_used": False, "account_type": type, "plan": plan}).execute()
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Baza xətası! registration_tokens cədvəlində account_type sütunu olmalıdır (alter table registration_tokens add column account_type text;): {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Baza xətası! registration_tokens cədvəlində account_type və plan sütunları olmalıdır (alter table registration_tokens add column if not exists account_type text; alter table registration_tokens add column if not exists plan text;): {str(e)}")
 
     invite_link = f"{BASE_URL}/register?token={new_token}"
     return {
         "mesaj": f"{INVITE_TYPES[type]} üçün link yaradıldı! Bütün yazını kopyalayıb müştəriyə WhatsApp-da və ya E-poçtla göndərin:",
         "novu": type,
+        "plan": plan,
         "musteri_linki": invite_link
     }
 
@@ -2167,10 +2171,15 @@ def process_registration(request: Request, data: RegisterRequest):
             raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq mövcuddur.")
 
         hashed_password = pwd_context.hash(data.password)
-        ins = supabase.table("customers").insert({
+        new_customer = {
             "email": data.email, "password": hashed_password, "name": company_name,
             "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access
-        }).execute()
+        }
+        # Linkdə plan yazılıbsa (basic | pro), hesab həmin planla açılır; yazılmayıbsa bazanın standart planı qalır
+        invite_plan = valid_token.get("plan") if valid_token else None
+        if invite_plan in ("basic", "pro"):
+            new_customer["plan"] = invite_plan
+        ins = supabase.table("customers").insert(new_customer).execute()
         new_id = ins.data[0]["id"] if ins.data else None
 
         # Forwarder panelinə girişi olan hesab üçün boş profil yaradılır (şirkət adı ilə)
