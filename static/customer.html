@@ -571,6 +571,11 @@
         }
         .text-primary { color: var(--primary-blue) !important; }
         .bg-primary { background-color: var(--primary-blue) !important; }
+        /* bg-primary + bg-opacity-*: yuxarıdakı !important qaydası Bootstrap-in şəffaflığını ləğv edirdi (sətir tam tünd mavi olurdu) */
+        .bg-primary.bg-opacity-10 { background-color: rgba(0, 55, 184, 0.10) !important; }
+        .bg-primary.bg-opacity-25 { background-color: rgba(0, 55, 184, 0.25) !important; }
+        .bg-primary.bg-opacity-50 { background-color: rgba(0, 55, 184, 0.50) !important; }
+        .bg-primary.bg-opacity-75 { background-color: rgba(0, 55, 184, 0.75) !important; }
         .border-primary { border-color: var(--primary-blue) !important; }
         .text-indigo-600 { color: var(--primary-blue) !important; }
         .border-indigo-200 { border-color: var(--brand-line-2) !important; }
