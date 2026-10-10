@@ -1928,6 +1928,40 @@ Best regards,
                         </div>
                         <button type="submit" class="btn btn-primary w-100" id="cp_submitBtn">Şifrəni Yenilə</button>
                         <div id="cp_errorMsg" class="text-danger small mt-3 text-center d-none"></div>
+                        <div class="text-center mt-4 pt-3 border-top">
+                            <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="openDeleteAccountModal('changePasswordModal')">
+                                <i class="bi bi-trash3 me-1"></i> Hesabı silmək istəyirəm
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HESABI SİL MODALI -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-danger"><i class="bi bi-trash3 me-2"></i> Hesabı sil</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="deleteAccountForm" onsubmit="submitAccountDelete(event)">
+                        <div class="alert alert-danger small mb-3">
+                            <strong>Bu əməliyyat geri qaytarılmır.</strong> Hesabınız və ona aid bütün məlumatlar birdəfəlik silinəcək: sorğular, gələn təkliflər, daşıyıcı bazası, kateqoriyalar, müştəri təklifləri və forwarder profili.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-bold small">Şifrəniz (təsdiq üçün)</label>
+                            <input type="password" class="form-control" id="da_password" required autocomplete="current-password" placeholder="Hazırkı şifrənizi daxil edin">
+                        </div>
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="da_confirm" onchange="document.getElementById('da_submitBtn').disabled = !this.checked">
+                            <label class="form-check-label small" for="da_confirm">Hesabımın və bütün məlumatlarımın silinəcəyini başa düşürəm.</label>
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100" id="da_submitBtn" disabled>Hesabı birdəfəlik sil</button>
+                        <div id="da_errorMsg" class="text-danger small mt-3 text-center d-none"></div>
                     </form>
                 </div>
             </div>
@@ -2200,6 +2234,42 @@ Best regards,
                 btn.disabled = false;
                 btn.innerText = "Şifrəni Yenilə";
             }
+        }
+
+
+        // HESABI SİL
+        function openDeleteAccountModal(fromModalId) {
+            if (fromModalId) {
+                const open = bootstrap.Modal.getInstance(document.getElementById(fromModalId));
+                if (open) open.hide();
+            }
+            document.getElementById("deleteAccountForm").reset();
+            document.getElementById("da_submitBtn").disabled = true;
+            document.getElementById("da_errorMsg").classList.add("d-none");
+            new bootstrap.Modal(document.getElementById("deleteAccountModal")).show();
+        }
+        async function submitAccountDelete(e) {
+            e.preventDefault();
+            const btn = document.getElementById("da_submitBtn");
+            const err = document.getElementById("da_errorMsg");
+            const password = document.getElementById("da_password").value;
+            btn.disabled = true; btn.innerText = "Silinir..."; err.classList.add("d-none");
+            try {
+                const res = await fetch("/api/delete-account", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ password: password }) });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    localStorage.clear(); sessionStorage.clear();
+                    alert(data.message || "Hesabınız silindi.");
+                    window.location.replace("/");
+                    return;
+                }
+                err.innerText = typeof data.detail === "string" ? data.detail : "Xəta baş verdi";
+                err.classList.remove("d-none");
+            } catch (x) {
+                err.innerText = "Sistemlə əlaqə kəsildi.";
+                err.classList.remove("d-none");
+            }
+            btn.disabled = !document.getElementById("da_confirm").checked; btn.innerText = "Hesabı birdəfəlik sil";
         }
 
         // E-POÇTU DƏYİŞMƏ FUNKSİYALARI
@@ -4250,13 +4320,13 @@ function loadBulkSubCategories(categoryId) {
                 const color = isPublicLinkCarrier ? "#4f46e5" : AVATAR_PALETTE[idx % AVATAR_PALETTE.length]; 
                 const avatarContent = isPublicLinkCarrier ? '<i class="bi bi-link-45deg fs-4"></i>' : getInitials(c.company_name);
                 let deliveryBadge;
-                if (isPublicLinkCarrier) { deliveryBadge = `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25"><i class="bi bi-link-45deg"></i> Link</span>`; }
+                if (isPublicLinkCarrier) { deliveryBadge = ""; }
                 else if (c.mail_status === 'delivered') { deliveryBadge = `<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Çatdırıldı</span>`; } 
                 else if (c.mail_status === 'failed') { deliveryBadge = `<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">Çatdırılmadı</span>`; } 
                 else { deliveryBadge = `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Göndərilir...</span>`; }
 
                 let quoteStatus = c.has_submitted
-                    ? `<span class="text-success fw-bold" style="font-size: 11.5px;"><i class="bi bi-check-circle-fill me-1"></i>Təklif alındı</span>`
+                    ? `<span class="text-success fw-bold" style="font-size: 11.5px;"><i class="bi bi-check-circle-fill me-1"></i>Təklif alındı${c.offers_count > 1 ? ` (${c.offers_count} təklif)` : ''}</span>`
                     : `<span class="text-warning fw-bold" style="font-size: 11.5px;"><i class="bi bi-hourglass-split me-1"></i>Təklif yoxdur</span>`;
 
                 let actionBtn;
@@ -4913,6 +4983,14 @@ function copyPublicLinkText() {
             "Forwarder paneli": "Forwarder Panel",
             "Aİ istifadə et": "Use AI",
             "← Panelə qayıt": "← Back to panel",
+            "Hesabı sil": "Delete account",
+            "Hesabı silmək istəyirəm": "I want to delete my account",
+            "Hesabı birdəfəlik sil": "Delete account permanently",
+            "Bu əməliyyat geri qaytarılmır.": "This action cannot be undone.",
+            "Şifrəniz (təsdiq üçün)": "Your password (to confirm)",
+            "Hazırkı şifrənizi daxil edin": "Enter your current password",
+            "Hesabımın və bütün məlumatlarımın silinəcəyini başa düşürəm.": "I understand that my account and all my data will be deleted.",
+            "Silinir...": "Deleting...",
             "Alternativ təklif": "Alternative offer",
             "İctimai link vasitəsilə təklif verib": "Offer submitted via public link",
             "Sənədin dili": "Document language",
