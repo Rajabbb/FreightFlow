@@ -921,14 +921,15 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                     else:
                         carrier_name = carrier.get("company_name", "Daşıyıcı")
                     
-                    extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k not in ("submitted", "submitted_at") and v])
+                    extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k not in ("submitted", "submitted_at", "is_alternative") and v])
+                    if extra.get("is_alternative"): extra_str = "Alternativ təklif" + ("; " + extra_str if extra_str else "")
                     date_val = extra.get("submitted_at") or q.get("updated_at") or q.get("created_at")
 
                     report_data.append({
                         "Sorğu ID": f"RFQ #{disp_id}",
                         "Marşrut": route,
                         "Daşıyıcı Şirkət": carrier_name, # 2. YENİLƏNDİ: Artıq düzgün adı bura yazdırırıq
-                        "Daşıyıcı Email": carrier.get("email", ""),
+                        "Daşıyıcı Email": "-" if "public_link_" in (carrier.get("email") or "") else carrier.get("email", ""),
                         "Qiymət": q.get("price", "Yoxdur") if q.get("price") is not None else "Yoxdur",
                         "Valyuta": q.get("currency", "AZN"),
                         "Tranzit Müddəti (gün)": q.get("transit_time_days", "Qeyd edilməyib") if q.get("transit_time_days") is not None else "Qeyd edilməyib",
@@ -1946,6 +1947,11 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
         if form_carrier_name:
             parsed_extra["carrier_company"] = form_carrier_name.strip()
             # DİQQƏT: Orjinal "İctimai Link" profilinin adını ARTIQ DƏYİŞMİRİK. 
+
+        # Daşıyıcı özü "alternativ təklif" seçibsə (ictimai link olmayan halda), təklif belə işarələnir
+        explicitly_alternative = (is_alternative or "").lower() == "true" and not is_public_link
+        if explicitly_alternative:
+            parsed_extra["is_alternative"] = True
 
         # --- ƏSAS HƏLL: Public Linkdirsə əsas linki boş saxlamaq üçün həmişə YENİ təklif yaradırıq ---
         if is_public_link:
