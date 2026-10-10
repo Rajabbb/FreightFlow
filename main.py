@@ -1723,7 +1723,26 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
                 "has_submitted": has_submitted, "token": item.get("token"),
                 "is_public": "public_link_" in (carrier.get("email") or "")
             })
-        return {"status": "success", "carriers": result_carriers, "has_public_link": has_public_link}
+        # Eyni daşıyıcı bir neçə təklif göndəribsə (alternativ təkliflər), siyahıda bir daşıyıcı kimi görünür:
+        # əsas qeyd ilk göndəriş sətridir (xatırlatma/yenidən göndərmə ona aiddir). İctimai link təklifləri ayrı şirkətlərdir.
+        merged, by_carrier = [], {}
+        for entry in sorted(result_carriers, key=lambda e: e.get("quote_id") or 0):
+            if entry.get("is_public"):
+                merged.append(entry)
+                continue
+            key = entry.get("carrier_id")
+            main = by_carrier.get(key)
+            if main is None:
+                entry["offers_count"] = 1 if entry["has_submitted"] else 0
+                by_carrier[key] = entry
+                merged.append(entry)
+            else:
+                main["has_submitted"] = main["has_submitted"] or entry["has_submitted"]
+                main["is_viewed"] = main["is_viewed"] or entry["is_viewed"]
+                if entry["has_submitted"]: main["offers_count"] = main.get("offers_count", 0) + 1
+        for e in merged:
+            e.setdefault("offers_count", 1 if e.get("has_submitted") else 0)
+        return {"status": "success", "carriers": merged, "has_public_link": has_public_link}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -2263,6 +2282,65 @@ def change_password(request: Request, data: ChangePasswordRequest, current_user:
     supabase.table("customers").update({"password": new_hashed_password}).eq("id", user_id).execute()
     
     return {"status": "success", "message": "Şifrəniz uğurla dəyişdirildi!"}
+
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+
+def _delete_where(table: str, column: str, value):
+    try:
+        supabase.table(table).delete().eq(column, value).execute()
+    except Exception:
+        traceback.print_exc()
+        raise
+
+
+def _delete_in(table: str, column: str, values: list):
+    for i in range(0, len(values), 100):
+        chunk = values[i:i + 100]
+        if chunk:
+            supabase.table(table).delete().in_(column, chunk).execute()
+
+
+@app.post("/api/delete-account")
+@limiter.limit("3/minute")
+def delete_account(request: Request, data: DeleteAccountRequest, current_user: dict = Depends(verify_any_token)):
+    """Hesabı və ona aid bütün məlumatları (sorğular, təkliflər, daşıyıcı bazası, profil) birdəfəlik silir.
+    Cari şifrə tələb olunur. Aİ sessiyası ilə silmək olmaz."""
+    if current_user.get("role") != "customer":
+        raise HTTPException(status_code=403, detail="Yalnız müştəri hesabı silinə bilər.")
+    if current_user.get("via") == "ai":
+        raise HTTPException(status_code=403, detail="Hesab yalnız arachi.co saytından, öz girişinizlə silinə bilər.")
+    customer_id = int(current_user.get("sub"))
+    res = supabase.table("customers").select("*").eq("id", customer_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Hesab tapılmadı.")
+    user = res.data[0]
+    if not pwd_context.verify(data.password or "", user.get("password", "")):
+        raise HTTPException(status_code=400, detail="Şifrə yanlışdır.")
+
+    try:
+        rfq_ids = [r["id"] for r in (supabase.table("shipment_requests").select("id").eq("customer_id", customer_id).execute().data or [])]
+        carrier_ids = [c["id"] for c in (supabase.table("carriers").select("id").eq("customer_id", customer_id).execute().data or [])]
+        category_ids = [c["id"] for c in (supabase.table("carrier_categories").select("id").eq("customer_id", customer_id).execute().data or [])]
+        profile = (supabase.table("forwarder_profiles").select("photo_url").eq("customer_id", customer_id).execute().data or [{}])[0]
+
+        _delete_where("customer_quotes", "customer_id", customer_id)
+        _delete_in("quotes", "request_id", rfq_ids)
+        _delete_in("quotes", "carrier_id", carrier_ids)
+        _delete_where("shipment_requests", "customer_id", customer_id)
+        _delete_in("carrier_sub_categories", "category_id", category_ids)
+        _delete_where("carriers", "customer_id", customer_id)
+        _delete_where("carrier_categories", "customer_id", customer_id)
+        _delete_where("forwarder_profiles", "customer_id", customer_id)
+        _delete_where("ai_sso_jti", "customer_id", customer_id)
+        supabase.table("customers").delete().eq("id", customer_id).execute()
+        _delete_profile_photo_file(profile.get("photo_url"))
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Hesabı silmək alınmadı, bəzi məlumatlar silinməmiş ola bilər: {e}. info@arachi.co ünvanına yazın.")
+    return {"status": "success", "message": "Hesabınız və bütün məlumatlarınız silindi."}
+
 
 @app.post("/api/change-email")
 @limiter.limit("5/minute")
