@@ -319,6 +319,40 @@
                         <div class="mb-3"><label class="form-label">Yeni Şifrə (Təkrar)</label><input type="password" class="form-control" id="cp_confirm" required placeholder="Yeni şifrəni təkrar yazın"></div>
                         <div id="cp_errorMsg" class="text-danger small mb-3 d-none"></div>
                         <button type="submit" class="btn btn-primary w-100" id="cp_submitBtn">Şifrəni Yenilə</button>
+                        <div class="text-center mt-4 pt-3 border-top">
+                            <button type="button" class="btn btn-link btn-sm text-danger text-decoration-none p-0" onclick="openDeleteAccountModal('changePasswordModal')">
+                                <i class="bi bi-trash3 me-1"></i> Hesabı silmək istəyirəm
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- HESABI SİL MODALI -->
+    <div class="modal fade" id="deleteAccountModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold text-danger"><i class="bi bi-trash3 me-2"></i> Hesabı sil</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <form id="deleteAccountForm" onsubmit="submitAccountDelete(event)">
+                        <div class="alert alert-danger small mb-3">
+                            <strong>Bu əməliyyat geri qaytarılmır.</strong> Hesabınız və ona aid bütün məlumatlar birdəfəlik silinəcək: sorğular, gələn təkliflər, daşıyıcı bazası, kateqoriyalar, müştəri təklifləri və forwarder profili.
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted fw-bold small">Şifrəniz (təsdiq üçün)</label>
+                            <input type="password" class="form-control" id="da_password" required autocomplete="current-password" placeholder="Hazırkı şifrənizi daxil edin">
+                        </div>
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="da_confirm" onchange="document.getElementById('da_submitBtn').disabled = !this.checked">
+                            <label class="form-check-label small" for="da_confirm">Hesabımın və bütün məlumatlarımın silinəcəyini başa düşürəm.</label>
+                        </div>
+                        <button type="submit" class="btn btn-danger w-100" id="da_submitBtn" disabled>Hesabı birdəfəlik sil</button>
+                        <div id="da_errorMsg" class="text-danger small mt-3 text-center d-none"></div>
                     </form>
                 </div>
             </div>
@@ -527,6 +561,41 @@
             } catch (x) { err.innerText = "Sistemlə əlaqə kəsildi."; err.classList.remove("d-none"); }
             finally { btn.disabled = false; btn.innerText = "Şifrəni Yenilə"; }
         }
+        // HESABI SİL
+        function openDeleteAccountModal(fromModalId) {
+            if (fromModalId) {
+                const open = bootstrap.Modal.getInstance(document.getElementById(fromModalId));
+                if (open) open.hide();
+            }
+            document.getElementById("deleteAccountForm").reset();
+            document.getElementById("da_submitBtn").disabled = true;
+            document.getElementById("da_errorMsg").classList.add("d-none");
+            new bootstrap.Modal(document.getElementById("deleteAccountModal")).show();
+        }
+        async function submitAccountDelete(e) {
+            e.preventDefault();
+            const btn = document.getElementById("da_submitBtn");
+            const err = document.getElementById("da_errorMsg");
+            const password = document.getElementById("da_password").value;
+            btn.disabled = true; btn.innerText = "Silinir..."; err.classList.add("d-none");
+            try {
+                const res = await fetch("/api/delete-account", { method: "POST", headers: authHeaders(), body: JSON.stringify({ password: password }) });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok) {
+                    localStorage.clear(); sessionStorage.clear();
+                    alert(data.message || "Hesabınız silindi.");
+                    window.location.replace("/");
+                    return;
+                }
+                err.innerText = typeof data.detail === "string" ? data.detail : "Xəta baş verdi";
+                err.classList.remove("d-none");
+            } catch (x) {
+                err.innerText = "Sistemlə əlaqə kəsildi.";
+                err.classList.remove("d-none");
+            }
+            btn.disabled = !document.getElementById("da_confirm").checked; btn.innerText = "Hesabı birdəfəlik sil";
+        }
+
         function openChangeEmailModal() {
             $("changeEmailForm").reset(); $("ce_errorMsg").classList.add("d-none");
             new bootstrap.Modal($("changeEmailModal")).show();
@@ -561,6 +630,14 @@
             "Şirkət": "Company",
             "E-poçtu Dəyiş": "Change Email",
             "Şifrəni Dəyiş": "Change Password",
+            "Hesabı sil": "Delete account",
+            "Hesabı silmək istəyirəm": "I want to delete my account",
+            "Hesabı birdəfəlik sil": "Delete account permanently",
+            "Bu əməliyyat geri qaytarılmır.": "This action cannot be undone.",
+            "Şifrəniz (təsdiq üçün)": "Your password (to confirm)",
+            "Hazırkı şifrənizi daxil edin": "Enter your current password",
+            "Hesabımın və bütün məlumatlarımın silinəcəyini başa düşürəm.": "I understand that my account and all my data will be deleted.",
+            "Silinir...": "Deleting...",
             "Çıxış": "Exit",
             "Şirkət profili": "Company Profile",
             "Profilinizi doldurun, idxalçı və ixracçı şirkətlər sizi Arachi-də tapa bilsin.": "Fill in your profile so importer and exporter companies can find you on Arachi.",
