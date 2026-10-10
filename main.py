@@ -466,6 +466,7 @@ class ShipmentRequestCreate(BaseModel):
     hs_code: Optional[str] = ""
     stackable: Optional[Any] = None
     shipment_type: Optional[str] = ""
+    transportation_mode: Optional[str] = ""
     required_fields: Optional[List[Any]] = []
     send_to_all: bool = True
     send_option: Optional[str] = "all"
@@ -858,7 +859,7 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                 disp_id = display_id_map.get(r.get("id"), r.get("id"))
                 req_fields = r.get("required_fields") or []
                 
-                opts = {"Incoterm": "", "ADR": "", "Temperature": "", "Delivery": "", "Info": ""}
+                opts = {"Incoterm": "", "ADR": "", "Temperature": "", "Delivery": "", "Info": "", "Mode": ""}
                 for f in req_fields:
                     f_str = str(f)
                     lower_f = f_str.lower()
@@ -870,6 +871,7 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                     elif lower_f.startswith("temperature") or lower_f.startswith("temp:"): opts["Temperature"] = val
                     elif lower_f.startswith("delivery deadline") or lower_f.startswith("deliv_date:"): opts["Delivery"] = val
                     elif lower_f.startswith("additional info") or lower_f.startswith("info:"): opts["Info"] = val
+                    elif lower_f.startswith("transportation mode"): opts["Mode"] = val
 
                 stackable_val = r.get("stackable")
                 if stackable_val is True: stackable_str = "Bəli"
@@ -877,7 +879,8 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                 else: stackable_str = "Qeyd edilməyib"
 
                 main_notes = (r.get("additional_notes") or "").strip()
-                all_notes = " | ".join(filter(None, [main_notes, opts["Info"]]))
+                # Eyni mətn həm qeyd, həm "Additional Information" kimi saxlanıldığı üçün təkrarlar atılır
+                all_notes = " | ".join(dict.fromkeys(filter(None, [main_notes, opts["Info"]])))
 
                 report_data.append({
                     "Sorğu ID": f"RFQ #{disp_id}",
@@ -885,7 +888,7 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                     "Yük Növü": r.get("cargo_type") or "Qeyd edilməyib",
                     "Çəki (kq)": r.get("weight_kg") if r.get("weight_kg") is not None else "Qeyd edilməyib",
                     "Həcm (CBM)": r.get("volume_m3") if r.get("volume_m3") is not None else "Qeyd edilməyib",
-                    "Nəqliyyat Növü": r.get("transportation_mode") or "Qeyd edilməyib",
+                    "Nəqliyyat Növü": r.get("transportation_mode") or opts["Mode"] or "Qeyd edilməyib",
                     "Yükləmə Tarixi": format_excel_date(r.get("deadline"), is_utc=False, use_ampm=True) if r.get("deadline") else "Qeyd edilməyib",
                     "Maşın Növü": r.get("truck_type") or "Qeyd edilməyib",
                     "HS Kod": r.get("hs_code") or "Qeyd edilməyib",
@@ -1523,8 +1526,15 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
 
         stackable_val = payload.stackable
         if isinstance(stackable_val, str):
-            if stackable_val.strip() == "" or stackable_val.lower() == "none": stackable_val = None
-            else: stackable_val = stackable_val.lower() in ["true", "1", "yes", "on"]
+            sv = stackable_val.strip().lower()
+            if sv == "" or sv == "none": stackable_val = None
+            # "Stackable" -> True, "Non-stackable" -> False (əvvəl "Stackable" da səhvən False olurdu)
+            elif sv in ("non-stackable", "non stackable", "nonstackable", "false", "0", "no", "off"): stackable_val = False
+            else: stackable_val = sv in ("stackable", "true", "1", "yes", "on")
+
+        mode_val = (payload.transportation_mode or "").strip()
+        if mode_val and not any(str(x).lower().startswith("transportation mode") for x in parsed_required):
+            parsed_required.append(f"Transportation Mode: {mode_val}")
 
         response = supabase.table("shipment_requests").insert({
             "customer_id": payload.customer_id, "origin": payload.origin, "destination": payload.destination,
