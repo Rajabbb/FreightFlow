@@ -58,12 +58,15 @@
         .badge-link { font-size: 10.5px; font-weight: 800; color: #8A5A12; background: #FFF4DB; border: 1px solid rgba(183,121,31,.3); border-radius: 999px; padding: 1px 8px; margin-left: 6px; white-space: nowrap; }
         .notice { background: #FFF4DB; border: 1px solid rgba(183,121,31,.3); color: #8A5A12; border-radius: 14px; padding: 10px 14px; font-size: 12.5px; font-weight: 600; }
         .panel-opts { display: grid; gap: 8px; }
+        .back-btn { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; padding: 0; margin: 0 0 6px; color: var(--brand); font-weight: 600; font-size: 14px; cursor: pointer; }
+        .back-btn:hover { text-decoration: underline; }
         @media (max-width: 576px) { .register-card { padding: 24px 18px; border-radius: 22px; } }
     </style>
 </head>
 <body>
 
     <div class="register-card">
+        <button type="button" class="back-btn" id="backBtn" aria-label="Geri qayıt"><i class="bi bi-arrow-left"></i> Geri</button>
         <div class="text-center mb-4">
             <img src="/static/arachi-logo.png" alt="Arachi" class="logo" onerror="this.style.display='none'">
             <h4 class="fw-bold mt-3 mb-1">Hesabınızı Yaradın</h4>
@@ -108,7 +111,7 @@
                         <input type="radio" name="panel_access" value="forwarder" id="panel_forwarder">
                         <span class="opt-body">
                             <span class="opt-ico"><i class="bi bi-person-badge-fill"></i></span>
-                            <span><span class="opt-title">Yalnız Freight forwarder paneli</span><span class="badge-free">Pulsuz · linksiz</span>
+                            <span><span class="opt-title">Yalnız Freight forwarder paneli</span><span class="badge-free">İctimai · linksiz</span>
                             <span class="opt-desc d-block">Profilinizi yaradın və idxalçılara görünün.</span></span>
                         </span>
                     </label>
@@ -171,6 +174,12 @@
         const lockedMode = inviteType || (hasToken ? '' : 'free');
 
         const $ = id => document.getElementById(id);
+        // Geri: əvvəlki səhifə bu saytdandırsa ora, əks halda ana səhifəyə
+        $('backBtn').addEventListener('click', function () {
+            let sameSite = false;
+            try { sameSite = document.referrer && new URL(document.referrer).origin === location.origin; } catch (e) {}
+            if (sameSite && history.length > 1) history.back(); else window.location.href = '/';
+        });
         const typeRadios = () => document.querySelectorAll('input[name="account_type"]');
         const panelRadios = () => document.querySelectorAll('input[name="panel_access"]');
         const checked = name => { const el = document.querySelector('input[name="' + name + '"]:checked'); return el ? el.value : ''; };
@@ -186,7 +195,7 @@
                 const banner = $('inviteBanner');
                 banner.classList.remove('d-none');
                 banner.innerHTML = lockedMode === 'free'
-                    ? '<i class="bi bi-person-badge-fill me-1"></i> <strong>Pulsuz Freight forwarder</strong> hesabı yaradırsınız: şirkət profiliniz idxalçı və ixracçılara görünəcək. Sorğu göndərmək üçün müştəri paneli də lazımdırsa, <a href="mailto:info@arachi.co?subject=Arachi%20-%20Forwarder%20(m%C3%BC%C5%9Ft%C9%99ri%20paneli%20il%C9%99)" class="fw-semibold">bizə yazın</a>.'
+                    ? '<i class="bi bi-person-badge-fill me-1"></i> <strong>İctimai Freight forwarder</strong> hesabı yaradırsınız: şirkət profiliniz idxalçı və ixracçılara görünəcək. Sorğu göndərmək üçün müştəri paneli də lazımdırsa, <a href="mailto:info@arachi.co?subject=Arachi%20-%20Forwarder%20(m%C3%BC%C5%9Ft%C9%99ri%20paneli%20il%C9%99)" class="fw-semibold">bizə yazın</a>.'
                     : lockedMode === 'forwarder'
                     ? '<i class="bi bi-truck-front-fill me-1"></i> <strong>Freight forwarder</strong> hesabı yaradırsınız: forwarder paneli və müştəri paneli eyni girişlə açılacaq.'
                     : '<i class="bi bi-box-seam-fill me-1"></i> <strong>İdxalçı / İxracçı şirkət</strong> hesabı yaradırsınız: yük sorğuları göndərib daşıyıcılardan təklif ala biləcəksiniz.';
