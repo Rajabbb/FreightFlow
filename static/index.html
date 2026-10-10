@@ -478,7 +478,7 @@
   .bg-ice-2{background:var(--ice);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
   .feat-grid{display:grid;grid-template-columns:1fr;gap:22px;min-width:0;}
   @media(min-width:760px){ .feat-grid{grid-template-columns:repeat(2,1fr);} }
-  @media(min-width:1060px){ .feat-grid{grid-template-columns:repeat(3,1fr);} }
+  @media(min-width:1060px){ .feat-grid{grid-template-columns:repeat(3,1fr);} .feat-grid > .feat:last-child:nth-child(3n+1){grid-column:2;} }
   .feat{
     position:relative;overflow:hidden;display:flex;flex-direction:column;
     background:#fff;border:1px solid var(--line);border-radius:24px;padding:28px 26px 26px;
@@ -1112,41 +1112,6 @@
         </div>
       </div>
 
-      <div class="feat reveal" style="--d:.1s">
-        <span class="feat-num">08</span>
-        <h3>Alternativ təkliflər ayrıca görünür</h3>
-        <p>Daşıyıcı əsas təklifdən əlavə alternativ qiymət də göndərə bilər. Alternativlər ayrıca işarələnir, əsas təklif dəyişməz qalır, qalibi siz seçirsiniz.</p>
-        <div class="feat-art" aria-hidden="true">
-          <div class="mock">
-            <div class="mock-body">
-              <div class="m-table">
-                <div class="m-tr head c4b"><span>Daşıyıcı Şirkət</span><span>Qiymət</span><span>Müddət</span><span></span></div>
-                <div class="m-tr c4b"><b>Vardexa Logistika</b><span class="m-price">1 250 USD</span><span>6 gün</span><span class="m-btn ghost sm">Qalib Seç</span></div>
-                <div class="m-tr c4b"><b>Vardexa Logistika</b><span class="m-price">1 190 USD</span><span>8 gün</span><span class="m-badge warn">Alternativ</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="feat reveal" style="--d:.2s">
-        <span class="feat-num">09</span>
-        <h3>İki dildə: Azərbaycanca və ingiliscə</h3>
-        <p>Panel, daşıyıcıya gedən səhifə və müştəriyə göndərilən PDF təklif iki dildə işləyir. Sənədin dilini hər dəfə özünüz seçirsiniz.</p>
-        <div class="feat-art" aria-hidden="true">
-          <div class="mock">
-            <div class="mock-body">
-              <div class="m-label">Sənədin dili</div>
-              <div class="m-chips">
-                <span class="m-chip on">Azərbaycanca</span>
-                <span class="m-chip">English</span>
-              </div>
-              <div class="m-sum"><span>Yekun məbləğ</span><b>1 298 USD</b></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
     </div>
   </div>
 </section>
@@ -1179,11 +1144,11 @@
       </details>
       <details class="faq-item reveal" style="--d:.08s">
         <summary><span>Aİ sorğunu mənim əvəzimə göndərir?</span><i class="faq-icon" aria-hidden="true"></i></summary>
-        <div class="faq-a"><p>Xeyr. Aİ köməkçi sorğu yarada, təklifləri müqayisə edə, PDF təklif və hesabat hazırlaya bilər, amma daşıyıcılara göndərməni (və daşıyıcı silməni) yalnız siz «Bəli» düyməsini basandan sonra edir. Əvvəl kimə nə gedəcəyini dəqiq siyahı ilə göstərir. Aİ köməkçi yalnız Pro planda aktivdir və eyni hesabınızdakı məlumatlarla işləyir.</p></div>
+        <div class="faq-a"><p>Bəli, istəsəniz göndərir, amma yalnız sizin təsdiqinizlə. Aİ köməkçi sorğunu söhbətdən və ya sənəddən (PDF, şəkil, Excel, e-poçt mətni) özü yaradır, bütün daşıyıcılara, seçdiyiniz kateqoriyaya və ya xüsusi daşıyıcılara göndərməyə hazırlayır və kimə nə gedəcəyini dəqiq siyahı ilə göstərir. Siz «Bəli» basanda göndərilir, təsdiqiniz olmadan heç bir mesaj getmir.</p><p>Göndərməklə yanaşı Aİ köməkçi daşıyıcı bazanızı idarə edir (Excel-dən idxal, kateqoriyalara bölmə), gələn təklifləri müqayisə edir, qalibi seçir, cavab verməyənlərə xatırlatma göndərir, müştəriyə PDF təklif və Excel/PDF hesabat hazırlayır. Aİ köməkçi Pro planda aktivdir və eyni hesabınızdakı məlumatlarla işləyir.</p></div>
       </details>
       <details class="faq-item reveal" style="--d:.16s">
         <summary><span>Arachi mənə daşıyıcı tapır?</span><i class="faq-icon" aria-hidden="true"></i></summary>
-        <div class="faq-a"><p>Əsasən siz öz daşıyıcılarınızla işləyirsiniz: bazanızı Excel-dən yükləyir və ya əllə əlavə edib kateqoriyalara bölürsünüz, Arachi sorğunu onlara çatdırır, təklifləri toplayır və müqayisə etməyə kömək edir. Bundan əlavə, freight forwarder şirkətlərin açıq profil kataloqu var: onları kəşf edib, əlaqə vasitələrini görüb uyğun olanı bazanıza əlavə edə bilərsiniz.</p></div>
+        <div class="faq-a"><p>Bəli, iki yolla. Birincisi, Arachi-nin kataloqunda freight forwarder şirkətlər öz profillərini yerləşdirir: xidmətlərini, əhatə dairəsini və əlaqə vasitələrini görüb uyğun olanı bir kliklə daşıyıcı bazanıza əlavə edə bilərsiniz.</p><p>İkincisi, öz daşıyıcılarınız varsa, onları Excel-dən yükləyir və ya əllə əlavə edib kateqoriyalara bölürsünüz. Sonra sorğu seçdiyiniz daşıyıcılara eyni anda çatır, gələn təkliflər tək paneldə toplanır və müqayisə olunur.</p></div>
       </details>
       <details class="faq-item reveal" style="--d:.24s">
         <summary><span>Qeydiyyat üçün niyə dəvət linki lazımdır?</span><i class="faq-icon" aria-hidden="true"></i></summary>
