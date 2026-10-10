@@ -828,13 +828,13 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-<div class="position-relative d-inline-flex align-items-center">
-    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-        <option value="az">AZ</option>
-        <option value="en">EN</option>
-    </select>
-</div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 10px; pointer-events: none; font-size: 13px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: auto; padding-left: 30px; font-size: 12.5px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
                 <button id="aiLaunchBtn" type="button" onclick="launchAI()" class="btn btn-sm px-3 py-1.5 rounded-pill text-nowrap d-none fw-bold ai-launch-btn" style="font-size: 12.5px;">
                     <i class="bi bi-stars me-1"></i> Aİ istifadə et
                 </button>
@@ -1849,9 +1849,18 @@ Best regards,
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label class="form-label small text-muted fw-bold">Təklifin Etibarlılıq Tarixi</label>
-                            <input type="date" class="form-control form-control-sm shadow-sm border-secondary" id="cq_valid_until" required style="max-width: 200px;">
+                        <div class="mb-4 d-flex flex-wrap gap-3 align-items-end">
+                            <div>
+                                <label class="form-label small text-muted fw-bold">Təklifin Etibarlılıq Tarixi</label>
+                                <input type="date" class="form-control form-control-sm shadow-sm border-secondary" id="cq_valid_until" required style="max-width: 200px;">
+                            </div>
+                            <div>
+                                <label class="form-label small text-muted fw-bold" for="cq_lang">Sənədin dili</label>
+                                <select class="form-select form-select-sm shadow-sm border-secondary" id="cq_lang" style="min-width: 150px;">
+                                    <option value="az">Azərbaycanca</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
                         </div>
 
                         <div class="p-3 bg-light border rounded-3 shadow-sm mb-4">
@@ -3755,11 +3764,23 @@ function loadBulkSubCategories(categoryId) {
                 </thead>
                 <tbody>`;
 
+            // Alternativ təkliflər: daşıyıcı özü "alternativ" seçibsə (is_alternative), köhnə qeydlərdə isə eyni daşıyıcının 2-ci və sonrakı təklifi
+            const altQuoteIds = new Set();
+            {
+                const seenCarrier = {};
+                [...quotesList].sort((a, b) => (a.id || 0) - (b.id || 0)).forEach(q => {
+                    if (String(q.carrier_email || "").includes("public_link_")) return;
+                    if (q.extra_details && q.extra_details.is_alternative) { altQuoteIds.add(q.id); return; }
+                    if (seenCarrier[q.carrier_id]) altQuoteIds.add(q.id);
+                    seenCarrier[q.carrier_id] = true;
+                });
+            }
+
             for (let q of quotesList) {
                 let extraStr = "";
                 if (q.extra_details) {
                     for (let [k, v] of Object.entries(q.extra_details)) {
-                        if (k === 'submitted' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
+                        if (k === 'submitted' || k === 'is_alternative' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
                         if (v !== null && v !== undefined && v !== "") {
                             if (k === 'carrier_attachment_url') {
                                 extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${escapeHTML(v)}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
@@ -3779,7 +3800,7 @@ function loadBulkSubCategories(categoryId) {
 
                 html += `
                     <tr class="${q.is_winner ? 'table-success' : ''}">
-                        <td class="px-3 fw-bold text-dark py-2.5 text-nowrap" style="min-width: 130px;">${escapeHTML(q.carrier_company || 'Daşıyıcı')}</td>
+                        <td class="px-3 fw-bold text-dark py-2.5 text-nowrap" style="min-width: 130px;${altQuoteIds.has(q.id) ? ' box-shadow: inset 4px 0 0 #8b5cf6;' : ''}">${escapeHTML(q.carrier_company || 'Daşıyıcı')}${altQuoteIds.has(q.id) ? '<div><span class="badge rounded-pill mt-1" style="font-size:10px; background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd;"><i class="bi bi-arrow-repeat me-1"></i>Alternativ təklif</span></div>' : ''}</td>
                         <td class="px-3 text-success fw-bold py-2.5 text-nowrap" style="min-width: 100px;">${priceDisplay}</td>
                         <td class="px-3 fw-medium text-dark py-2.5 text-nowrap" style="min-width: 90px;">${transitDisplay}</td>
                         <td class="px-3 py-2.5 text-nowrap" style="min-width: 160px;">
@@ -3920,7 +3941,7 @@ function loadBulkSubCategories(categoryId) {
             let extraHtml = ""; let extraObj = targetData.extra_details || {};
             
             for (let [k, v] of Object.entries(extraObj)) {
-                if (k === 'submitted' || k.toLowerCase() === 'carrier_attachment_name' || k === 'submitted_at') continue;
+                if (k === 'submitted' || k === 'is_alternative' || k.toLowerCase() === 'carrier_attachment_name' || k === 'submitted_at') continue;
                 if (v !== null && v !== undefined && v !== "" && v !== "null") {
                     if (k === 'carrier_attachment_url') {
                         extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -4254,7 +4275,9 @@ function loadBulkSubCategories(categoryId) {
                             <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
                                 <div style="min-width:0;">
                                     <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 170px;">${escapeHTML(c.company_name || 'Daşıyıcı')}</div>
-                                    <div class="text-muted text-truncate" style="font-size: 11.5px; max-width: 170px;">${escapeHTML(c.email || '')}</div>
+                                    ${isPublicLinkCarrier
+                                        ? '<div class="text-muted fst-italic" style="font-size: 11.5px; max-width: 190px; line-height: 1.35;"><i class="bi bi-link-45deg me-1"></i>İctimai link vasitəsilə təklif verib</div>'
+                                        : `<div class="text-muted text-truncate" style="font-size: 11.5px; max-width: 170px;">${escapeHTML(c.email || '')}</div>`}
                                 </div>
                                 ${deliveryBadge}
                             </div>
@@ -4407,21 +4430,42 @@ function loadBulkSubCategories(categoryId) {
 
         function createPdfAndDownload(data, tcTexts) {
             return new Promise((resolve, reject) => {
+                const langSel = document.getElementById("cq_lang");
+                const lang = (langSel && langSel.value === "en") ? "en" : "az";
+                try { localStorage.setItem("cqLang", lang); } catch (e) {}
+                const PDF_TEXT = {
+                    az: { title: "RƏSMİ YÜKDAŞIMA TƏKLİFİ", ref: "TƏKLİF №", date: "TARİX", valid: "ETİBARLIDIR", routing: "MARŞRUT VƏ YÜK MƏLUMATLARI",
+                          from: "Haradan:", to: "Hara:", cargo: "Yük növü:", desc: "Xidmətin təsviri", total: "Yekun məbləğ",
+                          service: "Beynəlxalq yükdaşıma xidməti", terms: "Şərtlər və qaydalar", defaultTc: "Standart daşınma şərtləri tətbiq olunur.",
+                          kg: "kq", unknown: "Məlum deyil", cargoDefault: "Logistika xidməti", locale: "az-AZ" },
+                    en: { title: "OFFICIAL FREIGHT QUOTATION", ref: "QUOTATION REF", date: "DATE", valid: "VALID UNTIL", routing: "ROUTING & CARGO DETAILS",
+                          from: "From (Origin):", to: "To (Destination):", cargo: "Cargo Type:", desc: "Description of Services", total: "Total Amount",
+                          service: "International Freight Forwarding Charges", terms: "Terms and Conditions", defaultTc: "Standard shipping terms apply.",
+                          kg: "kg", unknown: "Unknown", cargoDefault: "Logistics service", locale: "en-GB" }
+                };
+                const TC_EN = {
+                    "Gömrük rüsumları və xərcləri qiymətə daxil deyil.": "Customs duties and charges are not included in the price.",
+                    "Yükün sığortalanması qiymətə daxil deyil (müştərinin məsuliyyətindədir).": "Cargo insurance is not included in the price (the customer's responsibility).",
+                    "Yükləmə və boşaltma əməliyyatları qiymətə daxil deyil.": "Loading and unloading operations are not included in the price.",
+                    "Təklif verilən qiymət yalnız yuxarıdakı həcm və çəkiyə əsasən hesablanmışdır. Parametrlər dəyişərsə qiymət yenidən hesablanacaq.": "The quoted price is calculated only for the volume and weight stated above. If the parameters change, the price will be recalculated."
+                };
+                const T = PDF_TEXT[lang];
+                if (lang === "en") tcTexts = tcTexts.map(t => TC_EN[t] || t);
                 const req = currentQuoteForCustomer.req || {};
-                const origin = req.origin || req.loading_location || "Məlum deyil";
-                const destination = req.destination || req.delivery_location || "Məlum deyil";
-                const cargo = req.cargo_type || req.cargo || "Logistika xidməti";
+                const origin = req.origin || req.loading_location || T.unknown;
+                const destination = req.destination || req.delivery_location || T.unknown;
+                const cargo = req.cargo_type || req.cargo || T.cargoDefault;
                 const weight = req.weight_kg || req.weight || "";
                 const vol = req.volume_m3 || req.volume || "";
                 
-                let weightStr = weight ? `${weight} kq` : "";
+                let weightStr = weight ? `${weight} ${T.kg}` : "";
                 if (vol && vol !== "0" && vol !== 0) weightStr += ` / ${vol} CBM`;
 
                 let tcHtml = tcTexts.map(t => `<li style="margin-bottom: 6px;">${escapeHTML(t)}</li>`).join("");
-                if (!tcHtml) tcHtml = "<li>Standart daşınma şərtləri tətbiq olunur.</li>";
+                if (!tcHtml) tcHtml = "<li>${escapeHTML(T.defaultTc)}</li>";
 
                 let compName = (activeUser && (activeUser.company_name || activeUser.name)) ? (activeUser.company_name || activeUser.name) : "";
-                let dateStr = new Date().toLocaleDateString('az-AZ');
+                let dateStr = new Date().toLocaleDateString(T.locale);
 
                 // Yeni gizli iframe yaradırıq
                 const iframe = document.createElement('iframe');
@@ -4437,11 +4481,11 @@ function loadBulkSubCategories(categoryId) {
                 doc.open();
                 doc.write(`
                     <!DOCTYPE html>
-                    <html>
+                    <html lang="${lang}">
                     <head>
                         <title> </title>
                         <style>
-                            /* Kənar boşluq 0: brauzer çap zamanı səhifənin ünvanını, tarixi və başlığı (arachi.co linki) yazmır. Boşluğu səhifənin içində veririk. */
+                            /* Kənar boşluq 0: brauzer çap zamanı səhifənin ünvanını, tarixi və başlığı yazmır. Boşluğu səhifənin içində veririk. */
                             @page { size: A4; margin: 0; }
                             body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000000; margin: 0; padding: 15mm; background: #ffffff; }
                             .container { width: 100%; box-sizing: border-box; }
@@ -4452,31 +4496,31 @@ function loadBulkSubCategories(categoryId) {
                             <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 15px; margin-bottom: 25px;">
                                 <div style="max-width: 55%; word-wrap: break-word;">
                                     ${compName ? `<h1 style="color: #4f46e5; margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase;">${escapeHTML(compName)}</h1>` : ""}
-                                    <p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px; font-weight: bold;">OFFICIAL FREIGHT FORWARDER QUOTATION</p>
+                                    <p style="margin: 4px 0 0 0; color: #64748b; font-size: 12px; font-weight: bold;">${T.title}</p>
                                 </div>
                                 <div style="text-align: right; font-size: 12px; color: #475569; line-height: 1.4; max-width: 40%;">
-                                    <strong style="color: #0f172a;">QUOTATION REF:</strong> RFQ-${data.request_id}<br>
-                                    <strong style="color: #0f172a;">DATE:</strong> ${dateStr}<br>
-                                    ${data.valid_until ? `<strong style="color: #0f172a;">VALID UNTIL:</strong> ${escapeHTML(data.valid_until)}` : ''}
+                                    <strong style="color: #0f172a;">${T.ref}:</strong> RFQ-${data.request_id}<br>
+                                    <strong style="color: #0f172a;">${T.date}:</strong> ${dateStr}<br>
+                                    ${data.valid_until ? `<strong style="color: #0f172a;">${T.valid}:</strong> ${escapeHTML(data.valid_until)}` : ''}
                                 </div>
                             </div>
                             
                             <div style="margin-bottom: 25px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                                <h3 style="margin-top: 0; margin-bottom: 12px; color: #0f172a; font-size: 13px; font-weight: 800; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">ROUTING & CARGO DETAILS</h3>
+                                <h3 style="margin-top: 0; margin-bottom: 12px; color: #0f172a; font-size: 13px; font-weight: 800; border-bottom: 1px solid #cbd5e1; padding-bottom: 8px;">${T.routing}</h3>
                                 <table style="width: 100%; font-size: 12.5px; line-height: 1.5; border-collapse: collapse; table-layout: fixed;">
-                                    <tr><td style="padding-bottom: 6px; width: 130px; font-weight: 700;">From (Origin):</td><td style="padding-bottom: 6px; word-wrap: break-word;">${escapeHTML(origin)}</td></tr>
-                                    <tr><td style="padding-bottom: 6px; font-weight: 700;">To (Destination):</td><td style="padding-bottom: 6px; word-wrap: break-word;">${escapeHTML(destination)}</td></tr>
-                                    <tr><td style="padding-bottom: 6px; font-weight: 700;">Cargo Type:</td><td style="padding-bottom: 6px; word-wrap: break-word;">${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}</td></tr>
+                                    <tr><td style="padding-bottom: 6px; width: 130px; font-weight: 700;">${T.from}</td><td style="padding-bottom: 6px; word-wrap: break-word;">${escapeHTML(origin)}</td></tr>
+                                    <tr><td style="padding-bottom: 6px; font-weight: 700;">${T.to}</td><td style="padding-bottom: 6px; word-wrap: break-word;">${escapeHTML(destination)}</td></tr>
+                                    <tr><td style="padding-bottom: 6px; font-weight: 700;">${T.cargo}</td><td style="padding-bottom: 6px; word-wrap: break-word;">${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}</td></tr>
                                 </table>
                             </div>
                             
                             <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12.5px; table-layout: fixed;">
                                 <tr style="background: #4f46e5; color: #fff;">
-                                    <th style="padding: 10px 12px; text-align: left; width: 65%;">Description of Services</th>
-                                    <th style="padding: 10px 12px; text-align: right; width: 35%;">Total Amount</th>
+                                    <th style="padding: 10px 12px; text-align: left; width: 65%;">${T.desc}</th>
+                                    <th style="padding: 10px 12px; text-align: right; width: 35%;">${T.total}</th>
                                 </tr>
                                 <tr>
-                                    <td style="padding: 12px; border: 1px solid #e2e8f0; border-top: none; color: #334155; word-wrap: break-word;">International Freight Forwarding Charges</td>
+                                    <td style="padding: 12px; border: 1px solid #e2e8f0; border-top: none; color: #334155; word-wrap: break-word;">${T.service}</td>
                                     <td style="padding: 12px; border: 1px solid #e2e8f0; border-top: none; text-align: right; font-weight: 800; color: #16a34a; font-size: 15px; word-wrap: break-word;">
                                         ${escapeHTML(data.final_price)} ${escapeHTML(data.currency)}
                                     </td>
@@ -4484,7 +4528,7 @@ function loadBulkSubCategories(categoryId) {
                             </table>
 
                             <div style="margin-bottom: 30px;">
-                                <h4 style="color: #0f172a; font-size: 12.5px; margin-bottom: 10px; font-weight: 800;">Terms and Conditions</h4>
+                                <h4 style="color: #0f172a; font-size: 12.5px; margin-bottom: 10px; font-weight: 800;">${T.terms}</h4>
                                 <ul style="font-size: 11px; color: #475569; padding-left: 18px; line-height: 1.6; margin: 0; word-wrap: break-word;">
                                     ${tcHtml}
                                 </ul>
@@ -4803,6 +4847,19 @@ function copyPublicLinkText() {
     })();
     </script>
     <script id="arachi-ai">
+    // Müştəri təklifi pəncərəsi açılanda son seçilmiş sənəd dili bərpa olunur (standart: Azərbaycanca)
+    (function () {
+        const modal = document.getElementById("customerQuoteModal");
+        if (!modal) return;
+        modal.addEventListener("show.bs.modal", function () {
+            try {
+                const saved = localStorage.getItem("cqLang");
+                const sel = document.getElementById("cq_lang");
+                if (sel) sel.value = saved === "en" ? "en" : "az";
+            } catch (e) {}
+        });
+    })();
+
     // ===== Aİ (arachi v2) =====
     // Düymə yalnız müştəri paneli olan və Pro planda olan hesablarda görünür. Əsl yoxlama serverdədir (/api/ai/launch).
     (function () {
@@ -4856,6 +4913,10 @@ function copyPublicLinkText() {
             "Forwarder paneli": "Forwarder Panel",
             "Aİ istifadə et": "Use AI",
             "← Panelə qayıt": "← Back to panel",
+            "Alternativ təklif": "Alternative offer",
+            "İctimai link vasitəsilə təklif verib": "Offer submitted via public link",
+            "Sənədin dili": "Document language",
+            "Azərbaycanca": "Azerbaijani",
             "Aİ açıla bilmədi.": "AI could not be opened.",
             "Aİ funksiyası yalnız Pro plan üçün aktivdir.": "The AI feature is only available on the Pro plan.",
             "Aİ inteqrasiyası hələ qurulmayıb.": "AI integration is not set up yet.",
