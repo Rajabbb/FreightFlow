@@ -1346,6 +1346,14 @@ AI_PARSE_PROMPT = """Sən peşəkar logistika assistentisən. Sənə verilən s�
         * Yük palet / pallet / паллет / поддон ilə ifadə olunubsa (məsələn "10 palet mal", "10 pallets of goods") volume_type = "Palet" və volume_m3 = paletlərin SAYI (məsələn 10).
         * Həcm kub metr / m3 / m³ / CBM ilə verilibsə volume_type = "CBM" və volume_m3 = həmin rəqəm.
         * Heç biri göstərilməyibsə volume_m3 = null və volume_type = "CBM".
+    - ŞƏHƏR/ÖLKƏ ADLARI: "origin" və "destination" həmişə AZƏRBAYCAN dilində, "Şəhər, Ölkə" formatında yazılsın (məsələn "Москва, Россия" → "Moskva, Rusiya"; "Baku, Azerbaijan" → "Bakı, Azərbaycan"; "Guangzhou" → "Quançjou, Çin"). Mətn hansı dildə olursa olsun, bu xanalarda dil qarışmasın. (Bu qayda yalnız yer adlarına aiddir; "cargo_type" və "additional_notes" mətnin öz dilində qalır.)
+    - TARİXLƏR: Aşağıdakı "BU GÜN" tarixinə görə hesabla. İl yazılmayıbsa (məs. "20 oktyabr", "5 Nov", "30 noyabr"), BU GÜNDƏN SONRA gələn ən yaxın tarixi seç. "sabah", "birisi gün", "gələn həftə çərşənbə", "послезавтра" kimi nisbi ifadələri BU GÜN-ə görə konkret tarixə çevir. Tarixi YYYY-MM-DDTHH:MM formatında yaz (vaxt yoxdursa T00:00).
+    - "deadline" = YÜKLƏMƏ tarixi. "delivery_deadline" = ÇATDIRILMA tarixi/müddəti ("çatdırılma ən gec 30 noyabr", "deliver by", "доставка до"). Çatdırılma tarixini heç vaxt "deadline"-a yazma.
+    - ÇOX YÜK: mətndə bir neçə ayrı yük/marşrut varsa (məs. "Bakı-Moskva 5 ton meyvə ... Bakı-Minsk 3 ton xalça"), YALNIZ BİRİNCİSİNİ doldur, "shipment_count" = yüklərin sayı, "other_shipments" = digər yüklərin qısa təsvirlərinin siyahısı (məs. ["Bakı → Minsk, 3 ton xalça"]).
+    - ARALIQ və TƏXMİNİ ədədlər ("8-10 ton", "təxminən 1.5 ton", "around 20 t"): "weight_kg" və "volume_m3" üçün null qoy (rəqəmə çevirmə) və aralığı/təxmini dəyəri "additional_notes"-a olduğu kimi yaz (məs. "Çəki: 8-10 ton").
+    - MARŞRUT detalı ("via Poti", "İran üzərindən", "Xəzər bərəsi ilə"): bunu "additional_notes"-a "Marşrut: ..." kimi yaz, itirmə.
+    - "shipment_type": konteyner tam yüklənibsə (20DC, 40HC, 40ft, 2x40HC, "full container") FCL; konteynerdə qismən/konsolidasiya yükü LCL; tam maşın FTL; qismən maşın LTL. Mətndə göstərilməyibsə və təxmin etmək olmursa boş burax.
+    - Mətndə yük/sorğu məlumatı YOXDURSA (salamlaşma, sual və s.) bütün xanaları null/boş qoy; heç nə uydurma.
     - "cargo_type" yalnız yükün NÖVÜNÜ/təsvirini göstərməlidir (məsələn "Tekstil", "Electronics"). Miqdarı (palet sayı, çəki, həcm) cargo_type-a YAZMA. Yalnız "10 palet mal" kimi ümumi ifadə varsa cargo_type = "Mal" (ingiliscə mətndə "Goods").
     - DİL QAYDASI: "cargo_type" və "additional_notes" xanalarını sənəddəki/mətndəki ORİJİNAL DİLDƏ saxla, TƏRCÜMƏ ETMƏ. Azərbaycanca yazılıbsa Azərbaycanca, ingiliscə yazılıbsa ingiliscə, rusca yazılıbsa rusca yaz. Mətn qarışıqdırsa ən çox işlənən dildən istifadə et.
 
@@ -1365,9 +1373,94 @@ AI_PARSE_PROMPT = """Sən peşəkar logistika assistentisən. Sənə verilən s�
         "incoterm": "Incoterm",
         "adr": "ADR sinfi",
         "temperature": "Temperatur",
-        "deadline": "YYYY-MM-DDTHH:MM",
+        "deadline": "Yükləmə tarixi, YYYY-MM-DDTHH:MM",
+        "delivery_deadline": "Çatdırılma tarixi, YYYY-MM-DDTHH:MM",
+        "shipment_count": 1,
+        "other_shipments": [],
         "additional_notes": "Əlavə qeydlər (mətnin öz dilində)"
     }"""
+
+
+_AZ_WEEKDAYS = ["bazar ertəsi", "çərşənbə axşamı", "çərşənbə", "cümə axşamı", "cümə", "şənbə", "bazar"]
+
+
+def _baku_now() -> datetime:
+    """Bakı vaxtı (UTC+4): "bu gün" və "sabah" kimi ifadələr bunun əsasında hesablanır."""
+    return datetime.utcnow() + timedelta(hours=4)
+
+
+def _ai_system_prompt() -> str:
+    now = _baku_now()
+    return AI_PARSE_PROMPT + f"\n\nBU GÜN: {now.strftime('%Y-%m-%d')} ({_AZ_WEEKDAYS[now.weekday()]}). Cari il {now.year}-dir."
+
+
+def _normalize_ai_datetime(value) -> Optional[str]:
+    """Modelin tarixini YYYY-MM-DDTHH:MM formatına gətirir; oxuna bilmirsə None."""
+    if not value:
+        return None
+    text = str(value).strip().replace(" ", "T", 1) if re.match(r"^\d{4}-\d{2}-\d{2}[ T]", str(value).strip()) else str(value).strip()
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?", text)
+    if not m:
+        return None
+    try:
+        d = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4) or 0), int(m.group(5) or 0))
+    except ValueError:
+        return None
+    return d.strftime("%Y-%m-%dT%H:%M")
+
+
+def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None) -> Dict[str, Any]:
+    """Modelin cavabını yoxlayır: keçmiş tarixləri doldurmur, çatışmayanı və itən yükləri xəbərdarlıqla bildirir."""
+    today = today or _baku_now()
+    warnings: List[str] = []
+    data = dict(parsed or {})
+    start_of_today = today.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def clean_date(key: str, label: str) -> Optional[datetime]:
+        norm = _normalize_ai_datetime(data.get(key))
+        if data.get(key) and not norm:
+            warnings.append(f"{label} oxuna bilmədi, doldurulmadı: {data.get(key)}")
+        data[key] = norm
+        if not norm:
+            return None
+        parsed_dt = datetime.strptime(norm, "%Y-%m-%dT%H:%M")
+        if parsed_dt < start_of_today:
+            warnings.append(f"{label} keçmişdə qaldığı üçün doldurulmadı ({norm[:10]}). Tarixi özünüz yazın.")
+            data[key] = None
+            return None
+        return parsed_dt
+
+    loading = clean_date("deadline", "Yükləmə tarixi")
+    delivery = clean_date("delivery_deadline", "Çatdırılma tarixi")
+    if loading and delivery and delivery < loading:
+        warnings.append("Çatdırılma tarixi yükləmə tarixindən əvvəldir, zəhmət olmasa yoxlayın.")
+
+    try:
+        count = int(data.get("shipment_count") or 1)
+    except (TypeError, ValueError):
+        count = 1
+    others = [str(x).strip() for x in (data.get("other_shipments") or []) if str(x).strip()]
+    if count > 1 or others:
+        shown = "; ".join(others) if others else f"{count - 1} əlavə yük"
+        warnings.append(f"Mətndə {max(count, len(others) + 1)} ayrı yük var, yalnız birincisi dolduruldu. Qalan: {shown}")
+    data["other_shipments"] = others
+    data["shipment_count"] = max(count, len(others) + 1)
+
+    missing = [label for key, label in (("origin", "yükləmə yeri"), ("destination", "boşaltma yeri"), ("weight_kg", "çəki"), ("cargo_type", "yükün növü")) if not data.get(key)]
+    if not data.get("volume_m3"):
+        missing.append("həcm / palet")
+    meaningful = any(data.get(k) for k in ("origin", "destination", "cargo_type", "weight_kg", "volume_m3"))
+    return {"data": data, "warnings": warnings, "missing": missing, "empty": not meaningful}
+
+
+def _ai_response(parsed: dict) -> Dict[str, Any]:
+    checked = _apply_ai_guards(parsed)
+    if checked["empty"]:
+        raise HTTPException(status_code=422, detail="Bu mətndə yük və ya sorğu məlumatı tapılmadı. Yükləmə/boşaltma yerini, yükün növünü və çəkisini yazın.")
+    warnings = list(checked["warnings"])
+    if checked["missing"]:
+        warnings.insert(0, "Çatışan məcburi sahələr: " + ", ".join(checked["missing"]) + ".")
+    return {"status": "success", "data": checked["data"], "warnings": warnings}
 
 
 @app.post("/requests/parse-ai")
@@ -1380,7 +1473,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
     ext = os.path.splitext(file.filename)[1].lower()
 
     # TƏKMİLLƏŞDİRİLMİŞ VƏ SƏRT PROMPT:
-    prompt = AI_PARSE_PROMPT
+    prompt = _ai_system_prompt()
 
     try:
         text_content = ""
@@ -1432,7 +1525,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
         res_text = response.choices[0].message.content.strip()
         parsed_json = json.loads(res_text)
 
-        return {"status": "success", "data": parsed_json}
+        return _ai_response(parsed_json)
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Aİ düzgün formatda cavab qaytarmadı.")
@@ -1455,7 +1548,7 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
     if not payload.raw_text or not payload.raw_text.strip():
         raise HTTPException(status_code=400, detail="Analiz üçün mətn daxil edilməyib.")
 
-    prompt = AI_PARSE_PROMPT
+    prompt = _ai_system_prompt()
     
     try:
         messages = [
@@ -1473,7 +1566,7 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
         res_text = response.choices[0].message.content.strip()
         parsed_json = json.loads(res_text)
 
-        return {"status": "success", "data": parsed_json}
+        return _ai_response(parsed_json)
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Aİ düzgün formatda cavab qaytarmadı.")
