@@ -157,6 +157,16 @@
                 </small>
             </div>
 
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" id="accept_terms">
+                <label class="form-check-label small text-secondary" for="accept_terms">
+                    <a href="/static/terms.html" target="_blank" rel="noopener" class="fw-semibold text-decoration-none" style="color: var(--brand);">İstifadə Şərtləri</a>
+                    və
+                    <a href="/static/privacy.html" target="_blank" rel="noopener" class="fw-semibold text-decoration-none" style="color: var(--brand);">Məxfilik Siyasəti</a>
+                    ilə tanış oldum və razıyam.
+                </label>
+            </div>
+
             <button type="submit" class="btn btn-primary w-100" id="submitBtn">Qeydiyyatı Tamamla</button>
             <div id="errorMsg" class="text-danger small mt-3 text-center d-none"></div>
             <div class="text-center mt-3 small text-muted">Artıq hesabınız var? <a href="/login" class="fw-semibold text-decoration-none" style="color: var(--brand);">Daxil olun</a></div>
@@ -244,6 +254,7 @@
             const email = $('email').value.trim();
             const password = $('password').value;
             if (!company) { fail('Şirkətin adını yazın.'); return; }
+            if (!$('accept_terms').checked) { fail('Davam etmək üçün İstifadə Şərtləri və Məxfilik Siyasəti ilə razılaşmalısınız.'); return; }
             if (!email || email.indexOf('@') === -1) { fail('E-poçt ünvanını düzgün yazın.'); return; }
             const passRegex = /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/;
             if (!passRegex.test(password)) { fail('Şifrə tələblərə cavab vermir. Ən azı 8 simvol, 1 böyük, 1 kiçik hərf və rəqəm yazın.'); return; }
@@ -251,6 +262,7 @@
             btn.disabled = true; btn.innerText = 'Gözləyin...'; errorMsg.classList.add('d-none');
 
             const payload = { company_name: company, email: email, password: password, account_type: accountType, panel_access: panelAccess };
+            payload.accepted_terms = true;
             if (needsLink && hasToken) payload.token = token;
 
             try {
