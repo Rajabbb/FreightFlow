@@ -4841,6 +4841,10 @@ function copyPublicLinkText() {
             else if (!f.can_add) action = `<button type="button" class="btn btn-light border btn-sm fw-bold" disabled title="Bu forwarder əlaqə e-poçtu göstərməyib"><i class="bi bi-plus-circle me-1"></i> Bazama əlavə et</button>`;
             else action = `<button type="button" class="btn btn-primary btn-sm" data-add-id="${Number(f.id)}"><i class="bi bi-plus-circle me-1"></i> Bazama əlavə et</button>`;
 
+            const noEmailNote = (!f.already_in_base && !f.can_add)
+                ? `<div class="small text-muted mt-2"><i class="bi bi-info-circle me-1"></i> Bazaya əlavə etmək olmur: bu şirkət əlaqə e-poçtunu göstərməyib.</div>`
+                : "";
+
             return `<div class="col-12 col-md-6 col-xl-4"><div class="fwd-card">
                 <div class="fwd-head">${photo}<div style="min-width:0;">
                     <div class="fwd-name">${escapeHTML(name)}${f.is_verified ? '<span class="fwd-verified">Təsdiqlənib</span>' : ""}</div>
@@ -4853,12 +4857,13 @@ function copyPublicLinkText() {
                     <button type="button" class="btn btn-outline-primary btn-sm fw-bold" data-detail-id="${Number(f.id)}"><i class="bi bi-person-lines-fill me-1"></i> Ətraflı bax</button>
                     ${action}
                 </div>
+                ${noEmailNote}
             </div></div>`;
         }
 
         function addButtonHtml(f) {
             if (f.already_in_base) return `<button type="button" class="btn btn-light border btn-sm fw-bold" disabled><i class="bi bi-check2-circle me-1 text-success"></i> Bazada var</button>`;
-            if (!f.can_add) return `<button type="button" class="btn btn-light border btn-sm fw-bold" disabled title="Bu forwarder əlaqə e-poçtu göstərməyib"><i class="bi bi-plus-circle me-1"></i> Bazama əlavə et</button>`;
+            if (!f.can_add) return `<div><button type="button" class="btn btn-light border btn-sm fw-bold" disabled title="Bu forwarder əlaqə e-poçtu göstərməyib"><i class="bi bi-plus-circle me-1"></i> Bazama əlavə et</button><div class="small text-muted mt-1"><i class="bi bi-info-circle me-1"></i> Bazaya əlavə etmək olmur: bu şirkət əlaqə e-poçtunu göstərməyib.</div></div>`;
             return `<button type="button" class="btn btn-primary btn-sm" data-add-id="${Number(f.id)}"><i class="bi bi-plus-circle me-1"></i> Bazama əlavə et</button>`;
         }
 
@@ -5067,6 +5072,7 @@ function copyPublicLinkText() {
             "Təsdiqlənib": "Verified",
             "Əhatə": "Coverage",
             "Bu forwarder əlaqə e-poçtu göstərməyib": "This forwarder has not provided a contact email",
+            "Bazaya əlavə etmək olmur: bu şirkət əlaqə e-poçtunu göstərməyib.": "Cannot be added: this company has not provided a contact email.",
             "Forwarder-lər yüklənir...": "Loading forwarders...",
             "Heç bir forwarder tapılmadı.": "No forwarders found.",
             "Axtarış zamanı xəta baş verdi.": "An error occurred while searching.",
