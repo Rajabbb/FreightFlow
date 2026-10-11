@@ -2542,7 +2542,7 @@ async function parseTextWithAI() {
             if (transportSelect) transportSelect.selectedIndex = 0;
 
             // 3. İxtiyari (Optional) xanaları təmizləyib gizlədirik
-            const optFields = ['truck_type', 'hs_code', 'stackable', 'shipment_type', 'incoterm', 'adr', 'temp', 'loading_date'];
+            const optFields = ['truck_type', 'hs_code', 'stackable', 'shipment_type', 'incoterm', 'adr', 'temp', 'loading_date', 'deliv_date'];
             optFields.forEach(key => {
                 const chk = document.getElementById(`chk_${key}`);
                 const inp = document.getElementById(`inp_${key}`);
