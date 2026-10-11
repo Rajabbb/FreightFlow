@@ -2337,8 +2337,9 @@ Best regards,
 
 // Aİ doldurmadan sonra: serverin xəbərdarlıqları (keçmiş tarix, itən yük, çatışmayan sahələr) mesajın altında göstərilir
 function aiFillMessage(base, warnings) {
-    if (!Array.isArray(warnings) || warnings.length === 0) return base;
-    return base + "\n\n⚠ Diqqət:\n• " + warnings.join("\n• ");
+    const reminder = "\n\nAİ səhv edə bilər: sorğunu göndərməzdən əvvəl məlumatları yoxlayın.";
+    if (!Array.isArray(warnings) || warnings.length === 0) return base + reminder;
+    return base + "\n\n⚠ Diqqət:\n• " + warnings.join("\n• ") + reminder;
 }
 
 async function parseTextWithAI() {
