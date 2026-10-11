@@ -1,0 +1,35 @@
+:root{--brand:#0037B8;--brand-2:#2F63E0;--ink:#0B1433;--muted:#56627F;--line:#DCE4F7;--ice:#F4F7FF;--tint:#E7EEFF}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);background:#fff;line-height:1.65;font-size:17px}
+a{color:var(--brand)}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px}
+.top{border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
+.top-in{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand img{height:34px;width:auto;display:block}
+.top-nav{display:flex;align-items:center;gap:16px;font-size:15px}
+.top-nav a{text-decoration:none;color:var(--muted)}
+.btn{display:inline-block;background:var(--brand);color:#fff!important;padding:9px 16px;border-radius:10px;text-decoration:none;font-weight:600}
+.btn:hover{background:var(--brand-2)}
+.btn-lg{padding:13px 22px;font-size:17px}
+.crumbs{font-size:14px;color:var(--muted);margin:22px 0 6px}
+.crumbs a{color:var(--muted)}
+h1{font-size:clamp(26px,4.5vw,38px);line-height:1.2;margin:10px 0 14px}
+h2{font-size:clamp(20px,3vw,26px);margin:34px 0 10px}
+.lead{font-size:19px;color:var(--muted)}
+ul,ol{padding-left:22px}
+li{margin:6px 0}
+table.tbl{width:100%;border-collapse:collapse;font-size:15px;margin:12px 0}
+.tbl th,.tbl td{border:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+.tbl th{background:var(--ice)}
+.note{font-size:14px;color:var(--muted)}
+pre.sample{background:var(--ice);border:1px solid var(--line);border-radius:12px;padding:14px;white-space:pre-wrap;font-size:15px}
+.cta{background:var(--tint);border:1px solid var(--line);border-radius:18px;padding:24px;margin:40px 0}
+.cta h2{margin-top:0}
+.faq details{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:10px 0}
+.faq summary{cursor:pointer;font-weight:600}
+.related ul{list-style:none;padding:0}
+.related li{margin:8px 0}
+.foot{border-top:1px solid var(--line);margin-top:48px;padding:24px 0;font-size:14px;color:var(--muted)}
+.foot a{color:var(--muted)}
+@media (max-width:560px){body{font-size:16px}.top-nav{gap:10px;font-size:14px}.btn{padding:8px 12px}}
