@@ -2335,6 +2335,12 @@ Best regards,
         }
 
 
+// Aİ doldurmadan sonra: serverin xəbərdarlıqları (keçmiş tarix, itən yük, çatışmayan sahələr) mesajın altında göstərilir
+function aiFillMessage(base, warnings) {
+    if (!Array.isArray(warnings) || warnings.length === 0) return base;
+    return base + "\n\n⚠ Diqqət:\n• " + warnings.join("\n• ");
+}
+
 async function parseTextWithAI() {
             const rawText = document.getElementById("aiRawTextInput").value.trim();
             if (!rawText) {
@@ -2356,6 +2362,7 @@ async function parseTextWithAI() {
                 });
                 
                 if (res.status === 401 || res.status === 403) { logout(); return; }
+                if (res.status === 429) { alert("Çox sorğu göndərdiniz. Zəhmət olmasa 1 dəqiqə gözləyin və yenidən cəhd edin."); return; }
                 const result = await res.json();
                 
                 if (res.ok && result.status === "success") {
@@ -2388,7 +2395,8 @@ async function parseTextWithAI() {
                         'incoterm': 'incoterm',
                         'adr': 'adr',
                         'temperature': 'temp',
-                        'deadline': 'loading_date'
+                        'deadline': 'loading_date',
+                        'delivery_deadline': 'deliv_date'
                     };
                     
                     for(let [jsonKey, inpKey] of Object.entries(optMap)) {
@@ -2405,7 +2413,7 @@ async function parseTextWithAI() {
                         document.getElementById("inp_info_text").value = d.additional_notes;
                     }
                     
-                    alert("✅ Aİ mətni uğurla analiz etdi və formu doldurdu!");
+                    alert(aiFillMessage("✅ Aİ mətni uğurla analiz etdi və formu doldurdu!", result.warnings));
                 } else {
                     alert("Xəta: " + (result.detail || "Mətni analiz etmək mümkün olmadı."));
                 }
@@ -2443,6 +2451,7 @@ async function parseTextWithAI() {
                 });
                 
                 if (res.status === 401 || res.status === 403) { logout(); return; }
+                if (res.status === 429) { alert("Çox sorğu göndərdiniz. Zəhmət olmasa 1 dəqiqə gözləyin və yenidən cəhd edin."); return; }
                 const result = await res.json();
                 
                 if (res.ok && result.status === "success") {
@@ -2475,7 +2484,8 @@ async function parseTextWithAI() {
                         'incoterm': 'incoterm',
                         'adr': 'adr',
                         'temperature': 'temp',
-                        'deadline': 'loading_date'
+                        'deadline': 'loading_date',
+                        'delivery_deadline': 'deliv_date'
                     };
                     
                     for(let [jsonKey, inpKey] of Object.entries(optMap)) {
@@ -2492,7 +2502,7 @@ async function parseTextWithAI() {
                         document.getElementById("inp_info_text").value = d.additional_notes;
                     }
                     
-                    alert("✅ Aİ faylı uğurla oxudu və formu doldurdu! Məlumatları gözdən keçirib sorğunu göndərə bilərsiniz.");
+                    alert(aiFillMessage("✅ Aİ faylı uğurla oxudu və formu doldurdu! Məlumatları gözdən keçirib sorğunu göndərə bilərsiniz.", result.warnings));
                 } else {
                     alert("Xəta: " + (result.detail || "Faylı analiz etmək mümkün olmadı."));
                 }
