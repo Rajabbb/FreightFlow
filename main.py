@@ -1361,6 +1361,16 @@ AI_PARSE_PROMPT = """Sən peşəkar logistika assistentisən. Sənə verilən s�
     - "incoterm" yalnız 3 hərfli kod olmalıdır (EXW, FCA, FOB, CIF, DAP, DDP...). Yeri ("FCA İstanbul") koda yapışdırma, yerini "additional_notes"-a yaz.
     - Mətndə yük/sorğu məlumatı YOXDURSA (salamlaşma, sual və s.) bütün xanaları null/boş qoy; heç nə uydurma.
     - "cargo_type" yalnız yükün NÖVÜNÜ/təsvirini göstərməlidir (məsələn "Tekstil", "Electronics"). Miqdarı (palet sayı, çəki, həcm) cargo_type-a YAZMA. Yalnız "10 palet mal" kimi ümumi ifadə varsa cargo_type = "Mal" (ingiliscə mətndə "Goods").
+    - FAYL: Excel bir neçə vərəqlə gələ bilər ("=== Vərəq: ad ==="): HAMISINI oxu (yüklər, HS kodları, dəyərlər, tələblər ayrı vərəqlərdə ola bilər).
+    - TƏXMİN ETMƏ: hər sahə yalnız mənbədə yazılıbsa və ya mənbədəki rəqəmlərin sadə cəmindən çıxırsa doldurulur. Yazılmayıbsa null: shipment_type, stackable, truck_type, temperature, hs_code, adr, incoterm, həcm. Həcmi çəkidən, çəkini həcmdən və ya ölçülərdən təxmin etmə; yalnız ölçülər varsa həcmi null qoy, ölçüləri "additional_notes"-a yaz.
+    - TƏHLÜKƏLİ YÜK: "adr" yalnız mənbə UN nömrəsi/sinif ilə TƏSDİQLƏYİBSƏ doldurulur. "yoxlanmalıdır", "SDS/MSDS/UN38.3 gözlənilir", "ola bilər" və ya yalnız litium batareya qeyd olunubsa adr = null, qeyd: "DG statusu təsdiqlənməyib: ...". Mənbə təhlükəli deyil deyirsə adr = "Yox". "ADR" yalnız avtomobil daşımasıdır (hava: IATA DGR, dəniz: IMDG, qeyddə belə yaz).
+    - SIĞORTA: sığorta istəyi Incoterm deyil (CIP yazma): qeyd "Sığorta: ayrıca opsiya, yük dəyəri ...". "incoterm" yalnız mənbədə yazılan termindir.
+    - MƏNTƏQƏLƏR: eyni sorğu/bir maşın/bir layihə altında bir neçə yükləmə və ya boşaltma yeri = BİR yükdür (shipment_count = 1). Məntəqələri sırayla "additional_notes"-a yaz: "Məntəqələr: 1) Yükləmə – Bursa, 2) Yükləmə – Gebze, 3) Boşaltma – Bakı".
+    - LOT TƏLƏBLƏRİ: stackable, temperatur və təhlükəli yük yalnız BƏZİ lotlara aiddirsə sahəni null qoy və qeydə yaz ("MM-01: üst-üstə qoyulmaz", "Yalnız TR-03: +5…+25°C"). Bütün yükə aiddirsə sahəyə yaz.
+    - TARİX ARALIĞI: yükləmə pəncərəsində (22–25.10) "deadline" ilk gündür, aralıq qeydə yazılır. Təklif üçün son tarix saatla qeydə yazılır.
+    - MULTIMODAL: əsas uzun mərhələ nəqliyyat növüdür; bütün zəncir qeydə yazılır ("Multimodal: avtomobil → dəniz → avtomobil"). Daşınma tipi (FTL/LTL/FCL/LCL) yalnız nəqliyyat növünə uyğundur: Quru → FTL/LTL, Dəniz → FCL/LCL, Hava və Dəmiryolu → boş; "truck_type" yalnız Quru üçündür.
+    - ŞƏRTLƏR: partiyalar, pulsuz günlər, valyuta, alternativlər (A/B), təklifin qüvvədə qalma müddəti, gömrük/broker, sənədlər qısa şəkildə "additional_notes"-a yazılır. "Detallar fayldadır" yazma.
+    - HS KODLARI: bir neçədirsə hamısı vergüllə.
     - DİL QAYDASI: "cargo_type" və "additional_notes" xanalarını sənəddəki/mətndəki ORİJİNAL DİLDƏ saxla, TƏRCÜMƏ ETMƏ. Azərbaycanca yazılıbsa Azərbaycanca, ingiliscə yazılıbsa ingiliscə, rusca yazılıbsa rusca yaz. Mətn qarışıqdırsa ən çox işlənən dildən istifadə et.
 
     JSON Formatı:
@@ -1422,12 +1432,12 @@ def _normalize_ai_datetime(value) -> Optional[str]:
 
 
 _WEIGHT_UNITS_KG = {"ton": 1000.0, "tonna": 1000.0, "tona": 1000.0, "t": 1000.0, "kq": 1.0, "kg": 1.0, "кг": 1.0, "тонн": 1000.0, "тонна": 1000.0, "тонны": 1000.0, "т": 1000.0}
-_NUM = r"(\d+(?:[.,]\d+)?)"
+_NUM = r"(\d{1,3}(?:[  ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
 _UNIT = r"(tonna|tona|ton|kq|kg|тонны|тонна|тонн|кг|т|t)\b"
 
 
 def _to_float(text: str) -> float:
-    return float(text.replace(",", "."))
+    return float(text.replace(" ", "").replace(" ", "").replace(",", "."))
 
 
 def _weight_ranges(raw: str) -> List[tuple]:
@@ -1453,6 +1463,41 @@ def _weights_in_text(raw: str) -> List[float]:
     return sorted(values)
 
 
+def _spreadsheet_text(contents: bytes, ext: str) -> str:
+    """CSV və ya Excel faylının mətni. Excel-in BÜTÜN vərəqləri başlıqla oxunur (yük, HS, dəyər, tələb vərəqləri)."""
+    limit = 60_000
+    if ext == ".csv":
+        return pd.read_csv(io.BytesIO(contents), header=None).fillna("").to_string(index=False, header=False)[:limit]
+    sheets = pd.read_excel(io.BytesIO(contents), sheet_name=None, header=None)
+    parts = []
+    for name, frame in sheets.items():
+        frame = frame.dropna(how="all").dropna(axis=1, how="all").fillna("")
+        if frame.empty:
+            continue
+        parts.append(f"=== Vərəq: {name} ===\n{frame.to_string(index=False, header=False)}")
+    return "\n\n".join(parts)[:limit]
+
+
+def _number_supported(value: float, raw: str) -> bool:
+    """Rəqəm mətndə birbaşa yazılıb, ya da həcmlə bağlı sətirlərdəki rəqəmlərin cəmidir (lot həcmlərinin cəmi)."""
+    def numbers(text: str) -> List[float]:
+        return sorted({float(x.replace(" ", "").replace(" ", "").replace(",", ".")) for x in re.findall(r"\d{1,3}(?:[  ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?", text)})
+
+    tol = max(0.01, value * 0.005)
+    if any(abs(value - t) <= tol for t in numbers(raw)):
+        return True
+    hinted = "\n".join(line for line in raw.split("\n") if re.search(r"m³|m3|m\^3|cbm|kub|həcm|hecm|volume|palet|pallet", line, re.IGNORECASE))
+    tokens = numbers(hinted)[:40]
+    for i, a in enumerate(tokens):
+        for j in range(i + 1, len(tokens)):
+            if abs(value - (a + tokens[j])) <= tol:
+                return True
+            for k in range(j + 1, len(tokens)):
+                if abs(value - (a + tokens[j] + tokens[k])) <= tol:
+                    return True
+    return False
+
+
 _QUOTE_LABEL = re.compile(
     r"(?:t[əe]klif(?:l[əe]r)?\s+üçün\s+son\s+tarix|t[əe]klif(?:l[əe]r)?\s+(?:son\s+tarix|müddəti)|quot(?:e|ation)s?\s+(?:deadline|due)|bid\s+deadline|offers?\s+(?:due|deadline)|срок\s+подачи\s+(?:предложений|котировок))",
     re.IGNORECASE,
@@ -1469,6 +1514,16 @@ _NOT_DANGEROUS = re.compile(
     r"təhlükəli\s+yük\s+deyil|not\s+(?:a\s+)?dangerous|non[- ]?dangerous|non[- ]?hazardous|not\s+hazardous|\badr\W{0,3}\s*(?:yox|xeyr|no|none|n/?a)\b|не\s+опасн",
     re.IGNORECASE,
 )
+_CONSOLIDATION = re.compile(
+    r"konsolid|consolid|bir\s+(?:maşın|avtomobil|reys)|tək\s+(?:maşın|reys)|one\s+(?:truck|vehicle)|single\s+(?:truck|vehicle)|milk[- ]?run|çox\s*məntəqə|multi[- ]?(?:stop|drop|pick)",
+    re.IGNORECASE,
+)
+_DG_WORDS = re.compile(r"litium|lithium|li-?ion|battery|batter|\bUN\s?\d{4}\b|təhlükəli|dangerous|hazard|\bDG\b|\bADR\b|IMDG|IATA", re.IGNORECASE)
+_DG_VERIFY = re.compile(r"yoxlan|yoxla\b|təsdiq\w*\s+edil\w*\s+(?:mə|mi)|ola\s+bilər|SDS|MSDS|UN\s?38\.3|must\s+be\s+(?:checked|verified|confirmed)|to\s+be\s+(?:checked|verified|confirmed)|may\s+be|need(?:s)?\s+to\s+be\s+checked", re.IGNORECASE)
+_OOG_WORDS = re.compile(r"\bOOG\b|out[- ]of[- ]gauge|flat[- ]?rack|break[- ]?bulk|heavy[- ]lift|qabarit\w*\s+kənar|open[- ]top", re.IGNORECASE)
+_DIMS = re.compile(r"(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|sm|m)?\b", re.IGNORECASE)
+_DETAILS_IN_FILE = re.compile(r"detallar\s+fayl|ətraflı\s+fayl|details?\s+(?:are\s+)?in\s+(?:the\s+)?(?:attached\s+)?file|see\s+(?:the\s+)?attach", re.IGNORECASE)
+_ALLOWED_SHIPMENT = {"road": ("FTL", "LTL"), "sea": ("FCL", "LCL")}
 _STACK_WORDS = re.compile(r"stack|üst-?üstə|yığ|штабел|stapel", re.IGNORECASE)
 _EXTRA_NOTE_FIELDS = (
     ("container_type", "Konteyner növü"),
@@ -1539,7 +1594,16 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
             )
     if quote_dates:
         d = quote_norm[:10] if quote_norm else sorted(quote_dates)[0]
-        add_note(f"Təklif üçün son tarix: {d[8:10]}.{d[5:7]}.{d[:4]}")
+        stamp = f"{d[8:10]}.{d[5:7]}.{d[:4]}"
+        if quote_norm and quote_norm[11:16] not in ("", "00:00"):
+            stamp += f" {quote_norm[11:16]}"
+        elif not quote_norm:
+            for label in _QUOTE_LABEL.finditer(raw_text or ""):
+                t = re.search(r"\b([01]?\d|2[0-3]):([0-5]\d)\b", (raw_text or "")[label.end():label.end() + 40])
+                if t:
+                    stamp += f" {int(t.group(1)):02d}:{t.group(2)}"
+                    break
+        add_note(f"Təklif üçün son tarix: {stamp}")
     data.pop("quote_deadline", None)
 
     # Sahəsi olmayan, amma sənəddə yazılmış məlumat "Əlavə məlumat"a yazılır
@@ -1581,6 +1645,92 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
     # Sənəd "təhlükəli yük deyil" deyirsə, bu qeyd model bəzən yazır, bəzən yazmır: kodda sabitləyirik
     if raw_text and not data.get("adr") and _NOT_DANGEROUS.search(raw_text):
         add_note("Təhlükəli yük deyil")
+
+    # --- Nəqliyyat növünə görə icazəli sahələr ---
+    mode_text = str(data.get("transportation_mode") or "").lower()
+    if any(w in mode_text for w in ("quru", "road", "avtomobil")):
+        mode_kind = "road"
+    elif any(w in mode_text for w in ("dəniz", "deniz", "sea")):
+        mode_kind = "sea"
+    elif any(w in mode_text for w in ("hava", "air")):
+        mode_kind = "air"
+    elif any(w in mode_text for w in ("dəmir", "demir", "rail")):
+        mode_kind = "rail"
+    else:
+        mode_kind = ""
+    shipment_now = str(data.get("shipment_type") or "").strip().upper()
+    if mode_kind and shipment_now and shipment_now not in _ALLOWED_SHIPMENT.get(mode_kind, ()):
+        data["shipment_type"] = None
+        warnings.append(f"Daşınma tipi ({shipment_now}) bu nəqliyyat növü üçün keçərli deyil, boş saxlandı.")
+    truck_now = str(data.get("truck_type") or "").strip()
+    if mode_kind and mode_kind != "road" and truck_now:
+        data["truck_type"] = None
+        add_note(f"Nəqliyyat vasitəsi: {truck_now}")
+        warnings.append("«Maşın növü» yalnız avtomobil daşıması üçündür, qeydə köçürüldü.")
+
+    # --- Həcm: mətndəki rəqəmlərdən və ya onların cəmindən çıxmırsa, model uydurub/hesablayıb sayılır ---
+    volume = data.get("volume_m3")
+    if raw_text and volume not in (None, "", 0):
+        try:
+            wanted = float(volume)
+        except (TypeError, ValueError):
+            wanted = None
+        if wanted is not None and not _number_supported(wanted, raw_text):
+            data["volume_m3"] = None
+            warnings.append(f"Həcm ({wanted:g}) mətndə yazılmayıb və yazılan rəqəmlərin cəmi də deyil (hesablanmış ola bilər), boş saxlandı. Həcmi özünüz yazın.")
+
+    # --- Incoterm mətndə yoxdursa uydurulmur (məs. sığorta istəyi CIP deyil) ---
+    inc = str(data.get("incoterm") or "").strip().upper()
+    if raw_text and inc and not re.search(r"\b" + re.escape(inc) + r"\b", raw_text, re.IGNORECASE):
+        data["incoterm"] = None
+        warnings.append(f"Incoterm ({inc}) mətndə yazılmayıb, boş saxlandı.")
+
+    # --- Təhlükəli yük: "yoxlanmalıdır" deyilən yerdə ADR təsdiqlənmir ---
+    if raw_text and _DG_WORDS.search(raw_text):
+        near_verify = False
+        for m in _DG_WORDS.finditer(raw_text):
+            window = raw_text[max(0, m.start() - 160):m.end() + 160]
+            if _DG_VERIFY.search(window):
+                near_verify = True
+                break
+        if near_verify:
+            if data.get("adr"):
+                data["adr"] = None
+            add_note("DG statusu təsdiqlənməyib (SDS / UN38.3 yoxlanmalıdır)")
+            warnings.append("Təhlükəli yük statusu yoxlanmalıdır: sənəd bunu təsdiqləmir, ADR/DG sahəsi boş saxlandı.")
+        elif re.search(r"litium|lithium|li-?ion|\bUN\s?\d{4}\b", raw_text, re.IGNORECASE) and not data.get("adr"):
+            warnings.append("Mətndə litium/UN nömrəsi var: təhlükəli yük statusunu yoxlayın.")
+
+    # --- Qabaritdən kənar yük (OOG) ---
+    oog_hit = bool(_OOG_WORDS.search(raw_text or ""))
+    if raw_text:
+        for m in _DIMS.finditer(raw_text):
+            try:
+                a, b, c = (float(m.group(i).replace(",", ".")) for i in (1, 2, 3))
+            except ValueError:
+                continue
+            unit = (m.group(4) or "").lower()
+            factor = {"mm": 0.1, "cm": 1.0, "sm": 1.0, "m": 100.0}.get(unit, 100.0 if max(a, b, c) <= 30 else 1.0)
+            length, width, height = a * factor, b * factor, c * factor
+            if length > 1360 or width > 255 or height > 260:
+                oog_hit = True
+                break
+    if oog_hit:
+        add_note("Qabaritdən kənar yük (OOG) ola bilər: ölçülər qeyddədir")
+        warnings.append("Qabaritdən kənar yük (OOG): icazə və müşayiət lazım ola bilər.")
+
+    # --- "Detallar fayldadır" şərtləri əvəz etmir ---
+    if _DETAILS_IN_FILE.search(str(data.get("additional_notes") or "")):
+        warnings.append("Qeyd «detallar fayldadır» deyir, amma şərtlər qeydə yazılmayıb. Qeydi tamamlayın.")
+
+    # --- Bir maşın / konsolidasiya: bir neçə məntəqə = bir yük ---
+    if raw_text and _CONSOLIDATION.search(raw_text):
+        extra = [str(x).strip() for x in (data.get("other_shipments") or []) if str(x).strip()]
+        if extra or int(data.get("shipment_count") or 1) > 1:
+            if extra:
+                add_note("Məntəqələr / qalan hissələr: " + "; ".join(extra))
+            data["other_shipments"] = []
+            data["shipment_count"] = 1
 
     if loading and delivery and delivery < loading:
         warnings.append("Çatdırılma tarixi yükləmə tarixindən əvvəldir, zəhmət olmasa yoxlayın.")
@@ -1656,8 +1806,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
 
         if ext in [".xls", ".xlsx", ".csv"]:
             contents_bytes = await file.read()
-            df = pd.read_csv(io.BytesIO(contents_bytes)) if ext == ".csv" else pd.read_excel(io.BytesIO(contents_bytes))
-            text_content = df.to_string()
+            text_content = _spreadsheet_text(contents_bytes, ext)
         elif ext == ".txt":
             text_content = (await file.read()).decode("utf-8", errors="ignore")
         elif ext == ".pdf":
