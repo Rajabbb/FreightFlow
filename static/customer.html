@@ -3837,7 +3837,7 @@ function loadBulkSubCategories(categoryId) {
 
         window.currentQuotesCache = {};
 
-        function buildQuotesTableHtml(quotesList, requestId) {
+        function buildQuotesTableHtml(quotesList, requestId, fx) {
             if (!quotesList || quotesList.length === 0) {
                 return `<div class="alert alert-light mt-2 border rounded-3 p-2.5 w-100"><p class="text-muted small mb-0"><i class="bi bi-info-circle me-1"></i> Hələ bu sorğuya təklif göndərilməyib.</p></div>`;
             }
@@ -3866,6 +3866,13 @@ function loadBulkSubCategories(categoryId) {
                 });
             }
 
+            // Valyuta müqayisəsi: AZN qarşılığına görə ən ucuz təklif(lər)
+            const aznOf = (q) => (q.price_azn !== null && q.price_azn !== undefined && !isNaN(Number(q.price_azn))) ? Number(q.price_azn) : null;
+            const fmtAzn = (v) => String(Math.round(v * 100) / 100);
+            const comparable = quotesList.filter(q => aznOf(q) !== null);
+            const cheapestAzn = comparable.length >= 2 ? Math.min(...comparable.map(aznOf)) : null;
+            const foreignCurrencies = new Set();
+
             for (let q of quotesList) {
                 let extraStr = "";
                 if (q.extra_details) {
@@ -3887,6 +3894,18 @@ function loadBulkSubCategories(categoryId) {
                 let isRevised = q.quote_history && q.quote_history.length > 0;
                 let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">Yenilənib (v${q.quote_history.length + 1})</span>` : "";
                 let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") ? `${escapeHTML(q.price)} <span class="text-muted small">${escapeHTML(q.currency || 'AZN')}</span>${revisedBadge}` : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
+
+                const curr = String(q.currency || 'AZN').toUpperCase();
+                const hasPrice = (q.price !== null && q.price !== undefined && q.price !== "null");
+                if (hasPrice && curr !== 'AZN') foreignCurrencies.add(curr);
+                if (hasPrice && curr !== 'AZN') {
+                    priceDisplay += aznOf(q) !== null
+                        ? `<div class="text-muted fw-normal" style="font-size:11px;">≈ ${fmtAzn(aznOf(q))} AZN</div>`
+                        : `<div class="text-muted fw-normal fst-italic" style="font-size:10.5px;">AZN qarşılığı yoxdur</div>`;
+                }
+                if (cheapestAzn !== null && aznOf(q) !== null && aznOf(q) === cheapestAzn) {
+                    priceDisplay += `<div><span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle mt-1" style="font-size:10px;">Ən ucuz</span></div>`;
+                }
 
                 html += `
                     <tr class="${q.is_winner ? 'table-success' : ''}">
@@ -3920,6 +3939,14 @@ function loadBulkSubCategories(categoryId) {
                 `;
             }
             html += `</tbody></table></div>`;
+            if (foreignCurrencies.size > 0) {
+                const rates = (fx && fx.rates) || {};
+                const parts = [...foreignCurrencies].filter(c => rates[c]).map(c => `1 ${escapeHTML(c)} = ${escapeHTML(String(Math.round(rates[c] * 10000) / 10000))} AZN`);
+                const d = fx && fx.date ? String(fx.date).split('-').reverse().join('.') : '';
+                html += parts.length
+                    ? `<div class="text-muted mt-1" style="font-size:11px;"><i class="bi bi-currency-exchange me-1"></i>Məzənnə (${escapeHTML((fx && fx.source) || '')}${d ? ', ' + escapeHTML(d) : ''}): ${parts.join(' · ')}. Müqayisə AZN qarşılığına görədir.</div>`
+                    : `<div class="text-warning small mt-1"><i class="bi bi-exclamation-triangle me-1"></i>Məzənnə hazırda əlçatan deyil, fərqli valyutalı təkliflər müqayisə olunmur.</div>`;
+            }
             return html;
         }
 
@@ -3938,7 +3965,7 @@ function loadBulkSubCategories(categoryId) {
 
                 if (res.ok) {
                     window.currentQuotesCache[requestId] = quotesList;
-                    container.innerHTML = buildQuotesTableHtml(quotesList, requestId);
+                    container.innerHTML = buildQuotesTableHtml(quotesList, requestId, data && data.fx);
                 } else { container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`; }
                 return quotesList;
             } catch (err) { container.innerHTML = `<p class="text-danger small mt-2 fw-bold"><i class="bi bi-x-circle me-1"></i> Təklifləri yükləmək xətası.</p>`; return []; }
