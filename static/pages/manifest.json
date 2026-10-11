@@ -1,0 +1,102 @@
+[
+  {
+    "path": "/yuk-sorgusu-gonder",
+    "file": "static/pages/yuk-sorgusu-gonder.html",
+    "lang": "az",
+    "key": "send",
+    "alternates": {
+      "az": "/yuk-sorgusu-gonder",
+      "en": "/en/send-freight-request"
+    }
+  },
+  {
+    "path": "/en/send-freight-request",
+    "file": "static/pages/en/send-freight-request.html",
+    "lang": "en",
+    "key": "send",
+    "alternates": {
+      "az": "/yuk-sorgusu-gonder",
+      "en": "/en/send-freight-request"
+    }
+  },
+  {
+    "path": "/forwarder-ucun",
+    "file": "static/pages/forwarder-ucun.html",
+    "lang": "az",
+    "key": "forwarders",
+    "alternates": {
+      "az": "/forwarder-ucun",
+      "en": "/en/for-forwarders"
+    }
+  },
+  {
+    "path": "/en/for-forwarders",
+    "file": "static/pages/en/for-forwarders.html",
+    "lang": "en",
+    "key": "forwarders",
+    "alternates": {
+      "az": "/forwarder-ucun",
+      "en": "/en/for-forwarders"
+    }
+  },
+  {
+    "path": "/incoterms",
+    "file": "static/pages/incoterms.html",
+    "lang": "az",
+    "key": "incoterms",
+    "alternates": {
+      "az": "/incoterms",
+      "en": "/en/incoterms"
+    }
+  },
+  {
+    "path": "/en/incoterms",
+    "file": "static/pages/en/incoterms.html",
+    "lang": "en",
+    "key": "incoterms",
+    "alternates": {
+      "az": "/incoterms",
+      "en": "/en/incoterms"
+    }
+  },
+  {
+    "path": "/cin-baki-yuk-dasima",
+    "file": "static/pages/cin-baki-yuk-dasima.html",
+    "lang": "az",
+    "key": "china",
+    "alternates": {
+      "az": "/cin-baki-yuk-dasima",
+      "en": "/en/china-to-baku-freight"
+    }
+  },
+  {
+    "path": "/en/china-to-baku-freight",
+    "file": "static/pages/en/china-to-baku-freight.html",
+    "lang": "en",
+    "key": "china",
+    "alternates": {
+      "az": "/cin-baki-yuk-dasima",
+      "en": "/en/china-to-baku-freight"
+    }
+  },
+  {
+    "path": "/rfq-nedir",
+    "file": "static/pages/rfq-nedir.html",
+    "lang": "az",
+    "key": "rfq",
+    "alternates": {
+      "az": "/rfq-nedir",
+      "en": "/en/what-is-rfq"
+    }
+  },
+  {
+    "path": "/en/what-is-rfq",
+    "file": "static/pages/en/what-is-rfq.html",
+    "lang": "en",
+    "key": "rfq",
+    "alternates": {
+      "az": "/rfq-nedir",
+      "en": "/en/what-is-rfq"
+    }
+  }
+]
