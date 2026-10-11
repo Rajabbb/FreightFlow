@@ -1346,7 +1346,7 @@ AI_PARSE_PROMPT = """Sən peşəkar logistika assistentisən. Sənə verilən s�
         * Yük palet / pallet / паллет / поддон ilə ifadə olunubsa (məsələn "10 palet mal", "10 pallets of goods") volume_type = "Palet" və volume_m3 = paletlərin SAYI (məsələn 10).
         * Həcm kub metr / m3 / m³ / CBM ilə verilibsə volume_type = "CBM" və volume_m3 = həmin rəqəm.
         * Heç biri göstərilməyibsə volume_m3 = null və volume_type = "CBM".
-    - ŞƏHƏR/ÖLKƏ ADLARI: "origin" və "destination" həmişə AZƏRBAYCAN dilində, "Şəhər, Ölkə" formatında yazılsın (məsələn "Москва, Россия" → "Moskva, Rusiya"; "Baku, Azerbaijan" → "Bakı, Azərbaycan"; "Guangzhou" → "Quançjou, Çin"). Mətn hansı dildə olursa olsun, bu xanalarda dil qarışmasın. (Bu qayda yalnız yer adlarına aiddir; "cargo_type" və "additional_notes" mətnin öz dilində qalır.)
+    - ŞƏHƏR/ÖLKƏ ADLARI: "origin" və "destination" həmişə AZƏRBAYCAN dilində, "Şəhər, Ölkə" formatında yazılsın (məsələn "Москва, Россия" → "Moskva, Rusiya"; "Baku, Azerbaijan" → "Bakı, Azərbaycan"; "Guangzhou" → "Quançjou, Çin"; "Ningbo" → "Ninbo, Çin"; "Shanghai" → "Şanxay, Çin"; "Beijing" → "Pekin, Çin"). Mətn hansı dildə olursa olsun, bu xanalarda dil qarışmasın. (Bu qayda yalnız yer adlarına aiddir; "cargo_type" və "additional_notes" mətnin öz dilində qalır.)
     - TARİXLƏR: Aşağıdakı "BU GÜN" tarixinə görə hesabla. İl yazılmayıbsa (məs. "20 oktyabr", "5 Nov", "30 noyabr"), BU GÜNDƏN SONRA gələn ən yaxın tarixi seç. "sabah", "birisi gün", "gələn həftə çərşənbə", "послезавтра" kimi nisbi ifadələri BU GÜN-ə görə konkret tarixə çevir. Tarixi YYYY-MM-DDTHH:MM formatında yaz (vaxt yoxdursa T00:00).
     - "deadline" = YÜKLƏMƏ tarixi. "delivery_deadline" = ÇATDIRILMA tarixi/müddəti ("çatdırılma ən gec 30 noyabr", "deliver by", "доставка до"). Çatdırılma tarixini heç vaxt "deadline"-a yazma.
     - "quote_deadline" = TƏKLİF ÜÇÜN SON TARİX: daşıyıcının qiymət təklifini göndərməli olduğu tarix ("Təklif üçün son tarix", "təkliflər ... qədər", "quotation deadline", "bid deadline", "offers due", "срок подачи предложений"). Bu tarix yükləmə tarixi DEYİL: onu heç vaxt "deadline"-a yazma. Yükləmə tarixi ayrıca göstərilməyibsə "deadline" null qalsın.
@@ -1355,7 +1355,8 @@ AI_PARSE_PROMPT = """Sən peşəkar logistika assistentisən. Sənə verilən s�
     - ÇOX YÜK: mətndə bir neçə ayrı yük/marşrut varsa (məs. "Bakı-Moskva 5 ton meyvə ... Bakı-Minsk 3 ton xalça"), YALNIZ BİRİNCİSİNİ doldur, "shipment_count" = yüklərin sayı, "other_shipments" = digər yüklərin qısa təsvirlərinin siyahısı (məs. ["Bakı → Minsk, 3 ton xalça"]).
     - ARALIQ və TƏXMİNİ ədədlər ("8-10 ton", "təxminən 1.5 ton", "around 20 t"): "weight_kg" və "volume_m3" üçün null qoy (rəqəmə çevirmə) və aralığı/təxmini dəyəri "additional_notes"-a olduğu kimi yaz (məs. "Çəki: 8-10 ton").
     - MARŞRUT detalı ("via Poti", "İran üzərindən", "Xəzər bərəsi ilə"): bunu "additional_notes"-a "Marşrut: ..." kimi yaz, itirmə.
-    - "shipment_type": konteyner tam yüklənibsə (20DC, 40HC, 40ft, 2x40HC, "full container") FCL; konteynerdə qismən/konsolidasiya yükü LCL; tam maşın FTL; qismən maşın LTL. Mətndə göstərilməyibsə və təxmin etmək olmursa boş burax.
+    - "shipment_type": konteyner tam yüklənibsə (20DC, 40HC, 40ft, 2x40HC, "full container") FCL; konteynerdə qismən/konsolidasiya yükü LCL; tam maşın FTL; qismən maşın LTL. Mətndə açıq yazılmayıbsa və konteynerdən çıxmırsa BOŞ burax: FTL və ya LTL-i marşrutdan, çəkidən və ya maşın növündən (tent, soyuducu) TƏXMİN ETMƏ.
+    - "incoterm" yalnız 3 hərfli kod olmalıdır (EXW, FCA, FOB, CIF, DAP, DDP...). Yeri ("FCA İstanbul") koda yapışdırma, yerini "additional_notes"-a yaz.
     - Mətndə yük/sorğu məlumatı YOXDURSA (salamlaşma, sual və s.) bütün xanaları null/boş qoy; heç nə uydurma.
     - "cargo_type" yalnız yükün NÖVÜNÜ/təsvirini göstərməlidir (məsələn "Tekstil", "Electronics"). Miqdarı (palet sayı, çəki, həcm) cargo_type-a YAZMA. Yalnız "10 palet mal" kimi ümumi ifadə varsa cargo_type = "Mal" (ingiliscə mətndə "Goods").
     - DİL QAYDASI: "cargo_type" və "additional_notes" xanalarını sənəddəki/mətndəki ORİJİNAL DİLDƏ saxla, TƏRCÜMƏ ETMƏ. Azərbaycanca yazılıbsa Azərbaycanca, ingiliscə yazılıbsa ingiliscə, rusca yazılıbsa rusca yaz. Mətn qarışıqdırsa ən çox işlənən dildən istifadə et.
@@ -1455,6 +1456,13 @@ _QUOTE_LABEL = re.compile(
     re.IGNORECASE,
 )
 _NUMERIC_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})|(\d{1,2})[./](\d{1,2})[./](\d{4})")
+_INCOTERMS = ("EXW", "FCA", "FAS", "FOB", "CFR", "CIF", "CPT", "CIP", "DAP", "DPU", "DDP", "DAT")
+_SHIPMENT_EVIDENCE = {
+    "FTL": re.compile(r"\bftl\b|tam\s+maşın|full\s+truck|truck\s*load|полн\w+\s+(?:машин|фур|загрузк)", re.IGNORECASE),
+    "LTL": re.compile(r"\bltl\b|qismən\s+(?:maşın|yük)|less\s+than\s+truck|part(?:ial)?\s*load|сборн|догруз", re.IGNORECASE),
+    "FCL": re.compile(r"\bfcl\b|konteyner|container|контейнер|\d+\s*[x×*]\s*(?:20|40)|\b(?:20|40)\s*(?:dc|hc|gp|rf|ft|feet|')|\b(?:20|40)(?:dc|hc|gp|rf|ft)\b", re.IGNORECASE),
+    "LCL": re.compile(r"\blcl\b|konsolid|consolid|groupage|сборн|less\s+than\s+container|qismən\s+konteyner", re.IGNORECASE),
+}
 _STACK_WORDS = re.compile(r"stack|üst-?üstə|yığ|штабел|stapel", re.IGNORECASE)
 _EXTRA_NOTE_FIELDS = (
     ("container_type", "Konteyner növü"),
@@ -1533,6 +1541,31 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
         value = str(data.pop(key, "") or "").strip()
         if value and value.lower() not in str(data.get("additional_notes") or "").lower():
             add_note(f"{label}: {value}")
+
+    # Incoterm yalnız kod olmalıdır ("FCAİstanbul" → FCA, yeri qeydə)
+    incoterm = str(data.get("incoterm") or "").strip()
+    if incoterm:
+        m = re.match(r"([A-Za-z]{3})", incoterm)
+        code = m.group(1).upper() if m else ""
+        if code in _INCOTERMS:
+            place = incoterm[3:].strip(" ,-:()/")
+            data["incoterm"] = code
+            if place:
+                add_note(f"Incoterm yeri: {place}")
+        else:
+            data["incoterm"] = None
+            add_note(f"Incoterm: {incoterm}")
+
+    # "Ninqbo" → "Ninbo" (Azərbaycanca adi yazılış)
+    for key in ("origin", "destination"):
+        if isinstance(data.get(key), str):
+            data[key] = re.sub(r"\bNin[qg]?bo\b", "Ninbo", data[key])
+
+    # Daşıma tipi (FTL/LTL/FCL/LCL) mətndə əsası olmadan yazılmır
+    shipment = str(data.get("shipment_type") or "").strip().upper()
+    if raw_text and shipment in _SHIPMENT_EVIDENCE and not _SHIPMENT_EVIDENCE[shipment].search(raw_text):
+        data["shipment_type"] = None
+        warnings.append(f"Daşıma tipi ({shipment}) mətndə yazılmayıb, boş saxlandı. Özünüz seçin.")
 
     # Mətndə yazılmayan "Stackable" dəyəri uydurulmur
     if raw_text and data.get("stackable") not in (None, "") and not _STACK_WORDS.search(raw_text):
