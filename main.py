@@ -925,7 +925,7 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                     else:
                         carrier_name = carrier.get("company_name", "Daşıyıcı")
                     
-                    extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k not in ("submitted", "submitted_at", "is_alternative") and v])
+                    extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k not in ("submitted", "submitted_at", "is_alternative") and not str(k).startswith("_") and v])
                     if extra.get("is_alternative"): extra_str = "Alternativ təklif" + ("; " + extra_str if extra_str else "")
                     date_val = extra.get("submitted_at") or q.get("updated_at") or q.get("created_at")
 
@@ -1607,7 +1607,19 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
                     stamp += f" {int(t.group(1)):02d}:{t.group(2)}"
                     break
         add_note(f"Təklif üçün son tarix: {stamp}")
-    data.pop("quote_deadline", None)
+        # Forma üçün ayrıca sahə: ISO, yalnız gələcəkdədirsə
+        hhmm = stamp[11:16] if len(stamp) >= 16 else "23:59"
+        iso = f"{d}T{hhmm}"
+        try:
+            if datetime.strptime(iso, "%Y-%m-%dT%H:%M") >= today:
+                data["quote_deadline"] = iso
+            else:
+                data.pop("quote_deadline", None)
+                warnings.append(f"Təklif üçün son tarix ({stamp}) keçmişdədir, avtomatik xatırlatma üçün sahə doldurulmadı.")
+        except ValueError:
+            data.pop("quote_deadline", None)
+    else:
+        data.pop("quote_deadline", None)
 
     # Sahəsi olmayan, amma sənəddə yazılmış məlumat "Əlavə məlumat"a yazılır
     for key, label in _EXTRA_NOTE_FIELDS:
@@ -2184,6 +2196,7 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
                 "mail_status": item.get("mail_status", "pending"), 
                 "is_viewed": item.get("is_viewed", False),
                 "has_submitted": has_submitted, "token": item.get("token"),
+                "auto_reminded_at": extra.get("_auto_reminded_at"),
                 "is_public": "public_link_" in (carrier.get("email") or "")
             })
         # Eyni daşıyıcı bir neçə təklif göndəribsə (alternativ təkliflər), siyahıda bir daşıyıcı kimi görünür:
@@ -2568,6 +2581,166 @@ def _azn_value(price: Any, currency: Any, rates: Dict[str, float]) -> Optional[f
     return round(amount * rate, 2) if rate else None
 
 
+# ---- Təklif üçün son tarix və avtomatik xatırlatma ----
+# Son tarix RFQ-nun required_fields siyahısında "Offer Due: YYYY-MM-DD HH:MM" sətri kimi saxlanılır
+# (panelin digər ixtiyari parametrləri kimi), ona görə bazada yeni sütun lazım deyil.
+_OFFER_DUE_RE = re.compile(r"^\s*Offer Due\s*:\s*(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?", re.IGNORECASE)
+_AUTO_REMINDER_OFF_RE = re.compile(r"^\s*Auto Reminder\s*:\s*(?:off|no|xeyr|yox|0)\b", re.IGNORECASE)
+AUTO_REMINDER_HOURS_BEFORE = float(os.getenv("AUTO_REMINDER_HOURS_BEFORE", "24"))
+AUTO_REMINDER_INTERVAL_SECONDS = int(os.getenv("AUTO_REMINDER_INTERVAL_SECONDS", "900"))
+ENABLE_AUTO_REMINDERS = os.getenv("ENABLE_AUTO_REMINDERS", "1") != "0"
+
+
+def _offer_due_from_fields(fields: Any) -> Optional[datetime]:
+    """RFQ-nun təklif son tarixi (Bakı vaxtı); saat yazılmayıbsa günün sonu."""
+    for line in fields or []:
+        if not isinstance(line, str):
+            continue
+        m = _OFFER_DUE_RE.match(line)
+        if not m:
+            continue
+        try:
+            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)), int(m.group(4) or 23), int(m.group(5) or 59))
+        except ValueError:
+            return None
+    return None
+
+
+def _auto_reminder_enabled(fields: Any) -> bool:
+    return not any(isinstance(line, str) and _AUTO_REMINDER_OFF_RE.match(line) for line in (fields or []))
+
+
+def _reminders_due(request_row: Dict[str, Any], quotes: List[Dict[str, Any]], now: datetime, hours_before: float = 0.0) -> List[Dict[str, Any]]:
+    """Bu sorğu üçün indi avtomatik xatırlatma almalı olan təkliflər (cavab verməyən, hələ xatırlatma almayan daşıyıcılar)."""
+    hours = hours_before or AUTO_REMINDER_HOURS_BEFORE
+    if str(request_row.get("status") or "open").lower() != "open":
+        return []
+    fields = request_row.get("required_fields") or []
+    due = _offer_due_from_fields(fields)
+    if not due or not _auto_reminder_enabled(fields):
+        return []
+    if not (now < due <= now + timedelta(hours=hours)):
+        return []
+    result = []
+    for q in quotes:
+        extra = q.get("extra_details") or {}
+        email = str((q.get("carriers") or {}).get("email") or "")
+        if q.get("price") is not None or extra.get("submitted"):
+            continue
+        if not email or "public_link" in email or q.get("mail_status") == "failed":
+            continue
+        if extra.get("_auto_reminded_at"):
+            continue
+        result.append(q)
+    return result
+
+
+async def _auto_reminder_pass(now: Optional[datetime] = None) -> List[int]:
+    """Vaxtı çatan xatırlatmaları göndərir; hər daşıyıcıya bir RFQ üçün yalnız bir dəfə. Göndərilən təklif ID-ləri qaytarılır."""
+    now = now or _baku_now()
+    reqs = supabase.table("shipment_requests").select("id, status, required_fields").eq("status", "open").execute().data or []
+    sent: List[int] = []
+    for r in sorted(reqs, key=lambda x: x.get("id") or 0, reverse=True)[:500]:
+        due = _offer_due_from_fields(r.get("required_fields"))
+        if not due or not (now < due <= now + timedelta(hours=AUTO_REMINDER_HOURS_BEFORE)):
+            continue
+        quotes = supabase.table("quotes").select("*, shipment_requests(*, customers(*)), carriers(*)").eq("request_id", r["id"]).execute().data or []
+        for q in _reminders_due(r, quotes, now):
+            # Başqa proses artıq göndəribsə (iki worker), yenidən oxuyub keçirik
+            fresh = supabase.table("quotes").select("extra_details").eq("id", q["id"]).execute().data or []
+            if fresh and (fresh[0].get("extra_details") or {}).get("_auto_reminded_at"):
+                continue
+            extra = dict((fresh[0].get("extra_details") if fresh else None) or q.get("extra_details") or {})
+            # Əvvəlcə işarələyirik: proses yenidən başlasa belə eyni daşıyıcıya ikinci dəfə getmir
+            extra["_auto_reminded_at"] = now.strftime("%Y-%m-%dT%H:%M")
+            supabase.table("quotes").update({"extra_details": extra}).eq("id", q["id"]).execute()
+            shipment = q.get("shipment_requests") or {}
+            sender_company, customer_email = get_sender_info_from_shipment(shipment)
+            try:
+                await send_carrier_email_link(
+                    carrier_email=q["carriers"]["email"], carrier_name=q["carriers"].get("company_name", "Daşıyıcı"),
+                    origin=shipment.get("origin", ""), destination=shipment.get("destination", ""), token=q["token"],
+                    sender_company=sender_company, is_reminder=True, reply_to_email=customer_email,
+                )
+                sent.append(q["id"])
+            except Exception:
+                traceback.print_exc()
+    return sent
+
+
+async def _auto_reminder_loop():
+    while True:
+        try:
+            sent = await _auto_reminder_pass()
+            if sent:
+                print(f"[auto-reminder] {len(sent)} xatırlatma göndərildi: {sent}")
+        except Exception:
+            traceback.print_exc()
+        await asyncio.sleep(AUTO_REMINDER_INTERVAL_SECONDS)
+
+
+@app.on_event("startup")
+async def start_auto_reminder_task():
+    if ENABLE_AUTO_REMINDERS:
+        asyncio.create_task(_auto_reminder_loop())
+    else:
+        print("[auto-reminder] Deaktivdir.")
+
+
+# ---- Marşrut üzrə qiymət tarixçəsi ----
+_PLACE_ALIASES = {"baku": "baki", "moscow": "moskva", "tiflis": "tbilisi", "kiev": "kiyev", "kyiv": "kiyev", "istanbul": "istanbul", "izmir": "izmir"}
+
+
+def _place_key(text: Any) -> str:
+    """"Bakı, Azərbaycan" / "Baku" / "baki" → eyni açar (şəhər adı, diakritiksiz)."""
+    import unicodedata
+    value = str(text or "").lower().split(",")[0]
+    value = re.sub(r"\b(limanı|limani|liman|port)\b", "", value)
+    value = unicodedata.normalize("NFKD", normalize_text(value))
+    value = "".join(c for c in value if not unicodedata.combining(c))
+    value = re.sub(r"[^a-z0-9а-яё ]", "", value).strip()
+    return _PLACE_ALIASES.get(value, value)
+
+
+@app.get("/analytics/route-prices")
+def route_price_history(origin: str, destination: str, exclude_request_id: Optional[int] = None, current_user: dict = Depends(verify_token)):
+    customer_id = current_user.get("sub")
+    reqs = supabase.table("shipment_requests").select("id, origin, destination, created_at").eq("customer_id", customer_id).order("id", desc=True).execute().data or []
+    display = {r["id"]: len(reqs) - i for i, r in enumerate(reqs)}
+    key_o, key_d = _place_key(origin), _place_key(destination)
+    if not key_o or not key_d:
+        raise HTTPException(status_code=400, detail="Yükləmə və boşaltma yeri lazımdır.")
+    matching = [r for r in reqs if _place_key(r.get("origin")) == key_o and _place_key(r.get("destination")) == key_d and r["id"] != exclude_request_id]
+    empty = {"status": "success", "origin": origin, "destination": destination, "count": 0, "rfq_count": 0, "items": []}
+    if not matching:
+        return empty
+    by_id = {r["id"]: r for r in matching}
+    quotes = supabase.table("quotes").select("id, request_id, price, currency, transit_time_days, extra_details, carriers(company_name)").in_("request_id", list(by_id)).execute().data or []
+    fx = _fx_rates()
+    items = []
+    for q in quotes:
+        if q.get("price") is None:
+            continue
+        extra = q.get("extra_details") or {}
+        items.append({
+            "rfq": display.get(q["request_id"]), "carrier": extra.get("carrier_company") or (q.get("carriers") or {}).get("company_name", "Daşıyıcı"),
+            "price": q["price"], "currency": q.get("currency") or "AZN", "price_azn": _azn_value(q["price"], q.get("currency") or "AZN", fx["rates"]),
+            "transit_days": q.get("transit_time_days"), "date": str(by_id[q["request_id"]].get("created_at") or "")[:10],
+        })
+    items.sort(key=lambda x: (x["rfq"] or 0), reverse=True)
+    azn = sorted(i["price_azn"] for i in items if i["price_azn"] is not None)
+    stats: Dict[str, Any] = {}
+    if azn:
+        mid = len(azn) // 2
+        stats = {
+            "min_azn": azn[0], "max_azn": azn[-1], "avg_azn": round(sum(azn) / len(azn), 2),
+            "median_azn": azn[mid] if len(azn) % 2 else round((azn[mid - 1] + azn[mid]) / 2, 2),
+            "fx_date": fx.get("date"),
+        }
+    cheapest = min((i for i in items if i["price_azn"] is not None), key=lambda x: x["price_azn"], default=None)
+    return {**empty, "count": len(items), "rfq_count": len(matching), "stats": stats, "cheapest": cheapest, "items": items[:10]}
+
+
 @app.get("/rates")
 def get_fx_rates(current_user: dict = Depends(verify_token)):
     return {"status": "success", **_fx_rates()}
@@ -2583,7 +2756,7 @@ def get_request_quotes(request_id: int, current_user: dict = Depends(verify_toke
         for item in quotes_res.data or []:
             raw_extra = item.get("extra_details") or {}
             if item.get("price") is None and raw_extra.get("submitted") != True: continue
-            filtered_extra = {k: v for k, v in raw_extra.items() if normalize_text(k) not in ['company', 'sirket', 'firma', 'email', 'mail', 'name', 'ad', 'dasiyici']}
+            filtered_extra = {k: v for k, v in raw_extra.items() if normalize_text(k) not in ['company', 'sirket', 'firma', 'email', 'mail', 'name', 'ad', 'dasiyici'] and not str(k).startswith("_")}
             quotes_list.append({
                 "id": item.get("id"), "request_id": item.get("request_id"), "carrier_id": item.get("carrier_id"),
                 "carrier_company": (item.get("extra_details") or {}).get("carrier_company") or item.get("carriers", {}).get("company_name", f"Daşıyıcı #{item.get('carrier_id')}"), "carrier_email": item.get("carriers", {}).get("email", ""),
