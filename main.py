@@ -1624,6 +1624,13 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
     # Sahəsi olmayan, amma sənəddə yazılmış məlumat "Əlavə məlumat"a yazılır
     for key, label in _EXTRA_NOTE_FIELDS:
         value = str(data.pop(key, "") or "").strip()
+        # Palet sayı artıq "Həcm / Palet" sahəsindədirsə, qeydə təkrar yazılmır
+        if key == "pallet_count" and str(data.get("volume_type") or "").lower().startswith("pal"):
+            try:
+                if abs(float(value.replace(",", ".")) - float(data.get("volume_m3") or 0)) < 0.01:
+                    continue
+            except ValueError:
+                pass
         if value and value.lower() not in str(data.get("additional_notes") or "").lower():
             add_note(f"{label}: {value}")
 
