@@ -1349,6 +1349,9 @@ AI_PARSE_PROMPT = """Sən peşəkar logistika assistentisən. Sənə verilən s�
     - ŞƏHƏR/ÖLKƏ ADLARI: "origin" və "destination" həmişə AZƏRBAYCAN dilində, "Şəhər, Ölkə" formatında yazılsın (məsələn "Москва, Россия" → "Moskva, Rusiya"; "Baku, Azerbaijan" → "Bakı, Azərbaycan"; "Guangzhou" → "Quançjou, Çin"). Mətn hansı dildə olursa olsun, bu xanalarda dil qarışmasın. (Bu qayda yalnız yer adlarına aiddir; "cargo_type" və "additional_notes" mətnin öz dilində qalır.)
     - TARİXLƏR: Aşağıdakı "BU GÜN" tarixinə görə hesabla. İl yazılmayıbsa (məs. "20 oktyabr", "5 Nov", "30 noyabr"), BU GÜNDƏN SONRA gələn ən yaxın tarixi seç. "sabah", "birisi gün", "gələn həftə çərşənbə", "послезавтра" kimi nisbi ifadələri BU GÜN-ə görə konkret tarixə çevir. Tarixi YYYY-MM-DDTHH:MM formatında yaz (vaxt yoxdursa T00:00).
     - "deadline" = YÜKLƏMƏ tarixi. "delivery_deadline" = ÇATDIRILMA tarixi/müddəti ("çatdırılma ən gec 30 noyabr", "deliver by", "доставка до"). Çatdırılma tarixini heç vaxt "deadline"-a yazma.
+    - "quote_deadline" = TƏKLİF ÜÇÜN SON TARİX: daşıyıcının qiymət təklifini göndərməli olduğu tarix ("Təklif üçün son tarix", "təkliflər ... qədər", "quotation deadline", "bid deadline", "offers due", "срок подачи предложений"). Bu tarix yükləmə tarixi DEYİL: onu heç vaxt "deadline"-a yazma. Yükləmə tarixi ayrıca göstərilməyibsə "deadline" null qalsın.
+    - "stackable" YALNIZ mətndə/sənəddə açıq yazılıbsa doldurulsun ("stackable", "non-stackable", "üst-üstə yığıla bilər/bilməz", "штабелируется"). Yazılmayıbsa null qoy, heç vaxt özün tamamlama.
+    - Sahəsi olmayan, amma sənəddə yazılmış məlumatı itirmə: konteyner növü ("20DC", "40HC") "container_type"-a, tranzit liman/şəhər "transit_port"-a, qablaşdırma növü (karton, kisə, paletli, bulk) "packaging"-a, palet sayı (həcm CBM ilə verilibsə də) "pallet_count"-a, ölçülər (L×W×H) "dimensions"-a yaz. Yazılmayıbsa boş burax.
     - ÇOX YÜK: mətndə bir neçə ayrı yük/marşrut varsa (məs. "Bakı-Moskva 5 ton meyvə ... Bakı-Minsk 3 ton xalça"), YALNIZ BİRİNCİSİNİ doldur, "shipment_count" = yüklərin sayı, "other_shipments" = digər yüklərin qısa təsvirlərinin siyahısı (məs. ["Bakı → Minsk, 3 ton xalça"]).
     - ARALIQ və TƏXMİNİ ədədlər ("8-10 ton", "təxminən 1.5 ton", "around 20 t"): "weight_kg" və "volume_m3" üçün null qoy (rəqəmə çevirmə) və aralığı/təxmini dəyəri "additional_notes"-a olduğu kimi yaz (məs. "Çəki: 8-10 ton").
     - MARŞRUT detalı ("via Poti", "İran üzərindən", "Xəzər bərəsi ilə"): bunu "additional_notes"-a "Marşrut: ..." kimi yaz, itirmə.
@@ -1375,6 +1378,12 @@ AI_PARSE_PROMPT = """Sən peşəkar logistika assistentisən. Sənə verilən s�
         "temperature": "Temperatur",
         "deadline": "Yükləmə tarixi, YYYY-MM-DDTHH:MM",
         "delivery_deadline": "Çatdırılma tarixi, YYYY-MM-DDTHH:MM",
+        "quote_deadline": "Təklif üçün son tarix, YYYY-MM-DDTHH:MM",
+        "container_type": "Konteyner növü (20DC, 40HC və s.)",
+        "transit_port": "Tranzit liman/şəhər",
+        "packaging": "Qablaşdırma növü",
+        "pallet_count": "Palet sayı",
+        "dimensions": "Ölçülər",
         "shipment_count": 1,
         "other_shipments": [],
         "additional_notes": "Əlavə qeydlər (mətnin öz dilində)"
@@ -1441,6 +1450,36 @@ def _weights_in_text(raw: str) -> List[float]:
     return sorted(values)
 
 
+_QUOTE_LABEL = re.compile(
+    r"(?:t[əe]klif(?:l[əe]r)?\s+üçün\s+son\s+tarix|t[əe]klif(?:l[əe]r)?\s+(?:son\s+tarix|müddəti)|quot(?:e|ation)s?\s+(?:deadline|due)|bid\s+deadline|offers?\s+(?:due|deadline)|срок\s+подачи\s+(?:предложений|котировок))",
+    re.IGNORECASE,
+)
+_NUMERIC_DATE = re.compile(r"(\d{4})-(\d{2})-(\d{2})|(\d{1,2})[./](\d{1,2})[./](\d{4})")
+_STACK_WORDS = re.compile(r"stack|üst-?üstə|yığ|штабел|stapel", re.IGNORECASE)
+_EXTRA_NOTE_FIELDS = (
+    ("container_type", "Konteyner növü"),
+    ("transit_port", "Tranzit liman"),
+    ("packaging", "Qablaşdırma"),
+    ("pallet_count", "Palet sayı"),
+    ("dimensions", "Ölçülər"),
+)
+
+
+def _numeric_date_after(raw: str, label: "re.Match") -> Optional[str]:
+    """Etiketdən dərhal sonra yazılmış rəqəmli tarix (YYYY-MM-DD və ya DD.MM.YYYY) → 'YYYY-MM-DD'."""
+    m = _NUMERIC_DATE.search(raw[label.end():label.end() + 40])
+    if not m:
+        return None
+    try:
+        if m.group(1):
+            d = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        else:
+            d = datetime(int(m.group(6)), int(m.group(5)), int(m.group(4)))
+    except ValueError:
+        return None
+    return d.strftime("%Y-%m-%d")
+
+
 def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: str = "") -> Dict[str, Any]:
     """Modelin cavabını yoxlayır: keçmiş tarixləri doldurmur, çatışmayanı və itən yükləri xəbərdarlıqla bildirir."""
     today = today or _baku_now()
@@ -1464,6 +1503,42 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
 
     loading = clean_date("deadline", "Yükləmə tarixi")
     delivery = clean_date("delivery_deadline", "Çatdırılma tarixi")
+    def add_note(note: str) -> None:
+        existing = str(data.get("additional_notes") or "")
+        if note not in existing:
+            data["additional_notes"] = (existing + " | " if existing else "") + note
+
+    # "Təklif üçün son tarix" yükləmə tarixi deyil: yükləmə tarixi yerinə yazılıbsa götürülür, qeydə düşür
+    quote_norm = _normalize_ai_datetime(data.get("quote_deadline"))
+    quote_dates = {quote_norm[:10]} if quote_norm else set()
+    for label in _QUOTE_LABEL.finditer(raw_text or ""):
+        found = _numeric_date_after(raw_text, label)
+        if found:
+            quote_dates.add(found)
+    if quote_dates and data.get("deadline"):
+        loading_norm = _normalize_ai_datetime(data.get("deadline"))
+        if loading_norm and loading_norm[:10] in quote_dates:
+            data["deadline"] = None
+            loading = None
+            warnings.append(
+                f"«Təklif üçün son tarix» ({loading_norm[:10]}) yükləmə tarixi kimi yazılmışdı, yükləmə tarixi boş qaldı. Yükləmə tarixini özünüz yazın."
+            )
+    if quote_dates:
+        d = quote_norm[:10] if quote_norm else sorted(quote_dates)[0]
+        add_note(f"Təklif üçün son tarix: {d[8:10]}.{d[5:7]}.{d[:4]}")
+    data.pop("quote_deadline", None)
+
+    # Sahəsi olmayan, amma sənəddə yazılmış məlumat "Əlavə məlumat"a yazılır
+    for key, label in _EXTRA_NOTE_FIELDS:
+        value = str(data.pop(key, "") or "").strip()
+        if value and value.lower() not in str(data.get("additional_notes") or "").lower():
+            add_note(f"{label}: {value}")
+
+    # Mətndə yazılmayan "Stackable" dəyəri uydurulmur
+    if raw_text and data.get("stackable") not in (None, "") and not _STACK_WORDS.search(raw_text):
+        data["stackable"] = None
+        warnings.append("«Stackable / Non-stackable» sənəddə göstərilməyib, boş saxlandı.")
+
     if loading and delivery and delivery < loading:
         warnings.append("Çatdırılma tarixi yükləmə tarixindən əvvəldir, zəhmət olmasa yoxlayın.")
 
