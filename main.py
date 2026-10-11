@@ -1523,6 +1523,9 @@ _DG_VERIFY = re.compile(r"yoxlan|yoxla\b|təsdiq\w*\s+edil\w*\s+(?:mə|mi)|ola\s
 _OOG_WORDS = re.compile(r"\bOOG\b|out[- ]of[- ]gauge|flat[- ]?rack|break[- ]?bulk|heavy[- ]lift|qabarit\w*\s+kənar|open[- ]top", re.IGNORECASE)
 _DIMS = re.compile(r"(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|sm|m)?\b", re.IGNORECASE)
 _DETAILS_IN_FILE = re.compile(r"detallar\s+fayl|ətraflı\s+fayl|details?\s+(?:are\s+)?in\s+(?:the\s+)?(?:attached\s+)?file|see\s+(?:the\s+)?attach", re.IGNORECASE)
+_TOTAL_WORDS = re.compile(r"\bcəmi\b|\bcəm\b|toplam|ümumi\s+çəki|\btotal\b|итого|всего", re.IGNORECASE)
+_PARTIAL_STACK = re.compile(r"\b[A-Z]{1,3}-?\d{1,3}\b[^.\n;]{0,60}(?:üst-?üstə|stack|штабел)", re.IGNORECASE)
+_LOT_TEXT = re.compile(r"\b[A-Z]{1,3}-\d{1,3}\b|\d+\s*(?:kq|kg)\b|\d+\s*[x×]\s*\d+", re.IGNORECASE)
 _ALLOWED_SHIPMENT = {"road": ("FTL", "LTL"), "sea": ("FCL", "LCL")}
 _STACK_WORDS = re.compile(r"stack|üst-?üstə|yığ|штабел|stapel", re.IGNORECASE)
 _EXTRA_NOTE_FIELDS = (
@@ -1642,9 +1645,37 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
         data["stackable"] = None
         warnings.append("«Stackable / Non-stackable» sənəddə göstərilməyib, boş saxlandı.")
 
+    if raw_text and data.get("stackable") and _PARTIAL_STACK.search(raw_text):
+        match = _PARTIAL_STACK.search(raw_text)
+        data["stackable"] = None
+        add_note("Üst-üstə qoyma: " + match.group(0).strip())
+        warnings.append("Stackable tələbi yalnız bəzi lotlara aiddir, ümumi sahə boş saxlandı, qeyddə yazılıb.")
+
     # Sənəd "təhlükəli yük deyil" deyirsə, bu qeyd model bəzən yazır, bəzən yazmır: kodda sabitləyirik
     if raw_text and not data.get("adr") and _NOT_DANGEROUS.search(raw_text):
         add_note("Təhlükəli yük deyil")
+
+    # --- "Multimodal" formada seçim deyil: əsas uzun mərhələ seçilir, zəncir qeydə yazılır ---
+    raw_mode = str(data.get("transportation_mode") or "")
+    if "multimodal" in raw_mode.lower():
+        lowered = (raw_text or "").lower()
+        if re.search(r"dəniz|deniz|\bsea\b|liman|\bport\b|konteyner|container", lowered):
+            data["transportation_mode"] = "Su/Dəniz (Sea)"
+        elif re.search(r"hava|\bair\b|aeroport|airport", lowered):
+            data["transportation_mode"] = "Hava (Air)"
+        elif re.search(r"dəmir|demir|\brail\b|vaqon", lowered):
+            data["transportation_mode"] = "Dəmiryolu (Rail)"
+        else:
+            data["transportation_mode"] = "Quru (Road)"
+        add_note("Multimodal daşıma: digər mərhələlər qeyddədir")
+        warnings.append("Multimodal daşıma: əsas mərhələ seçildi, bütün zəncir qeyddədir.")
+
+    # --- Yükün növü lot siyahısı olmasın ---
+    cargo = str(data.get("cargo_type") or "")
+    if len(cargo) > 80 and len(_LOT_TEXT.findall(cargo)) >= 2:
+        add_note("Lotlar: " + cargo)
+        data["cargo_type"] = None
+        warnings.append("Yükün növü lot siyahısı kimi yazılmışdı, qeydə köçürüldü: yükün növünü özünüz yazın.")
 
     # --- Nəqliyyat növünə görə icazəli sahələr ---
     mode_text = str(data.get("transportation_mode") or "").lower()
@@ -1696,7 +1727,8 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
         if near_verify:
             if data.get("adr"):
                 data["adr"] = None
-            add_note("DG statusu təsdiqlənməyib (SDS / UN38.3 yoxlanmalıdır)")
+            if "DG statusu təsdiqlənməyib" not in str(data.get("additional_notes") or ""):
+                add_note("DG statusu təsdiqlənməyib (SDS / UN38.3 yoxlanmalıdır)")
             warnings.append("Təhlükəli yük statusu yoxlanmalıdır: sənəd bunu təsdiqləmir, ADR/DG sahəsi boş saxlandı.")
         elif re.search(r"litium|lithium|li-?ion|\bUN\s?\d{4}\b", raw_text, re.IGNORECASE) and not data.get("adr"):
             warnings.append("Mətndə litium/UN nömrəsi var: təhlükəli yük statusunu yoxlayın.")
@@ -1724,11 +1756,11 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
         warnings.append("Qeyd «detallar fayldadır» deyir, amma şərtlər qeydə yazılmayıb. Qeydi tamamlayın.")
 
     # --- Bir maşın / konsolidasiya: bir neçə məntəqə = bir yük ---
-    if raw_text and _CONSOLIDATION.search(raw_text):
+    if raw_text and (_CONSOLIDATION.search(raw_text) or _TOTAL_WORDS.search(raw_text)):
         extra = [str(x).strip() for x in (data.get("other_shipments") or []) if str(x).strip()]
         if extra or int(data.get("shipment_count") or 1) > 1:
             if extra:
-                add_note("Məntəqələr / qalan hissələr: " + "; ".join(extra))
+                add_note("Lotlar / qalan hissələr: " + "; ".join(extra))
             data["other_shipments"] = []
             data["shipment_count"] = 1
 
@@ -1764,7 +1796,7 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
                 break
 
     # Model bir yük deyibsə də, mətndə bir neçə fərqli çəki varsa (bir neçə yük ola bilər) xəbərdar et
-    if raw_text and not others and count <= 1:
+    if raw_text and not others and count <= 1 and not _TOTAL_WORDS.search(raw_text) and not _CONSOLIDATION.search(raw_text):
         ranges = _weight_ranges(raw_text)
         values = [v for v in _weights_in_text(raw_text) if not any(low <= v <= high for low, high, _ in ranges)]
         if len(values) >= 2:
