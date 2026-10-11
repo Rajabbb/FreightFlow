@@ -1689,6 +1689,10 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
         mode_kind = "rail"
     else:
         mode_kind = ""
+    # Eyni nəqliyyat növü hər dəfə eyni yazılsın (forma bu dörd dəyəri tanıyır)
+    canonical_mode = {"road": "Quru (Road)", "sea": "Su/Dəniz (Sea)", "air": "Hava (Air)", "rail": "Dəmiryolu (Rail)"}.get(mode_kind)
+    if canonical_mode:
+        data["transportation_mode"] = canonical_mode
     shipment_now = str(data.get("shipment_type") or "").strip().upper()
     if mode_kind and shipment_now and shipment_now not in _ALLOWED_SHIPMENT.get(mode_kind, ()):
         data["shipment_type"] = None
