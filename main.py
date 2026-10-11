@@ -584,6 +584,69 @@ async def redirect_www_to_apex(request: Request, call_next):
     return await call_next(request)
 
 
+# ---- Yüklənmiş sənədlər: yalnız API-nin verdiyi imzalı (müddətli) link ilə açılır ----
+# Sənəd linkləri əvvəl hamıya açıq idi və Google onları tapıb taramışdı. İndi API cavabındakı hər /uploads/<fayl>
+# yolu avtomatik imzalanır (exp + sig), imzasız və ya müddəti bitmiş sorğu 403 alır. Profil şəkilləri ictimai qalır.
+# PROTECT_UPLOADS=0 ilə dərhal söndürülə bilər.
+PROTECT_UPLOADS = os.getenv("PROTECT_UPLOADS", "1") != "0"
+UPLOAD_LINK_TTL_SECONDS = int(os.getenv("UPLOAD_LINK_TTL_SECONDS", str(24 * 3600)))
+_UPLOAD_PATH_RE = re.compile(r"^/(?:static/)?uploads/([A-Za-z0-9][A-Za-z0-9._-]*)$")
+_UPLOAD_URL_RE = re.compile(r"(/(?:static/)?uploads/)(?!profiles/)([A-Za-z0-9][A-Za-z0-9._-]*)(?![A-Za-z0-9._?-])")
+
+
+def _upload_signature(name: str, exp: int) -> str:
+    return hmac.new(JWT_SECRET.encode(), f"upload:{name}:{exp}".encode(), "sha256").hexdigest()[:32]
+
+
+def _upload_link_valid(name: str, exp: Any, sig: Any) -> bool:
+    try:
+        exp_int = int(exp)
+    except (TypeError, ValueError):
+        return False
+    if exp_int < int(datetime.utcnow().timestamp()):
+        return False
+    return hmac.compare_digest(_upload_signature(name, exp_int), str(sig or ""))
+
+
+def _sign_uploads_in(text: str) -> str:
+    """JSON mətnindəki /uploads/<fayl> yollarını imzalı linkə çevirir (artıq imzalı olanlara toxunmur)."""
+    exp = int(datetime.utcnow().timestamp()) + UPLOAD_LINK_TTL_SECONDS
+
+    def repl(m: "re.Match") -> str:
+        return f"{m.group(1)}{m.group(2)}?exp={exp}&sig={_upload_signature(m.group(2), exp)}"
+
+    return _UPLOAD_URL_RE.sub(repl, text)
+
+
+def _canonical_upload_url(value: Any) -> Any:
+    """Bazaya imzasız yol yazılır: imza müddətlidir və saxlanılmamalıdır."""
+    if isinstance(value, str) and "/uploads/" in value:
+        return value.split("?", 1)[0]
+    return value
+
+
+@app.middleware("http")
+async def protect_uploaded_files(request: Request, call_next):
+    path = request.url.path
+    is_upload = bool(_UPLOAD_PATH_RE.match(path)) and "/uploads/profiles/" not in path
+    if PROTECT_UPLOADS and is_upload:
+        name = path.rsplit("/", 1)[-1]
+        if not _upload_link_valid(name, request.query_params.get("exp"), request.query_params.get("sig")):
+            return Response(content="Bu sənədin linkinin müddəti bitib və ya link etibarsızdır.", status_code=403, media_type="text/plain; charset=utf-8",
+                            headers={"X-Robots-Tag": "noindex, nofollow, noarchive"})
+    response = await call_next(request)
+    if path.startswith("/uploads/") or path.startswith("/static/uploads/"):
+        response.headers["X-Robots-Tag"] = "noindex, nofollow, noarchive"
+    if PROTECT_UPLOADS and (response.headers.get("content-type") or "").startswith("application/json"):
+        body = b"".join([chunk async for chunk in response.body_iterator])
+        text = body.decode("utf-8", errors="replace")
+        if "uploads/" in text:
+            text = _sign_uploads_in(text)
+        headers = {k: v for k, v in response.headers.items() if k.lower() != "content-length"}
+        return Response(content=text, status_code=response.status_code, headers=headers, media_type="application/json")
+    return response
+
+
 @app.get("/robots.txt", include_in_schema=False)
 def robots_txt():
     body = (
@@ -595,6 +658,16 @@ def robots_txt():
         "Disallow: /uploads/\n"
         "Disallow: /api/\n"
         "Disallow: /admin/\n"
+        "Disallow: /static/uploads/\n"
+        "Disallow: /auth/\n"
+        "Disallow: /carriers/\n"
+        "Disallow: /requests/\n"
+        "Disallow: /quotes/\n"
+        "Disallow: /categories/\n"
+        "Disallow: /carrier-sub-categories/\n"
+        "Disallow: /analytics/\n"
+        "Disallow: /mail/\n"
+        "Disallow: /rates\n"
         f"Sitemap: {PUBLIC_SITE_URL}/sitemap.xml\n"
     )
     return Response(content=body, media_type="text/plain; charset=utf-8")
@@ -2064,7 +2137,7 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
             "cargo_type": payload.cargo_type, "weight_kg": payload.weight_kg, "volume_m3": payload.volume_m3,
             "deadline": deadline_val, "truck_type": payload.truck_type, "hs_code": payload.hs_code,
             "stackable": stackable_val, "shipment_type": payload.shipment_type, "required_fields": parsed_required,
-            "attachment_url": payload.attachment_url, "additional_notes": final_note, "status": "open"
+            "attachment_url": _canonical_upload_url(payload.attachment_url), "additional_notes": final_note, "status": "open"
         }).execute()
         
         shipment_data = response.data[0]
