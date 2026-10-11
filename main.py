@@ -903,6 +903,7 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                     "Yaradılma Tarixi": format_excel_date(r.get("created_at"), is_utc=True, use_ampm=False)
                 })
         else:
+            report_fx = _fx_rates()
             for r in filtered_reqs:
                 disp_id = display_id_map.get(r.get("id"), r.get("id"))
                 origin = r.get("origin") or ""
@@ -935,6 +936,7 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                         "Daşıyıcı Email": "-" if "public_link_" in (carrier.get("email") or "") else carrier.get("email", ""),
                         "Qiymət": q.get("price", "Yoxdur") if q.get("price") is not None else "Yoxdur",
                         "Valyuta": q.get("currency", "AZN"),
+                        "AZN qarşılığı": _azn_value(q.get("price"), q.get("currency", "AZN"), report_fx["rates"]) if q.get("price") is not None else "Yoxdur",
                         "Tranzit Müddəti (gün)": q.get("transit_time_days", "Qeyd edilməyib") if q.get("transit_time_days") is not None else "Qeyd edilməyib",
                         "Qalibdir?": "Bəli" if q.get("is_winner") else "Xeyr",
                         "Əlavə Detallar": extra_str if extra_str else "Yoxdur",
@@ -2302,11 +2304,88 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
         traceback.print_exc()
         raise HTTPException(status_code=400, detail=f"Sistem xətası: {str(e)}")
 
+# ---- Məzənnə: təklifləri AZN-ə çevirib müqayisə etmək üçün ----
+_FX_CODES = ("USD", "EUR", "TRY", "RUB", "GBP")
+_FX_CACHE: Dict[str, Any] = {"at": 0.0, "failed_at": 0.0, "data": None}
+_FX_TTL = 6 * 3600
+_FX_RETRY = 600
+
+
+def _fx_from_cbar() -> Optional[Dict[str, Any]]:
+    """Azərbaycan Mərkəzi Bankının gündəlik rəsmi məzənnəsi (cbar.az XML); həftə sonu/bayramda əvvəlki gün."""
+    import xml.etree.ElementTree as ET
+    day = _baku_now()
+    for back in range(0, 5):
+        d = day - timedelta(days=back)
+        url = f"https://www.cbar.az/currencies/{d.strftime('%d.%m.%Y')}.xml"
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "arachi-fx/1.0"})
+            with urllib.request.urlopen(req, timeout=4) as resp:
+                root = ET.fromstring(resp.read(500_000))
+        except Exception:
+            continue
+        rates: Dict[str, float] = {"AZN": 1.0}
+        for v in root.iter("Valute"):
+            code = v.get("Code")
+            if code not in _FX_CODES:
+                continue
+            try:
+                nominal = float((v.findtext("Nominal") or "1").replace(",", ".").split()[0])
+                rates[code] = float((v.findtext("Value") or "").replace(",", ".")) / nominal
+            except (ValueError, IndexError):
+                continue
+        if len(rates) > 1:
+            return {"date": d.strftime("%Y-%m-%d"), "source": "Azərbaycan Mərkəzi Bankı", "rates": rates}
+    return None
+
+
+def _fx_rates() -> Dict[str, Any]:
+    """{"date", "source", "rates": {"AZN": 1.0, "USD": 1.7, ...}}: 1 vahid valyuta = rates[kod] AZN.
+    FX_RATES_JSON mühit dəyişəni verilibsə (məs. {"USD":1.7,"EUR":1.95}) o istifadə olunur."""
+    manual = os.getenv("FX_RATES_JSON")
+    if manual:
+        try:
+            parsed = json.loads(manual)
+            rates = {"AZN": 1.0}
+            rates.update({str(k).upper(): float(v) for k, v in parsed.items() if float(v) > 0})
+            return {"date": _baku_now().strftime("%Y-%m-%d"), "source": "Əl ilə təyin olunub", "rates": rates}
+        except Exception:
+            pass
+    now_ts = datetime.utcnow().timestamp()
+    cached = _FX_CACHE["data"]
+    if cached and now_ts - _FX_CACHE["at"] < _FX_TTL:
+        return cached
+    if now_ts - _FX_CACHE["failed_at"] < _FX_RETRY:
+        return cached or {"date": None, "source": None, "rates": {"AZN": 1.0}}
+    fresh = _fx_from_cbar()
+    if fresh:
+        _FX_CACHE.update({"at": now_ts, "data": fresh})
+        return fresh
+    _FX_CACHE["failed_at"] = now_ts
+    return cached or {"date": None, "source": None, "rates": {"AZN": 1.0}}
+
+
+def _azn_value(price: Any, currency: Any, rates: Dict[str, float]) -> Optional[float]:
+    """Qiymətin AZN qarşılığı; məzənnə yoxdursa və ya qiymət oxunmursa None."""
+    try:
+        amount = float(price)
+    except (TypeError, ValueError):
+        return None
+    rate = rates.get(str(currency or "AZN").upper())
+    return round(amount * rate, 2) if rate else None
+
+
+@app.get("/rates")
+def get_fx_rates(current_user: dict = Depends(verify_token)):
+    return {"status": "success", **_fx_rates()}
+
+
 @app.get("/quotes/request/{request_id}")
 def get_request_quotes(request_id: int, current_user: dict = Depends(verify_token)):
     _own_request(request_id, current_user)
     try:
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
+        fx = _fx_rates()
         quotes_list = []
         for item in quotes_res.data or []:
             raw_extra = item.get("extra_details") or {}
@@ -2316,10 +2395,11 @@ def get_request_quotes(request_id: int, current_user: dict = Depends(verify_toke
                 "id": item.get("id"), "request_id": item.get("request_id"), "carrier_id": item.get("carrier_id"),
                 "carrier_company": (item.get("extra_details") or {}).get("carrier_company") or item.get("carriers", {}).get("company_name", f"Daşıyıcı #{item.get('carrier_id')}"), "carrier_email": item.get("carriers", {}).get("email", ""),
                 "price": item.get("price"), "currency": item.get("currency", "AZN"), "transit_time_days": item.get("transit_time_days"),
+                "price_azn": _azn_value(item.get("price"), item.get("currency", "AZN"), fx["rates"]),
                 "is_winner": item.get("is_winner", False), "extra_details": filtered_extra, "extra_responses": filtered_extra,
                 "quote_history": item.get("quote_history", [])
             })
-        return {"status": "success", "quotes": quotes_list}
+        return {"status": "success", "quotes": quotes_list, "fx": {"date": fx.get("date"), "source": fx.get("source"), "rates": fx["rates"]}}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
