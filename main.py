@@ -1409,7 +1409,39 @@ def _normalize_ai_datetime(value) -> Optional[str]:
     return d.strftime("%Y-%m-%dT%H:%M")
 
 
-def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None) -> Dict[str, Any]:
+_WEIGHT_UNITS_KG = {"ton": 1000.0, "tonna": 1000.0, "tona": 1000.0, "t": 1000.0, "kq": 1.0, "kg": 1.0, "кг": 1.0, "тонн": 1000.0, "тонна": 1000.0, "тонны": 1000.0, "т": 1000.0}
+_NUM = r"(\d+(?:[.,]\d+)?)"
+_UNIT = r"(tonna|tona|ton|kq|kg|тонны|тонна|тонн|кг|т|t)\b"
+
+
+def _to_float(text: str) -> float:
+    return float(text.replace(",", "."))
+
+
+def _weight_ranges(raw: str) -> List[tuple]:
+    """Mətndəki "8-10 ton" tipli aralıqlar: [(aşağı_kq, yuxarı_kq, orijinal_mətn)]."""
+    found = []
+    for m in re.finditer(_NUM + r"\s*(?:[-–—]|ilə|до|to)\s*" + _NUM + r"\s*" + _UNIT, raw, flags=re.IGNORECASE):
+        unit = _WEIGHT_UNITS_KG.get(m.group(3).lower())
+        if not unit:
+            continue
+        low, high = _to_float(m.group(1)) * unit, _to_float(m.group(2)) * unit
+        if low < high:
+            found.append((low, high, m.group(0).strip()))
+    return found
+
+
+def _weights_in_text(raw: str) -> List[float]:
+    """Mətndəki bütün çəki qeydləri kq-la (təkrarsız)."""
+    values = set()
+    for m in re.finditer(_NUM + r"\s*" + _UNIT, raw, flags=re.IGNORECASE):
+        unit = _WEIGHT_UNITS_KG.get(m.group(2).lower())
+        if unit:
+            values.add(round(_to_float(m.group(1)) * unit, 2))
+    return sorted(values)
+
+
+def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: str = "") -> Dict[str, Any]:
     """Modelin cavabını yoxlayır: keçmiş tarixləri doldurmur, çatışmayanı və itən yükləri xəbərdarlıqla bildirir."""
     today = today or _baku_now()
     warnings: List[str] = []
@@ -1446,6 +1478,31 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None) -> Dict[str
     data["other_shipments"] = others
     data["shipment_count"] = max(count, len(others) + 1)
 
+    # Çəki aralıqla verilibsə ("8-10 ton"), model ortasını/sərhədi "dəqiq rəqəm" kimi yazmasın
+    weight = data.get("weight_kg")
+    if raw_text and weight not in (None, "", 0):
+        try:
+            w = float(weight)
+        except (TypeError, ValueError):
+            w = None
+        for low, high, original in _weight_ranges(raw_text):
+            if w is not None and low <= w <= high:
+                data["weight_kg"] = None
+                note = f"Çəki: {original}"
+                existing = str(data.get("additional_notes") or "")
+                if original not in existing:
+                    data["additional_notes"] = (existing + " | " if existing else "") + note
+                warnings.append(f"Çəki aralıq kimi yazılıb ({original}), dəqiq rəqəm yazılmadı. Çəkini özünüz daxil edin.")
+                break
+
+    # Model bir yük deyibsə də, mətndə bir neçə fərqli çəki varsa (bir neçə yük ola bilər) xəbərdar et
+    if raw_text and not others and count <= 1:
+        ranges = _weight_ranges(raw_text)
+        values = [v for v in _weights_in_text(raw_text) if not any(low <= v <= high for low, high, _ in ranges)]
+        if len(values) >= 2:
+            shown = ", ".join(f"{v / 1000:g} ton" if v >= 1000 else f"{v:g} kq" for v in values)
+            warnings.append(f"Mətndə bir neçə fərqli çəki var ({shown}). Bir neçə yük ola bilər, yalnız birincisi dolduruldu. Mətni yoxlayın.")
+
     missing = [label for key, label in (("origin", "yükləmə yeri"), ("destination", "boşaltma yeri"), ("weight_kg", "çəki"), ("cargo_type", "yükün növü")) if not data.get(key)]
     if not data.get("volume_m3"):
         missing.append("həcm / palet")
@@ -1453,8 +1510,8 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None) -> Dict[str
     return {"data": data, "warnings": warnings, "missing": missing, "empty": not meaningful}
 
 
-def _ai_response(parsed: dict) -> Dict[str, Any]:
-    checked = _apply_ai_guards(parsed)
+def _ai_response(parsed: dict, raw_text: str = "") -> Dict[str, Any]:
+    checked = _apply_ai_guards(parsed, None, raw_text)
     if checked["empty"]:
         raise HTTPException(status_code=422, detail="Bu mətndə yük və ya sorğu məlumatı tapılmadı. Yükləmə/boşaltma yerini, yükün növünü və çəkisini yazın.")
     warnings = list(checked["warnings"])
@@ -1525,7 +1582,7 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
         res_text = response.choices[0].message.content.strip()
         parsed_json = json.loads(res_text)
 
-        return _ai_response(parsed_json)
+        return _ai_response(parsed_json, text_content)
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Aİ düzgün formatda cavab qaytarmadı.")
@@ -1566,7 +1623,7 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
         res_text = response.choices[0].message.content.strip()
         parsed_json = json.loads(res_text)
 
-        return _ai_response(parsed_json)
+        return _ai_response(parsed_json, payload.raw_text)
 
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Aİ düzgün formatda cavab qaytarmadı.")
