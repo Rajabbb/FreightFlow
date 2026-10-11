@@ -1465,6 +1465,10 @@ _SHIPMENT_EVIDENCE = {
     "FCL": re.compile(r"\bfcl\b|konteyner|container|контейнер|\d+\s*[x×*]\s*(?:20|40)|\b(?:20|40)\s*(?:dc|hc|gp|rf|ft|feet|')|\b(?:20|40)(?:dc|hc|gp|rf|ft)\b", re.IGNORECASE),
     "LCL": re.compile(r"\blcl\b|konsolid|consolid|groupage|сборн|less\s+than\s+container|qismən\s+konteyner", re.IGNORECASE),
 }
+_NOT_DANGEROUS = re.compile(
+    r"təhlükəli\s+yük\s+deyil|not\s+(?:a\s+)?dangerous|non[- ]?dangerous|non[- ]?hazardous|not\s+hazardous|\badr\W{0,3}\s*(?:yox|xeyr|no|none|n/?a)\b|не\s+опасн",
+    re.IGNORECASE,
+)
 _STACK_WORDS = re.compile(r"stack|üst-?üstə|yığ|штабел|stapel", re.IGNORECASE)
 _EXTRA_NOTE_FIELDS = (
     ("container_type", "Konteyner növü"),
@@ -1573,6 +1577,10 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
     if raw_text and data.get("stackable") not in (None, "") and not _STACK_WORDS.search(raw_text):
         data["stackable"] = None
         warnings.append("«Stackable / Non-stackable» sənəddə göstərilməyib, boş saxlandı.")
+
+    # Sənəd "təhlükəli yük deyil" deyirsə, bu qeyd model bəzən yazır, bəzən yazmır: kodda sabitləyirik
+    if raw_text and not data.get("adr") and _NOT_DANGEROUS.search(raw_text):
+        add_note("Təhlükəli yük deyil")
 
     if loading and delivery and delivery < loading:
         warnings.append("Çatdırılma tarixi yükləmə tarixindən əvvəldir, zəhmət olmasa yoxlayın.")
