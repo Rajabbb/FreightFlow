@@ -665,9 +665,9 @@
                         if (fileUrl.includes("Fayl:")) {
                             const parts = fileUrl.split("Fayl:");
                             if (parts[1]) fileName = parts[1].replace("]", "").trim();
-                        } else if (fileUrl.includes("/")) { fileName = fileUrl.split('/').pop(); }
+                        } else if (fileUrl.includes("/")) { try { fileName = decodeURIComponent(fileUrl.split('?')[0].split('/').pop()); } catch (e) { fileName = fileUrl.split('?')[0].split('/').pop(); } }
 
-                        let realHref = fileUrl.includes("http") ? fileUrl.match(/https?:\/\/[^\s]+/)[0] : `/uploads/${fileName}`;
+                        let realHref = fileUrl.includes("http") ? fileUrl.match(/https?:\/\/[^\s]+/)[0] : (fileUrl.startsWith("/uploads/") ? fileUrl : `/uploads/${fileName}`);
 
                         const fileDiv = document.createElement("div");
                         fileDiv.className = "pt-3 mt-3 border-t border-slate-200";
