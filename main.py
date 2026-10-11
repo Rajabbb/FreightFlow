@@ -669,7 +669,7 @@ SEO_PAGES: List[Dict[str, Any]] = _load_seo_pages()
 
 def _make_seo_page_handler(file_path: str):
     def handler():
-        return FileResponse(file_path, media_type="text/html; charset=utf-8", headers={"Cache-Control": "public, max-age=3600"})
+        return FileResponse(file_path, media_type="text/html; charset=utf-8", headers={"Cache-Control": "public, max-age=300, must-revalidate"})
     return handler
 
 
@@ -737,7 +737,8 @@ def sitemap_xml():
 
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
-    if os.path.exists("static/index.html"): return FileResponse("static/index.html")
+    if os.path.exists("static/index.html"):
+        return FileResponse("static/index.html", headers={"Cache-Control": "no-cache"})
     return "index.html tapılmadı", 404
 
 @app.get("/login", response_class=HTMLResponse)
