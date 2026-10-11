@@ -1672,7 +1672,7 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
 
     # --- Yükün növü lot siyahısı olmasın ---
     cargo = str(data.get("cargo_type") or "")
-    if len(cargo) > 80 and len(_LOT_TEXT.findall(cargo)) >= 2:
+    if len(_LOT_TEXT.findall(cargo)) >= 2:
         add_note("Lotlar: " + cargo)
         data["cargo_type"] = "Müxtəlif yüklər (lotlar qeyddə)"
         warnings.append("Yük bir neçə lotdan ibarətdir: yükün növü ümumi yazıldı, lotlar qeyddədir. İstəsəniz dəqiqləşdirin.")
