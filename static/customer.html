@@ -1389,6 +1389,18 @@
 
                     <div class="opt-row">
                         <div class="form-check mb-1">
+                            <input class="form-check-input opt-check" type="checkbox" id="chk_quote_due" onchange="toggleOptField('quote_due')">
+                            <label class="form-check-label fw-bold text-dark" for="chk_quote_due">Təklif üçün son tarix</label>
+                        </div>
+                        <input type="datetime-local" class="form-control opt-input d-none mt-2" id="inp_quote_due">
+                        <div class="form-check d-none mt-2" id="auto_reminder_box">
+                            <input class="form-check-input" type="checkbox" id="chk_auto_reminder" checked>
+                            <label class="form-check-label small text-muted" for="chk_auto_reminder">Cavab verməyən daşıyıcılara son tarixdən 24 saat əvvəl avtomatik xatırlat</label>
+                        </div>
+                    </div>
+
+                    <div class="opt-row">
+                        <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_info" onchange="toggleOptField('info')">
                             <label class="form-check-label fw-bold text-dark" for="chk_info">Əlavə məlumat (qeyd və ya sənəd əlavəsi)</label>
                         </div>
@@ -2397,8 +2409,12 @@ async function parseTextWithAI() {
                         'adr': 'adr',
                         'temperature': 'temp',
                         'deadline': 'loading_date',
-                        'delivery_deadline': 'deliv_date'
+                        'delivery_deadline': 'deliv_date',
+                        'quote_deadline': 'quote_due'
                     };
+                    if (d.quote_deadline && d.additional_notes) {
+                        d.additional_notes = String(d.additional_notes).replace(/\s*\|?\s*Təklif üçün son tarix:[^|]*/g, "").replace(/^[\s|.]+|[\s|.]+$/g, "");
+                    }
                     
                     for(let [jsonKey, inpKey] of Object.entries(optMap)) {
                         if(d[jsonKey]) {
@@ -2486,8 +2502,12 @@ async function parseTextWithAI() {
                         'adr': 'adr',
                         'temperature': 'temp',
                         'deadline': 'loading_date',
-                        'delivery_deadline': 'deliv_date'
+                        'delivery_deadline': 'deliv_date',
+                        'quote_deadline': 'quote_due'
                     };
+                    if (d.quote_deadline && d.additional_notes) {
+                        d.additional_notes = String(d.additional_notes).replace(/\s*\|?\s*Təklif üçün son tarix:[^|]*/g, "").replace(/^[\s|.]+|[\s|.]+$/g, "");
+                    }
                     
                     for(let [jsonKey, inpKey] of Object.entries(optMap)) {
                         if(d[jsonKey]) {
@@ -2543,7 +2563,7 @@ async function parseTextWithAI() {
             if (transportSelect) transportSelect.selectedIndex = 0;
 
             // 3. İxtiyari (Optional) xanaları təmizləyib gizlədirik
-            const optFields = ['truck_type', 'hs_code', 'stackable', 'shipment_type', 'incoterm', 'adr', 'temp', 'loading_date', 'deliv_date'];
+            const optFields = ['truck_type', 'hs_code', 'stackable', 'shipment_type', 'incoterm', 'adr', 'temp', 'loading_date', 'deliv_date', 'quote_due'];
             optFields.forEach(key => {
                 const chk = document.getElementById(`chk_${key}`);
                 const inp = document.getElementById(`inp_${key}`);
@@ -3227,6 +3247,10 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
                 if (!input) return;
                 if (chk.checked) { input.classList.remove('d-none'); } 
                 else { input.classList.add('d-none'); input.value = ''; }
+                if (key === 'quote_due') {
+                    const box = document.getElementById('auto_reminder_box');
+                    if (box) box.classList.toggle('d-none', !chk.checked);
+                }
             }
         }
 
@@ -3647,6 +3671,14 @@ function loadBulkSubCategories(categoryId) {
                 let val = document.getElementById("inp_deliv_date")?.value.trim();
                 if(val) requiredFieldsList.push(`Delivery Deadline: ${formatDateTime(val, false, true)}`);
             }
+            if(document.getElementById("chk_quote_due")?.checked) {
+                let val = document.getElementById("inp_quote_due")?.value.trim();
+                if(val) {
+                    requiredFieldsList.push(`Offer Due: ${val.replace("T", " ")}`);
+                    const auto = document.getElementById("chk_auto_reminder");
+                    if(auto && !auto.checked) requiredFieldsList.push("Auto Reminder: off");
+                }
+            }
             if(document.getElementById("chk_info")?.checked) {
                 let textVal = document.getElementById("inp_info_text")?.value.trim() || "";
                 let fileInput = document.getElementById("inp_info_file");
@@ -3769,6 +3801,67 @@ function loadBulkSubCategories(categoryId) {
             } catch (err) {}
         }
 
+        // "Offer Due: 2026-10-16 17:00" sətrindən təklif son tarixi (yerli vaxt)
+        function offerDueOf(req) {
+            const fields = Array.isArray(req && req.required_fields) ? req.required_fields : [];
+            for (const line of fields) {
+                if (typeof line !== "string") continue;
+                const m = line.match(/^\s*Offer Due\s*:\s*(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?/i);
+                if (m) return new Date(+m[1], +m[2] - 1, +m[3], m[4] ? +m[4] : 23, m[5] ? +m[5] : 59);
+            }
+            return null;
+        }
+        function offerDueHtml(req) {
+            const due = offerDueOf(req);
+            if (!due) return "";
+            const pad = (n) => String(n).padStart(2, "0");
+            const text = `${pad(due.getDate())}.${pad(due.getMonth() + 1)}.${due.getFullYear()} ${pad(due.getHours())}:${pad(due.getMinutes())}`;
+            const passed = due.getTime() < Date.now();
+            return `<strong class="text-dark">${text}</strong>${passed ? ' <span class="badge bg-secondary ms-1">Təkliflər qəbulu bitib</span>' : ''}`;
+        }
+
+        // RFQ-nu təkrarla: sahələri formaya köçürür, tarixləri və son tarixi boş qoyur
+        function duplicateRfq(requestId) {
+            const req = (globalRequestsCache || []).find(r => String(r.id) === String(requestId));
+            if (!req) return;
+            const fields = Array.isArray(req.required_fields) ? req.required_fields : [];
+            const line = (re) => { for (const f of fields) { if (typeof f === "string") { const m = f.match(re); if (m) return m[1].trim(); } } return ""; };
+            resetFormForAI();
+            const setVal = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; };
+            setVal("origin", req.origin || req.loading_location || "");
+            setVal("destination", req.destination || req.delivery_location || "");
+            setVal("cargo_type", req.cargo_type || req.cargo || "");
+            setVal("weight_kg", req.weight_kg || req.weight || "");
+            const vol = line(/Həcm \/ Palet:\s*([\d.,]+)\s*(CBM|Palet)?/i);
+            const volMatch = fields.map(f => typeof f === "string" ? f.match(/Həcm \/ Palet:\s*([\d.,]+)\s*(CBM|Palet)?/i) : null).find(Boolean);
+            if (volMatch) { setVal("volume_cbm", volMatch[1]); setVal("volume_type", volMatch[2] || "CBM"); }
+            else if (req.volume_m3) { setVal("volume_cbm", req.volume_m3); }
+            const sel = document.getElementById("transportation_mode");
+            if (sel && req.transportation_mode) {
+                for (let i = 0; i < sel.options.length; i++) {
+                    if (sel.options[i].value.toLowerCase().includes(String(req.transportation_mode).toLowerCase().split(" ")[0])) { sel.selectedIndex = i; break; }
+                }
+            }
+            const opt = (key, value) => {
+                if (!value) return;
+                const chk = document.getElementById(`chk_${key}`);
+                if (!chk) return;
+                chk.checked = true; toggleOptField(key); setVal(`inp_${key}`, value);
+            };
+            opt("truck_type", req.truck_type || line(/^Truck Type:\s*(.+)$/i));
+            opt("hs_code", req.hs_code || line(/^HS Code:\s*(.+)$/i));
+            opt("stackable", req.stackable === true ? "Stackable" : (req.stackable === false ? "Non-stackable" : ""));
+            opt("shipment_type", req.shipment_type || line(/^Shipment Type:\s*(.+)$/i));
+            opt("incoterm", line(/^Incoterm:\s*(.+)$/i));
+            opt("adr", line(/^Dangerous Goods \(ADR\):\s*(.+)$/i));
+            opt("temp", line(/^Temperature Requirement:\s*(.+)$/i));
+            const notes = String(req.additional_notes || req.note || "").replace(/\s*\|?\s*Təklif üçün son tarix:[^|]*/g, "").trim();
+            if (notes) { const chk = document.getElementById("chk_info"); if (chk) { chk.checked = true; toggleOptField("info"); setVal("inp_info_text", notes); } }
+            const builderBtn = document.getElementById("tab-builder-btn");
+            if (builderBtn) builderBtn.click();
+            alert(`RFQ #${req.display_id || req.id} kopyalandı. Yükləmə/çatdırılma tarixlərini və təklif son tarixini yeniləyin, daşıyıcıları seçib göndərin.`);
+        }
+
         function renderRequests(requestsList) {
             const container = document.getElementById("requestsContainer");
             if (!requestsList || requestsList.length === 0) {
@@ -3807,10 +3900,12 @@ function loadBulkSubCategories(categoryId) {
                                 <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki / Həcm: <strong class="text-dark">${escapeHTML(req.weight_kg || req.weight || 0)} kq${volDisplay}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${formattedDeadline}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
+                                ${offerDueOf(req) ? `<div class="col-12 col-lg-6"><i class="bi bi-hourglass-split me-1 text-primary"></i> Təklif son tarixi: ${offerDueHtml(req)}</div>` : ''}
                             </div>
                         </div>
                         <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
                             <button class="btn btn-sm btn-primary px-3 py-1.5 fw-bold rounded-pill shadow-sm" style="font-size: 12px;" onclick="openRfqDetail(${req.id})"><i class="bi bi-eye me-1"></i> RFQ-ya Bax (${qCount} təklif)</button>
+                            <button class="btn btn-sm btn-light border px-3 py-1.5 fw-bold rounded-pill" style="font-size: 12px;" onclick="duplicateRfq(${req.id})" title="Eyni sorğunu yeni tarixlərlə yenidən yarat"><i class="bi bi-files me-1"></i> Təkrarla</button>
                             ${attachmentBtn}
                         </div>
                     </div>
@@ -4156,6 +4251,33 @@ function loadBulkSubCategories(categoryId) {
             
             try { renderDetailHeader(currentDetailRequestObj); } catch(e) {}
             loadDetailQuotes(requestId); loadDetailCarriersStatus(requestId);
+            try { loadRouteHistory(currentDetailRequestObj); } catch(e) {}
+        }
+
+        // Bu marşrut üçün keçmiş təkliflərin xülasəsi (AZN-lə), cari RFQ çıxarılmaqla
+        async function loadRouteHistory(req) {
+            const container = document.getElementById("detailQuotesContainer");
+            if (!container || !req || !req.origin || !req.destination) return;
+            let box = document.getElementById("routeHistoryBox");
+            if (!box) {
+                box = document.createElement("div");
+                box.id = "routeHistoryBox";
+                box.className = "small text-muted mb-2";
+                container.parentNode.insertBefore(box, container);
+            }
+            box.innerHTML = "";
+            try {
+                const q = new URLSearchParams({ origin: req.origin, destination: req.destination, exclude_request_id: String(req.id) });
+                const res = await fetch(`/analytics/route-prices?${q}`, { headers: getAuthHeaders() });
+                if (!res.ok) return;
+                const d = await res.json();
+                if (!d.count) return;
+                const st = d.stats || {};
+                const recent = (d.items || []).slice(0, 3).map(i => `#${i.rfq} ${escapeHTML(i.carrier)}: ${escapeHTML(i.price)} ${escapeHTML(i.currency)}`).join(" · ");
+                box.innerHTML = `<i class="bi bi-graph-up me-1 text-primary"></i> <strong class="text-dark">Bu marşrut üzrə keçmiş qiymətlər:</strong> ${d.count} təklif (${d.rfq_count} sorğu)` +
+                    (st.avg_azn !== undefined ? ` · orta <strong>${st.avg_azn} AZN</strong> · ən aşağı <strong>${st.min_azn} AZN</strong> · ən yüksək ${st.max_azn} AZN` : "") +
+                    (recent ? `<div class="mt-1">Son: ${recent}</div>` : "");
+            } catch (err) {}
         }
 
         function closeRfqDetail() {
@@ -5068,6 +5190,10 @@ function copyPublicLinkText() {
             "Daha çox göstər": "Show more",
             "Bazama əlavə et": "Add to my base",
             "Bazada var": "In your base",
+            "Təklif üçün son tarix": "Offer deadline",
+            "Təkrarla": "Duplicate",
+            "Təkliflər qəbulu bitib": "Offers closed",
+            "Təklif son tarixi:": "Offer deadline:",
             "Əlavə olundu": "Added",
             "Təsdiqlənib": "Verified",
             "Əhatə": "Coverage",
