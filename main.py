@@ -647,6 +647,36 @@ async def protect_uploaded_files(request: Request, call_next):
     return response
 
 
+def _load_seo_pages() -> List[Dict[str, Any]]:
+    """static/pages/manifest.json: ictimai məzmun səhifələri (bələdçilər). Fayl yoxdursa səhifə yoxdur."""
+    try:
+        with open(os.path.join("static", "pages", "manifest.json"), encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return []
+    pages = []
+    for entry in data if isinstance(data, list) else []:
+        if not isinstance(entry, dict):
+            continue
+        route, file_path = str(entry.get("path", "")), os.path.normpath(str(entry.get("file", "")))
+        if route.startswith("/") and file_path.replace("\\", "/").startswith("static/pages/") and os.path.exists(file_path):
+            pages.append({**entry, "file": file_path})
+    return pages
+
+
+SEO_PAGES: List[Dict[str, Any]] = _load_seo_pages()
+
+
+def _make_seo_page_handler(file_path: str):
+    def handler():
+        return FileResponse(file_path, media_type="text/html; charset=utf-8", headers={"Cache-Control": "public, max-age=3600"})
+    return handler
+
+
+for _page in SEO_PAGES:
+    app.add_api_route(_page["path"], _make_seo_page_handler(_page["file"]), methods=["GET"], include_in_schema=False)
+
+
 @app.get("/robots.txt", include_in_schema=False)
 def robots_txt():
     body = (
@@ -659,6 +689,7 @@ def robots_txt():
         "Disallow: /api/\n"
         "Disallow: /admin/\n"
         "Disallow: /static/uploads/\n"
+        "Disallow: /static/pages/\n"
         "Disallow: /auth/\n"
         "Disallow: /carriers/\n"
         "Disallow: /requests/\n"
@@ -675,16 +706,27 @@ def robots_txt():
 
 @app.get("/sitemap.xml", include_in_schema=False)
 def sitemap_xml():
-    """Yalnız ictimai səhifələr. Yeni ictimai səhifə (bələdçi, marşrut) əlavə olunanda bura yazılır."""
-    pages = [("/", "static/index.html", "1.0")]
-    items = []
-    for path, file_path, priority in pages:
+    """İctimai səhifələr. Məzmun səhifələri static/pages/manifest.json-dan gəlir, az və en variantları bir-birinə bağlıdır."""
+    def lastmod_of(file_path: str) -> str:
         try:
-            lastmod = datetime.utcfromtimestamp(os.path.getmtime(file_path)).strftime("%Y-%m-%d")
+            return datetime.utcfromtimestamp(os.path.getmtime(file_path)).strftime("%Y-%m-%d")
         except OSError:
-            lastmod = datetime.utcnow().strftime("%Y-%m-%d")
-        items.append(f"  <url><loc>{PUBLIC_SITE_URL}{path}</loc><lastmod>{lastmod}</lastmod><priority>{priority}</priority></url>")
-    xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "\n".join(items) + "\n</urlset>\n"
+            return datetime.utcnow().strftime("%Y-%m-%d")
+
+    items = [f"  <url><loc>{PUBLIC_SITE_URL}/</loc><lastmod>{lastmod_of('static/index.html')}</lastmod><priority>1.0</priority></url>"]
+    for page in SEO_PAGES:
+        alts = page.get("alternates") or {}
+        links = "".join(
+            f'<xhtml:link rel="alternate" hreflang="{lang}" href="{PUBLIC_SITE_URL}{href}"/>' for lang, href in alts.items()
+        )
+        items.append(
+            f"  <url><loc>{PUBLIC_SITE_URL}{page['path']}</loc><lastmod>{lastmod_of(page['file'])}</lastmod><priority>0.8</priority>{links}</url>"
+        )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>' + chr(10)
+        + '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">' + chr(10)
+        + chr(10).join(items) + chr(10) + "</urlset>" + chr(10)
+    )
     return Response(content=xml, media_type="application/xml; charset=utf-8")
 
 
