@@ -21,7 +21,7 @@ from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
@@ -568,6 +568,53 @@ class CustomerQuoteCreate(BaseModel):
     valid_until: Optional[str] = None
     terms_conditions: Optional[str] = ""
 
+# ---- SEO: robots.txt, sitemap.xml, www → əsas domen ----
+PUBLIC_SITE_URL = os.getenv("PUBLIC_SITE_URL", "https://arachi.co").rstrip("/")
+_SITE_HOST = PUBLIC_SITE_URL.split("://", 1)[-1]
+_NOINDEX_HEADERS = {"X-Robots-Tag": "noindex, nofollow"}
+
+
+@app.middleware("http")
+async def redirect_www_to_apex(request: Request, call_next):
+    """www.arachi.co → arachi.co (yalnız GET/HEAD): Google iki ayrı sayt saymasın."""
+    host = (request.headers.get("host") or "").split(":")[0].lower()
+    if request.method in ("GET", "HEAD") and host == f"www.{_SITE_HOST}":
+        query = f"?{request.url.query}" if request.url.query else ""
+        return RedirectResponse(f"{PUBLIC_SITE_URL}{request.url.path}{query}", status_code=301)
+    return await call_next(request)
+
+
+@app.get("/robots.txt", include_in_schema=False)
+def robots_txt():
+    body = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /customer\n"
+        "Disallow: /forwarder\n"
+        "Disallow: /carrier_quote/\n"
+        "Disallow: /uploads/\n"
+        "Disallow: /api/\n"
+        "Disallow: /admin/\n"
+        f"Sitemap: {PUBLIC_SITE_URL}/sitemap.xml\n"
+    )
+    return Response(content=body, media_type="text/plain; charset=utf-8")
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+def sitemap_xml():
+    """Yalnız ictimai səhifələr. Yeni ictimai səhifə (bələdçi, marşrut) əlavə olunanda bura yazılır."""
+    pages = [("/", "static/index.html", "1.0")]
+    items = []
+    for path, file_path, priority in pages:
+        try:
+            lastmod = datetime.utcfromtimestamp(os.path.getmtime(file_path)).strftime("%Y-%m-%d")
+        except OSError:
+            lastmod = datetime.utcnow().strftime("%Y-%m-%d")
+        items.append(f"  <url><loc>{PUBLIC_SITE_URL}{path}</loc><lastmod>{lastmod}</lastmod><priority>{priority}</priority></url>")
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + "\n".join(items) + "\n</urlset>\n"
+    return Response(content=xml, media_type="application/xml; charset=utf-8")
+
+
 @app.get("/", response_class=HTMLResponse)
 def get_home(): 
     if os.path.exists("static/index.html"): return FileResponse("static/index.html")
@@ -576,6 +623,7 @@ def get_home():
 @app.get("/login", response_class=HTMLResponse)
 def get_login(): 
     response = FileResponse("static/login.html")
+    response.headers["X-Robots-Tag"] = "noindex, follow"
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
@@ -584,6 +632,7 @@ def get_login():
 @app.get("/customer")
 def get_customer_dashboard(): 
     response = FileResponse("static/customer.html")
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
@@ -592,6 +641,7 @@ def get_customer_dashboard():
 @app.get("/forwarder")
 def get_forwarder_dashboard():
     response = FileResponse("static/forwarder.html")
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
@@ -602,6 +652,7 @@ def get_forwarder_dashboard():
 def get_carrier_quote_page(token: str):
     file_path = BASE_DIR / "static" / "carrier_quote.html"
     response = FileResponse(file_path)
+    response.headers["X-Robots-Tag"] = "noindex, nofollow"
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
@@ -2862,7 +2913,7 @@ def register_page(request: Request, token: str = None):
         with open(file_path, "r", encoding="utf-8") as f:
             html_content = f.read()
         html_content = html_content.replace("{{ token }}", safe_token).replace("{{ invite_type }}", safe_invite_type)
-        return HTMLResponse(content=html_content)
+        return HTMLResponse(content=html_content, headers=_NOINDEX_HEADERS)
     except Exception as e:
         traceback.print_exc()
         return HTMLResponse("<h1>Xəta: register.html faylı tapılmadı! Zəhmət olmasa static/ qovluğunda yaradın.</h1>", status_code=404)
