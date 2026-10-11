@@ -103,6 +103,15 @@
                 </div>
             </div>
 
+            <div id="offer_due_box" class="border border-blue-200 bg-blue-50 rounded-xl p-4 flex gap-3 hidden">
+                <i data-lucide="hourglass" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
+                <div>
+                    <p class="text-xs text-slate-500 mb-1" data-i18n="offer_due">Quote deadline</p>
+                    <p id="offer_due_text" class="font-bold text-sm text-slate-800">-</p>
+                    <p id="offer_due_passed" class="text-xs text-red-500 mt-1 hidden" data-i18n="offer_due_passed">The quote deadline has passed. You can still submit, but the customer may have already decided.</p>
+                </div>
+            </div>
+
             <div id="deadline_box" class="border border-slate-200 rounded-xl p-4 flex gap-3 bg-white hidden">
                 <i data-lucide="clock" class="text-blue-500 w-5 h-5 flex-shrink-0"></i>
                 <div>
@@ -178,6 +187,23 @@
                 </div>
             </div>
 
+            <!-- What the price includes -->
+            <div class="flex gap-3">
+                <i data-lucide="check-square" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
+                <div class="w-full">
+                    <label class="block font-medium mb-1.5 text-sm text-slate-700" data-i18n="includes_title">What is included in the price?</label>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2" id="includes_list">
+                        <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"><input type="checkbox" class="includes-opt" value="Gömrük rüsumları"> <span data-i18n="inc_customs">Customs duties</span></label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"><input type="checkbox" class="includes-opt" value="Yükləmə/boşaltma"> <span data-i18n="inc_handling">Loading / unloading</span></label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"><input type="checkbox" class="includes-opt" value="Sığorta"> <span data-i18n="inc_insurance">Insurance</span></label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"><input type="checkbox" class="includes-opt" value="Terminal xərcləri"> <span data-i18n="inc_terminal">Terminal charges</span></label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"><input type="checkbox" class="includes-opt" value="Qapıya çatdırılma"> <span data-i18n="inc_door">Door delivery</span></label>
+                        <label class="flex items-center gap-2 text-sm text-slate-700 cursor-pointer"><input type="checkbox" class="includes-opt" value="Yanacaq əlavəsi"> <span data-i18n="inc_fuel">Fuel surcharge</span></label>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1" data-i18n="includes_hint">Optional. Tick what your price covers; unticked items will be shown to the customer as not included.</p>
+                </div>
+            </div>
+
             <!-- Additional Notes -->
             <div class="flex gap-3">
                 <i data-lucide="file-edit" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
@@ -235,6 +261,12 @@
                 transit_time: "Transit Time (Days)",
                 eg_days: "e.g.: 5",
                 additional_notes: "Additional Notes or Terms (From Carrier)",
+                offer_due: "Quote deadline",
+                offer_due_passed: "The quote deadline has passed. You can still submit, but the customer may have already decided.",
+                includes_title: "What is included in the price?",
+                includes_hint: "Optional. Tick what your price covers; unticked items will be shown to the customer as not included.",
+                inc_customs: "Customs duties", inc_handling: "Loading / unloading", inc_insurance: "Insurance",
+                inc_terminal: "Terminal charges", inc_door: "Door delivery", inc_fuel: "Fuel surcharge",
                 notes_placeholder: "Payment terms, special notes or offer details...",
                 additional_doc: "Additional Document / File (From Carrier)",
                 submit_alt: "Submit Alternative Option",
@@ -268,6 +300,12 @@
                 transit_time: "Tranzit Müddəti (Gün)",
                 eg_days: "məsələn: 5",
                 additional_notes: "Əlavə Qeydlər və ya Şərtlər (Daşıyıcıdan)",
+                offer_due: "Təklif üçün son tarix",
+                offer_due_passed: "Təklif üçün son tarix keçib. Yenə də göndərə bilərsiniz, amma müştəri artıq qərar vermiş ola bilər.",
+                includes_title: "Qiymətə nələr daxildir?",
+                includes_hint: "İxtiyari. Qiymətinizin əhatə etdiyini seçin; seçilməyənlər müştəriyə «daxil deyil» kimi göstəriləcək.",
+                inc_customs: "Gömrük rüsumları", inc_handling: "Yükləmə/boşaltma", inc_insurance: "Sığorta",
+                inc_terminal: "Terminal xərcləri", inc_door: "Qapıya çatdırılma", inc_fuel: "Yanacaq əlavəsi",
                 notes_placeholder: "Ödəniş şərtləri, xüsusi qeydlər və ya təklif detalları...",
                 additional_doc: "Əlavə Sənəd / Fayl (Daşıyıcıdan)",
                 submit_alt: "Alternativ Təklif Göndər",
@@ -420,6 +458,7 @@
             } else {
                 document.getElementById("carrier_note").value = "";
             }
+            prefillIncludes(q.extra_details);
 
             let isSub = q.price !== null || (q.extra_details && q.extra_details.submitted_at);
             if (isSub) {
@@ -492,6 +531,7 @@
                             if (data.quote.extra_details && data.quote.extra_details["Carrier Note"]) {
                                 document.getElementById("carrier_note").value = data.quote.extra_details["Carrier Note"];
                             }
+                            prefillIncludes(data.quote.extra_details);
                         }
                     }
                 }
@@ -521,12 +561,18 @@
                 if (cargoTypeEl) cargoTypeEl.innerText = escapeHTML(req.cargo_type || "Not specified");
 
                 let loadingDateVal = null;
+                let offerDueMatch = null;
                 let deadlineVal = req.deadline || req.due_date || req.end_date || req.expiry_date || req.target_date;
                 let customerNote = req.additional_notes || req.note || req.customer_note || "";
 
                 if (req.required_fields && req.required_fields.length > 0) {
                     req.required_fields.forEach(field => {
                         if (typeof field === 'string') {
+                            if (/^\s*offer due/i.test(field)) {
+                                const od = field.match(/(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?/);
+                                if (od) offerDueMatch = od;
+                                return;
+                            }
                             const lowerField = field.toLowerCase();
                             if (lowerField.includes("loading") || lowerField.includes("yükləmə")) {
                                 const match = field.match(/\d{4}-\d{2}-\d{2}.*/);
@@ -550,6 +596,18 @@
                     if (loadingDateText) loadingDateText.innerText = finalLoadingStr;
                     if (loadingDateBox) loadingDateBox.classList.remove("hidden");
                 } else { if (loadingDateBox) loadingDateBox.classList.add("hidden"); }
+
+                const offerDueBox = document.getElementById("offer_due_box");
+                if (offerDueBox) {
+                    if (offerDueMatch) {
+                        const pad2 = (n) => String(n).padStart(2, "0");
+                        const dueDate = new Date(+offerDueMatch[1], +offerDueMatch[2] - 1, +offerDueMatch[3], offerDueMatch[4] ? +offerDueMatch[4] : 23, offerDueMatch[5] ? +offerDueMatch[5] : 59);
+                        document.getElementById("offer_due_text").innerText = `${pad2(dueDate.getDate())}.${pad2(dueDate.getMonth() + 1)}.${dueDate.getFullYear()} ${pad2(dueDate.getHours())}:${pad2(dueDate.getMinutes())}`;
+                        const passedEl = document.getElementById("offer_due_passed");
+                        if (passedEl) passedEl.classList.toggle("hidden", dueDate.getTime() >= Date.now());
+                        offerDueBox.classList.remove("hidden");
+                    } else { offerDueBox.classList.add("hidden"); }
+                }
 
                 const deadlineBox = document.getElementById("deadline_box");
                 const deadlineText = document.getElementById("deadline_text");
@@ -585,7 +643,7 @@
                         req.required_fields.forEach(field => {
                             if (typeof field === 'string') {
                             const lowField = field.toLowerCase();
-                            if (lowField.includes("loading") || lowField.includes("deadline") || lowField.includes("deadl") || lowField.includes("fayl") || lowField.includes("attachment") || field.includes("http") || field.includes("Fayl:") || lowField.includes("həcm / palet") || lowField.includes("additional information") || lowField.includes("əlavə məlumat")) return;
+                            if (lowField.startsWith("offer due") || lowField.startsWith("auto reminder") || lowField.includes("loading") || lowField.includes("deadline") || lowField.includes("deadl") || lowField.includes("fayl") || lowField.includes("attachment") || field.includes("http") || field.includes("Fayl:") || lowField.includes("həcm / palet") || lowField.includes("additional information") || lowField.includes("əlavə məlumat")) return;
                         }
                             hasItems = true;
                             const noteDiv = document.createElement("div");
@@ -640,6 +698,12 @@
             });
         }
 
+        // Əvvəl göndərilmiş təklifdə seçilmiş "daxildir" bəndləri geri qaytarılır
+        function prefillIncludes(extra) {
+            const chosen = new Set(String((extra && extra["Daxildir"]) || "").split(",").map(x => x.trim()).filter(Boolean));
+            document.querySelectorAll(".includes-opt").forEach(el => { el.checked = chosen.has(el.value); });
+        }
+
         async function setSubmitTypeAndSend(isAlternative) {
             if (quoteSubmitting) return;
             quoteSubmitting = true;
@@ -664,6 +728,14 @@
             const carrierNoteEl = document.getElementById("carrier_note");
             if (carrierNoteEl && carrierNoteEl.value.trim()) { extraDetails["Carrier Note"] = carrierNoteEl.value.trim(); }
             
+            const includeOpts = Array.from(document.querySelectorAll(".includes-opt"));
+            const ticked = includeOpts.filter(x => x.checked).map(x => x.value);
+            if (ticked.length > 0) {
+                extraDetails["Daxildir"] = ticked.join(", ");
+                const notTicked = includeOpts.filter(x => !x.checked).map(x => x.value);
+                if (notTicked.length > 0) extraDetails["Daxil deyil"] = notTicked.join(", ");
+            }
+
             const carrierCompanyInput = document.getElementById("carrierCompanyInput");
             if (carrierCompanyInput && carrierCompanyInput.value.trim() !== "") {
                 formData.append("carrier_company", carrierCompanyInput.value.trim());
