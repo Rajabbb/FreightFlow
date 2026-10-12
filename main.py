@@ -4,6 +4,7 @@ import traceback
 import io
 import json
 import hmac
+from html import escape as _html_escape
 import re
 import csv
 import asyncio
@@ -21,7 +22,8 @@ from typing import Optional, Dict, Any, List, Tuple
 from pydantic import BaseModel, EmailStr
 from fastapi import FastAPI, HTTPException, BackgroundTasks, UploadFile, File, Form, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
@@ -40,6 +42,17 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+_DUMMY_HASH = pwd_context.hash("arachi-dummy-password")
+
+
+def _verify_password(plain: Any, stored: Any) -> bool:
+    """Şifrə düzgündürmü. Hash boş/tanınmayan olsa (məs. şifrəsi olmayan daşıyıcı qeydi) xəta yox, False qaytarır."""
+    if not isinstance(plain, str) or not isinstance(stored, str) or not stored:
+        return False
+    try:
+        return bool(pwd_context.verify(plain, stored))
+    except Exception:
+        return False
 BASE_DIR = Path(__file__).resolve().parent
 
 load_dotenv()
@@ -62,7 +75,14 @@ else:
 aclient = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-app = FastAPI(title="Arachi Backend API")
+# /docs, /redoc və /openapi.json bütün API-nin xəritəsini hamıya göstərirdi: istehsalatda bağlıdır (ENABLE_API_DOCS=1 ilə açılır)
+_API_DOCS_ON = os.getenv("ENABLE_API_DOCS", "0") == "1"
+app = FastAPI(
+    title="Arachi Backend API",
+    docs_url="/docs" if _API_DOCS_ON else None,
+    redoc_url="/redoc" if _API_DOCS_ON else None,
+    openapi_url="/openapi.json" if _API_DOCS_ON else None,
+)
 
 # ==========================================
 # MƏRHƏLƏ 4: BOT VƏ BRUTE-FORCE QORUNMASI
@@ -70,6 +90,60 @@ app = FastAPI(title="Arachi Backend API")
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# ==========================================
+# XƏTALARIN SIZMASI VƏ TƏHLÜKƏSİZLİK BAŞLIQLARI
+# ==========================================
+_GENERIC_SERVER_ERROR = "Daxili xəta baş verdi. Zəhmət olmasa bir az sonra yenidən cəhd edin."
+_GENERIC_FAILED = "Əməliyyat alınmadı. Məlumatları yoxlayıb yenidən cəhd edin."
+# str(e) ilə yazılmış 400 cavabları (baza, kitabxana xətaları) istifadəçiyə göstərilmir
+_LEAKY_DETAIL = re.compile(r"(Baza xətası|Sistem xətası|oxunarkən xəta|yüklənərkən xəta|Silinmə zamanı xəta|xətası:|Traceback|postgrest|supabase|psycopg|APIError|Exception|\bKeyError\b|\bTypeError\b|\bValueError\b)", re.IGNORECASE)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _http_exception_handler(request: Request, exc: StarletteHTTPException):
+    detail = exc.detail
+    if exc.status_code >= 500:
+        print(f"[xəta {exc.status_code}] {request.method} {request.url.path}: {detail}")
+        detail = _GENERIC_SERVER_ERROR
+    elif isinstance(detail, str) and _LEAKY_DETAIL.search(detail):
+        print(f"[xəta {exc.status_code}] {request.method} {request.url.path}: {detail}")
+        detail = _GENERIC_FAILED
+    return JSONResponse({"detail": detail}, status_code=exc.status_code, headers=getattr(exc, "headers", None))
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    traceback.print_exception(type(exc), exc, exc.__traceback__)
+    return JSONResponse({"detail": _GENERIC_SERVER_ERROR}, status_code=500)
+
+
+# Content-Security-Policy: off | report-only (yalnız brauzer konsolunda xəbərdarlıq) | enforce
+CSP_MODE = os.getenv("CSP_MODE", "report-only").strip().lower()
+_CSP_POLICY = (
+    "default-src 'self'; "
+    "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://unpkg.com https://cdnjs.cloudflare.com; "
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+    "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; "
+    "img-src 'self' data: blob: https:; "
+    "connect-src 'self'; "
+    "frame-src 'self' https://app.v2.arachi.co; "
+    "object-src 'none'; base-uri 'self'; form-action 'self'; "
+    "frame-ancestors 'self' https://app.v2.arachi.co"
+)
+
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    response = await call_next(request)
+    h = response.headers
+    h.setdefault("Strict-Transport-Security", "max-age=31536000")
+    h.setdefault("X-Content-Type-Options", "nosniff")
+    h.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    h.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()")
+    if CSP_MODE != "off" and (h.get("content-type") or "").startswith("text/html"):
+        h.setdefault("Content-Security-Policy-Report-Only" if CSP_MODE == "report-only" else "Content-Security-Policy", _CSP_POLICY)
+    return response
 
 # ==========================================
 # MƏRHƏLƏ 1: JWT TOKEN VƏ IDOR QORUNMASI
@@ -104,6 +178,8 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Müştəri paneli endpointləri. Köhnə tokenlərdə 'customer_access' yoxdur - onlar müştəri sayılır.
     Yalnız forwarder paneli hüququ olan hesablar müştəri panelinin məlumatlarına çıxış əldə edə bilmir."""
     payload = _decode_token(credentials)
+    if payload.get("role") == "carrier":
+        raise HTTPException(status_code=403, detail="Bu token müştəri panelinə giriş üçün deyil.")
     if payload.get("customer_access") is False:
         raise HTTPException(status_code=403, detail="Bu hesabın müştəri panelinə girişi yoxdur.")
     return payload
@@ -111,6 +187,8 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 def verify_forwarder_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Freight forwarder paneli endpointləri."""
     payload = _decode_token(credentials)
+    if payload.get("role") == "carrier":
+        raise HTTPException(status_code=403, detail="Bu token forwarder panelinə giriş üçün deyil.")
     if payload.get("forwarder_access") is not True:
         raise HTTPException(status_code=403, detail="Bu hesabın forwarder panelinə girişi yoxdur.")
     return payload
@@ -429,13 +507,16 @@ async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin:
         else:
             text_content = f"""Dear {carrier_name},\n\nPlease review the shipment details below and kindly complete the quotation form using the link provided.\n\nThank you.\n\nBest regards,\n{sender_company}"""
 
-    formatted_text = text_content.replace("\n", "<br>")
+    # Yeni sətir və başlıqda sətir sonu təmizlənir, mətn HTML-ə çevrilmədən əvvəl escape olunur (başqasının adından saxta link göndərmək olmasın)
+    subject_line = re.sub(r"[\r\n]+", " ", subject_line)
+    safe_origin, safe_destination = _html_escape(str(origin)), _html_escape(str(destination))
+    formatted_text = _html_escape(text_content).replace("\n", "<br>")
     html_content = f"""
     <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px;">
         <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 30px; border: 1px solid #e0e0e0;">
             <div style="font-size: 15px; color: #333333; line-height: 1.6; margin-bottom: 25px;">{formatted_text}</div>
             <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #1a73e8; margin: 20px 0;">
-                <p style="margin: 5px 0;"><strong>Route:</strong> {origin} ➔ {destination}</p>
+                <p style="margin: 5px 0;"><strong>Route:</strong> {safe_origin} ➔ {safe_destination}</p>
             </div>
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{quote_link}" style="background-color: #1a73e8; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">👉 Submit Your Proposal</a>
@@ -453,6 +534,9 @@ async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin:
     except Exception:
         traceback.print_exc()
         supabase.table("quotes").update({"mail_status": "failed"}).eq("token", token).execute()
+
+_send_carrier_email_link_original = send_carrier_email_link
+
 
 class ShipmentRequestCreate(BaseModel):
     customer_id: int
@@ -2986,11 +3070,14 @@ async def select_winner_body(payload: SelectWinnerRequest, current_user: dict = 
 INVITE_TYPES = {"importer": "İdxalçı / İxracçı", "forwarder": "Freight forwarder (müştəri paneli ilə)"}
 
 @app.get("/admin/generate-invite")
-def generate_invite_link(secret: str = None, type: str = None, plan: str = "basic"):
+@limiter.limit("10/minute")
+def generate_invite_link(request: Request, secret: str = None, type: str = None, plan: str = "basic"):
     """Qeydiyyat linki yaradır. type=importer: idxalçı/ixracçı hesabı; type=forwarder: forwarder + müştəri paneli.
     Hesab növü linkin özündə (bazada) saxlanılır, link sahibi onu dəyişə bilmir."""
     ADMIN_SECRET_KEY = os.getenv("ADMIN_SECRET_KEY")
-    if not ADMIN_SECRET_KEY or secret != ADMIN_SECRET_KEY:
+    # Gizli açar başlıqla (X-Admin-Secret) göndərilə bilər: URL-dəki açar jurnallarda və brauzer tarixçəsində qalır
+    provided = request.headers.get("x-admin-secret") or secret or ""
+    if not ADMIN_SECRET_KEY or not hmac.compare_digest(provided.encode(), ADMIN_SECRET_KEY.encode()):
         raise HTTPException(status_code=403, detail="Giriş qadağandır! Gizli şifrə səhvdir və ya təyin olunmayıb.")
     if type not in INVITE_TYPES:
         raise HTTPException(status_code=400, detail="Link növünü yazın: &type=importer (idxalçı/ixracçı) və ya &type=forwarder (forwarder + müştəri paneli).")
@@ -3121,7 +3208,7 @@ async def login(request: Request, data: LoginRequest):
     customer = supabase.table("customers").select("*").eq("email", data.email).execute()
     if customer.data:
         user = customer.data[0]
-        if pwd_context.verify(data.password, user.get("password", "")):
+        if _verify_password(data.password, user.get("password", "")):
             account_type = user.get("account_type") or "importer_exporter"
             customer_access = user.get("customer_access") is not False
             forwarder_access = user.get("forwarder_access") is True
@@ -3140,13 +3227,15 @@ async def login(request: Request, data: LoginRequest):
     carrier = supabase.table("carriers").select("*").eq("email", data.email).execute()
     if carrier.data:
         user = carrier.data[0]
-        if pwd_context.verify(data.password, user.get("password", "")):
+        if _verify_password(data.password, user.get("password", "")):
             token = create_access_token({"sub": str(user["id"]), "role": "carrier", "email": user["email"]})
             safe_user = {k: v for k, v in user.items() if k != "password"}
             return {"status": "success", "role": "carrier", "token": token, "user": safe_user}
         else: raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
 
-    raise HTTPException(status_code=404, detail="Bu e-poçt ilə qeydiyyatlı hesab tapılmadı.")
+    # Mövcud olmayan e-poçt üçün də hash yoxlanır: cavab müddəti hesabın mövcudluğunu açmasın
+    _verify_password(data.password, _DUMMY_HASH)
+    raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
 
 @app.post("/api/change-password")
 @limiter.limit("5/minute")
@@ -3162,7 +3251,7 @@ def change_password(request: Request, data: ChangePasswordRequest, current_user:
         raise HTTPException(status_code=404, detail="İstifadəçi tapılmadı.")
     user = user_res.data[0]
     
-    if not pwd_context.verify(data.current_password, user.get("password", "")):
+    if not _verify_password(data.current_password, user.get("password", "")):
         raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
         
     if len(data.new_password) < 8 or not re.search(r"[A-Z]", data.new_password) or not re.search(r"[a-z]", data.new_password) or not re.search(r"[0-9]", data.new_password):
@@ -3209,7 +3298,7 @@ def delete_account(request: Request, data: DeleteAccountRequest, current_user: d
     if not res.data:
         raise HTTPException(status_code=404, detail="Hesab tapılmadı.")
     user = res.data[0]
-    if not pwd_context.verify(data.password or "", user.get("password", "")):
+    if not _verify_password(data.password or "", user.get("password", "")):
         raise HTTPException(status_code=400, detail="Şifrə yanlışdır.")
 
     try:
@@ -3249,7 +3338,7 @@ def change_email(request: Request, data: ChangeEmailRequest, current_user: dict 
         raise HTTPException(status_code=404, detail="İstifadəçi tapılmadı.")
     user = user_res.data[0]
     
-    if not pwd_context.verify(data.current_password, user.get("password", "")):
+    if not _verify_password(data.current_password, user.get("password", "")):
         raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
         
     existing_cust = supabase.table("customers").select("id").eq("email", data.new_email).execute()
