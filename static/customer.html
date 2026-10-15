@@ -868,6 +868,26 @@
     </nav>
 
     <div id="subscriptionBanner" class="d-none"></div>
+
+    <div class="modal fade" id="inboundEmailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title fw-bold"><i class="bi bi-envelope-open me-2 text-primary"></i>Daşıyıcının cavabı</h5>
+                        <p class="text-muted small mb-0" id="inboundEmailMeta"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Bağla"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="inboundEmailExtracted" class="mb-3"></div>
+                    <label class="form-label fw-semibold small text-muted">Orijinal email mətni</label>
+                    <pre id="inboundEmailBody" class="border rounded-3 p-3 bg-light small" style="white-space:pre-wrap; word-break:break-word; max-height:340px; overflow:auto;"></pre>
+                    <div id="inboundEmailAttachments" class="small text-muted"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="managerBanner" class="d-none">
         <div class="alert alert-primary rounded-0 border-0 mb-0 d-flex flex-wrap align-items-center justify-content-between gap-2 small">
             <span><i class="bi bi-eye me-1"></i><strong>İdarəçi rejimi:</strong> prosesləri (sorğular, gələn təkliflər, hesabatlar) izləyirsiniz. Sorğuları komanda üzvləri yaradır və idarə edir.</span>
@@ -1818,6 +1838,7 @@ Best regards,
                         <i class="bi bi-file-earmark-text-fill"></i> Təkliflər (<span id="detailQuotesCount">0</span>)
                     </div>
                     <div class="section-desc mb-2">Daşıyıcıların göndərdiyi qiymət təklifləri.</div>
+                    <div id="detailInboundBox" class="d-none mb-3"></div>
                     <div id="detailQuotesContainer">
                         <p class="text-muted small">Təkliflər yüklənir...</p>
                     </div>
@@ -4099,7 +4120,7 @@ function loadBulkSubCategories(categoryId) {
                 let extraStr = "";
                 if (q.extra_details) {
                     for (let [k, v] of Object.entries(q.extra_details)) {
-                        if (k === 'submitted' || k === 'is_alternative' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name') continue;
+                        if (k === 'submitted' || k === 'is_alternative' || k.toLowerCase() === 'submitted' || k.toLowerCase() === 'carrier_attachment_name' || k === 'source' || k === 'ai_extracted' || k === 'inbound_email_id' || k === 'transit_range' || k.charAt(0) === '_') continue;
                         if (v !== null && v !== undefined && v !== "") {
                             if (k === 'carrier_attachment_url') {
                                 extraStr += `<div><strong class="text-dark">Sənəd:</strong> <a href="${escapeHTML(v)}" target="_blank" class="text-primary fw-bold text-decoration-none"><i class="bi bi-link-45deg"></i> Bax</a></div>`;
@@ -4131,7 +4152,7 @@ function loadBulkSubCategories(categoryId) {
 
                 html += `
                     <tr class="${q.is_winner ? 'table-success' : ''}">
-                        <td class="px-3 fw-bold text-dark py-2.5 text-nowrap" style="min-width: 130px;${altQuoteIds.has(q.id) ? ' box-shadow: inset 4px 0 0 #8b5cf6;' : ''}">${escapeHTML(q.carrier_company || 'Daşıyıcı')}${altQuoteIds.has(q.id) ? '<div><span class="badge rounded-pill mt-1" style="font-size:10px; background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd;"><i class="bi bi-arrow-repeat me-1"></i>Alternativ təklif</span></div>' : ''}</td>
+                        <td class="px-3 fw-bold text-dark py-2.5 text-nowrap" style="min-width: 130px;${altQuoteIds.has(q.id) ? ' box-shadow: inset 4px 0 0 #8b5cf6;' : ''}">${escapeHTML(q.carrier_company || 'Daşıyıcı')}${altQuoteIds.has(q.id) ? '<div><span class="badge rounded-pill mt-1" style="font-size:10px; background:#ede9fe; color:#6d28d9; border:1px solid #c4b5fd;"><i class="bi bi-arrow-repeat me-1"></i>Alternativ təklif</span></div>' : ''}${(q.extra_details && q.extra_details.source === 'email') ? `<div><button type="button" class="btn btn-link p-0 mt-1 text-decoration-none" style="font-size:10.5px;" onclick="openInboundEmail(${q.id})" title="Təklif daşıyıcının emailindən Aİ ilə çıxarılıb"><span class="badge rounded-pill" style="background:#e0f2fe; color:#075985; border:1px solid #bae6fd;"><i class="bi bi-envelope me-1"></i>Email · Aİ</span> orijinala bax</button></div>` : ''}</td>
                         <td class="px-3 text-success fw-bold py-2.5 text-nowrap" style="min-width: 100px;">${priceDisplay}</td>
                         <td class="px-3 fw-medium text-dark py-2.5 text-nowrap" style="min-width: 90px;">${transitDisplay}</td>
                         <td class="px-3 py-2.5 text-nowrap" style="min-width: 160px;">
@@ -4280,7 +4301,7 @@ function loadBulkSubCategories(categoryId) {
             let extraHtml = ""; let extraObj = targetData.extra_details || {};
 
             for (let [k, v] of Object.entries(extraObj)) {
-                if (k === 'submitted' || k === 'is_alternative' || k.toLowerCase() === 'carrier_attachment_name' || k === 'submitted_at') continue;
+                if (k === 'submitted' || k === 'is_alternative' || k.toLowerCase() === 'carrier_attachment_name' || k === 'submitted_at' || k === 'source' || k === 'ai_extracted' || k === 'inbound_email_id' || k === 'transit_range' || k.charAt(0) === '_') continue;
                 if (v !== null && v !== undefined && v !== "" && v !== "null") {
                     if (k === 'carrier_attachment_url') {
                         extraHtml += `<div class="mb-2 p-2.5 rounded-3 border bg-white shadow-sm d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -4378,6 +4399,7 @@ function loadBulkSubCategories(categoryId) {
             try { renderDetailHeader(currentDetailRequestObj); } catch(e) {}
             loadDetailQuotes(requestId); loadDetailCarriersStatus(requestId);
             try { loadRouteHistory(currentDetailRequestObj); } catch(e) {}
+            try { loadInboundForDetail(requestId); } catch(e) {}
         }
 
         // Bu marşrut üçün keçmiş təkliflərin xülasəsi (AZN-lə), cari RFQ çıxarılmaqla
@@ -5278,6 +5300,83 @@ function copyPublicLinkText() {
 
 
 
+
+    // ===== Gələn email cavabları: Aİ ilə çıxarılmış təkliflər və yoxlama gözləyənlər =====
+    function inboundExtractedHtml(ex) {
+        if (!ex || !Array.isArray(ex.offers) || !ex.offers.length) return '<div class="text-muted small">Aİ cavabdan təklif çıxara bilmədi.</div>';
+        const rows = ex.offers.map(o => {
+            const tr = (o.transit_min && o.transit_max && o.transit_min !== o.transit_max) ? `${o.transit_min}-${o.transit_max}` : (o.transit_max || "");
+            return `<li><strong>${escapeHTML(o.price)} ${escapeHTML(o.currency || "?")}</strong>${tr ? ` · ${escapeHTML(tr)} gün` : ""}${o.label ? ` · ${escapeHTML(o.label)}` : ""}</li>`;
+        }).join("");
+        return `<div class="small"><div class="fw-semibold mb-1"><i class="bi bi-stars text-primary me-1"></i>Aİ-nin çıxardığı (yoxlayın):</div><ul class="mb-1">${rows}</ul>${ex.notes ? `<div class="text-muted">${escapeHTML(ex.notes)}</div>` : ""}</div>`;
+    }
+
+    function showInboundEmail(em) {
+        document.getElementById("inboundEmailMeta").textContent = [em.from_name || em.from_addr, em.subject].filter(Boolean).join(" · ");
+        document.getElementById("inboundEmailExtracted").innerHTML = inboundExtractedHtml(em.extracted);
+        document.getElementById("inboundEmailBody").textContent = em.body_text || "";
+        const att = Array.isArray(em.attachments) ? em.attachments : [];
+        document.getElementById("inboundEmailAttachments").textContent = att.length
+            ? "Əlavələr: " + att.map(a => a.name + (a.read ? "" : " (oxunmadı)")).join(", ") : "";
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("inboundEmailModal")).show();
+    }
+
+    async function openInboundEmail(quoteId) {
+        try {
+            const res = await fetch(`/quotes/${quoteId}/email`, { headers: getAuthHeaders() });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { alert(formatErrorDetail(data.detail)); return; }
+            showInboundEmail(data.email);
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
+    let inboundPending = {};
+    async function loadInboundForDetail(requestId) {
+        const box = document.getElementById("detailInboundBox");
+        if (!box) return;
+        box.classList.add("d-none"); box.innerHTML = "";
+        let list = [];
+        try {
+            const res = await fetch(`/requests/${requestId}/inbound`, { headers: getAuthHeaders() });
+            if (res.ok) list = (await res.json()).emails || [];
+        } catch (e) { return; }
+        const pending = list.filter(e => e.status === "needs_review");
+        inboundPending = {}; pending.forEach(e => { inboundPending[e.id] = e; });
+        if (!pending.length) return;
+        box.innerHTML = `<div class="alert alert-warning small mb-0"><div class="fw-bold mb-2"><i class="bi bi-envelope-exclamation me-1"></i>Yoxlama gözləyən cavablar (${pending.length})</div>` +
+            pending.map(e => `<div class="bg-white border rounded-3 p-2 mb-2">
+                <div class="d-flex justify-content-between flex-wrap gap-2">
+                    <div><b>${escapeHTML(e.from_name || e.from_addr)}</b><div class="text-muted">${escapeHTML(e.reason || "")}</div></div>
+                    <div class="d-flex gap-2 align-items-start">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="viewPendingInbound(${e.id})">Oxu</button>
+                        <button type="button" class="btn btn-sm btn-success rounded-pill" onclick="acceptInbound(${e.id})">Təklif kimi qəbul et</button>
+                        <button type="button" class="btn btn-sm btn-outline-danger rounded-pill" onclick="rejectInbound(${e.id})">Rədd et</button>
+                    </div>
+                </div>
+            </div>`).join("") + `</div>`;
+        box.classList.remove("d-none");
+    }
+
+    function viewPendingInbound(id) { if (inboundPending[id]) showInboundEmail(inboundPending[id]); }
+
+    async function acceptInbound(id) {
+        if (!confirm("Aİ-nin çıxardığı təklif cədvələ yazılsın? Əvvəl orijinal mətni oxuyun.")) return;
+        try {
+            const res = await fetch(`/inbound/${id}/accept`, { method: "POST", headers: getAuthHeaders() });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { alert(formatErrorDetail(data.detail)); return; }
+            if (currentDetailRequestId) { loadDetailQuotes(currentDetailRequestId); loadInboundForDetail(currentDetailRequestId); }
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
+    async function rejectInbound(id) {
+        try {
+            const res = await fetch(`/inbound/${id}/reject`, { method: "POST", headers: getAuthHeaders() });
+            if (!res.ok) { const d = await res.json().catch(() => ({})); alert(formatErrorDetail(d.detail)); return; }
+            if (currentDetailRequestId) loadInboundForDetail(currentDetailRequestId);
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
     // ===== Komanda: şirkət hesabı (sahib + üzvlər) =====
     const ACTIVITY_LABELS = {
         rfq_created: "RFQ yaratdı", rfq_sent: "RFQ göndərdi", winner_selected: "qalib seçdi", winner_cancelled: "qalibi ləğv etdi",
@@ -5294,7 +5393,7 @@ function copyPublicLinkText() {
         '[onclick*="selectWinner("]', '[onclick*="cancelWinner("]', '[onclick*="duplicateRfq("]', '[onclick*="editRequestSubject("]',
         '[onclick*="openCustomerQuoteModal("]', '[onclick*="sendSingleReminder("]', '[onclick*="sendSelectedReminders("]',
         '[onclick*="selectAllPendingReminders("]', '[onclick*="clearAllReminderSelection("]', '[onclick*="resendCarrierEmail("]',
-        '[onclick*="submitRfqWithMode("]'
+        '[onclick*="submitRfqWithMode("]', '[onclick*="acceptInbound("]', '[onclick*="rejectInbound("]'
     ];
 
     function applyManagerMode(on) {
@@ -5683,6 +5782,13 @@ function copyPublicLinkText() {
             "Təklif üçün son tarix": "Offer deadline",
             "Təkrarla": "Duplicate",
             "Komanda": "Team",
+            "Daşıyıcının cavabı": "Carrier's reply",
+            "Orijinal email mətni": "Original email text",
+            "orijinala bax": "view original",
+            "Yoxlama gözləyən cavablar": "Replies waiting for review",
+            "Oxu": "Read",
+            "Təklif kimi qəbul et": "Accept as an offer",
+            "Rədd et": "Reject",
             "İdarəçi rejimi:": "Manager mode:",
             "prosesləri (sorğular, gələn təkliflər, hesabatlar) izləyirsiniz. Sorğuları komanda üzvləri yaradır və idarə edir.": "you follow the processes (requests, incoming offers, reports). Requests are created and managed by team members.",
             "Necə işləyir:": "How it works:",
