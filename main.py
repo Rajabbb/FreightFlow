@@ -3678,7 +3678,8 @@ def _strong_password(password: str) -> bool:
 def _email_in_use(email: str) -> bool:
     if (supabase.table("customers").select("id").eq("email", email).execute().data or []):
         return True
-    return bool(supabase.table("carriers").select("id").eq("email", email).execute().data or [])
+    # carriers cədvəli yalnız ünvan dəftəridir (giriş hesabı deyil): eyni e-poçt orada ola bilər
+    return False
 
 
 class TeamInviteRequest(BaseModel):
@@ -3964,14 +3965,11 @@ class ResetPasswordRequest(BaseModel):
 
 
 def _find_account_for_reset(email: str):
-    """E-poçta uyğun hesab: müştəri (sahib və ya üzv), yoxsa daşıyıcı. Tapılmasa (None, None)."""
+    """E-poçta uyğun hesab: müştəri (sahib və ya üzv). Daşıyıcılar cədvəli yalnız ünvan dəftəridir. Tapılmasa (None, None)."""
     for candidate in dict.fromkeys([email, email.lower()]):
         c = supabase.table("customers").select("id, email, name").eq("email", candidate).execute().data or []
         if c:
             return "customer", c[0]
-        k = supabase.table("carriers").select("id, email, company_name").eq("email", candidate).execute().data or []
-        if k:
-            return "carrier", k[0]
     return None, None
 
 
