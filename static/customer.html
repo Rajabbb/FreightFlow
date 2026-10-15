@@ -855,8 +855,9 @@
                     <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 py-2" style="min-width: 210px; font-size: 13.5px;">
                         <li><button class="dropdown-item py-2" type="button" onclick="openChangeEmailModal()"><i class="bi bi-envelope me-2 text-secondary"></i> E-poçtu Dəyiş</button></li>
                         <li><button class="dropdown-item py-2" type="button" onclick="openChangePasswordModal()"><i class="bi bi-key me-2 text-secondary"></i> Şifrəni Dəyiş</button></li>
+                        <li><button class="dropdown-item py-2" type="button" onclick="openTeamModal()"><i class="bi bi-people me-2 text-secondary"></i> Komanda</button></li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><button class="dropdown-item py-2 text-danger" type="button" onclick="openDeleteAccountModal()"><i class="bi bi-trash3 me-2"></i> Hesabı sil</button></li>
+                        <li id="deleteAccountItem"><button class="dropdown-item py-2 text-danger" type="button" onclick="openDeleteAccountModal()"><i class="bi bi-trash3 me-2"></i> Hesabı sil</button></li>
                     </ul>
                 </div>
                 <button onclick="logout()" class="btn btn-outline-danger btn-sm px-2.5 py-1.5 rounded-pill text-nowrap" style="font-size: 12.5px;">
@@ -867,6 +868,52 @@
     </nav>
 
     <div id="subscriptionBanner" class="d-none"></div>
+    <div id="managerBanner" class="d-none">
+        <div class="alert alert-primary rounded-0 border-0 mb-0 d-flex flex-wrap align-items-center justify-content-between gap-2 small">
+            <span><i class="bi bi-eye me-1"></i><strong>İdarəçi rejimi:</strong> prosesləri (sorğular, gələn təkliflər, hesabatlar) izləyirsiniz. Sorğuları komanda üzvləri yaradır və idarə edir.</span>
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" onclick="openTeamModal()">Komanda</button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="teamModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title fw-bold"><i class="bi bi-people me-2 text-primary"></i>Komanda</h5>
+                        <p class="text-muted small mb-0" id="teamSeatsLine"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Bağla"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-light border small mb-3">
+                        <b>Necə işləyir:</b> sahib hesabı və komandanı idarə edir, prosesləri izləyir. Sorğuları üzvlər yaradır və göndərir.
+                        Üzvü olmayan sahib hesabdan əvvəlki kimi istifadə edə bilər; ilk üzv qoşulandan sonra idarəçi rejiminə keçir.
+                    </div>
+                    <div id="teamInviteBox" class="d-none mb-4">
+                        <label class="form-label fw-semibold small">Kolleqanı dəvət edin</label>
+                        <div class="row g-2">
+                            <div class="col-12 col-md-5"><input type="text" id="teamInviteName" class="form-control form-control-sm" maxlength="100" placeholder="Ad Soyad (məcburi deyil)"></div>
+                            <div class="col-12 col-md-5"><input type="email" id="teamInviteEmail" class="form-control form-control-sm" maxlength="200" placeholder="kolleqa@sirket.az"></div>
+                            <div class="col-12 col-md-2 d-grid"><button type="button" class="btn btn-primary btn-sm fw-bold" id="teamInviteBtn" onclick="inviteTeamMember()">Dəvət et</button></div>
+                        </div>
+                        <div id="teamInviteMsg" class="small mt-2"></div>
+                    </div>
+
+                    <h6 class="fw-bold small text-uppercase text-muted">İstifadəçilər</h6>
+                    <div id="teamMembers" class="mb-4"></div>
+
+                    <div id="teamInvitesBlock" class="d-none mb-4">
+                        <h6 class="fw-bold small text-uppercase text-muted">Gözləyən dəvətlər</h6>
+                        <div id="teamInvites"></div>
+                    </div>
+
+                    <h6 class="fw-bold small text-uppercase text-muted">Son fəaliyyət</h6>
+                    <div id="teamActivity" class="small"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="plansModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
@@ -3945,6 +3992,7 @@ function loadBulkSubCategories(categoryId) {
                                 <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${formattedDeadline}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
                                 ${offerDueOf(req) ? `<div class="col-12 col-lg-6"><i class="bi bi-hourglass-split me-1 text-primary"></i> Təklif son tarixi: ${offerDueHtml(req)}</div>` : ''}
+                                ${(req.created_by_name && window.teamHasOthers) ? `<div class="col-12 col-lg-6"><i class="bi bi-person me-1 text-primary"></i> Yaradan: <strong class="text-dark">${escapeHTML(req.created_by_name)}</strong></div>` : ''}
                             </div>
                         </div>
                         <div id="quotes-for-${req.id}" class="mt-2 d-flex align-items-center flex-wrap gap-2">
@@ -5229,6 +5277,171 @@ function copyPublicLinkText() {
     })();
 
 
+
+    // ===== Komanda: şirkət hesabı (sahib + üzvlər) =====
+    const ACTIVITY_LABELS = {
+        rfq_created: "RFQ yaratdı", rfq_sent: "RFQ göndərdi", winner_selected: "qalib seçdi", winner_cancelled: "qalibi ləğv etdi",
+        member_invited: "dəvət göndərdi", member_joined: "komandaya qoşuldu", member_removed: "üzvü çıxardı", invite_cancelled: "dəvəti ləğv etdi"
+    };
+    let teamState = null;
+    window.teamHasOthers = false;
+    window.managerMode = false;
+
+    // İdarəçi rejimi: komandası olan şirkətin sahibi prosesləri izləyir və hesabı idarə edir; işi üzvlər görür.
+    // Backend bütün yazma əməliyyatlarını ayrıca dayandırır (423), burada yalnız düymələr gizlədilir.
+    const MANAGER_HIDE_SELECTORS = [
+        "#tab-builder-btn", "#tab-vendors-btn", "#discoverTabItem", "#aiLaunchBtn",
+        '[onclick*="selectWinner("]', '[onclick*="cancelWinner("]', '[onclick*="duplicateRfq("]', '[onclick*="editRequestSubject("]',
+        '[onclick*="openCustomerQuoteModal("]', '[onclick*="sendSingleReminder("]', '[onclick*="sendSelectedReminders("]',
+        '[onclick*="selectAllPendingReminders("]', '[onclick*="clearAllReminderSelection("]', '[onclick*="resendCarrierEmail("]',
+        '[onclick*="submitRfqWithMode("]'
+    ];
+
+    function applyManagerMode(on) {
+        window.managerMode = !!on;
+        let st = document.getElementById("managerModeStyle");
+        if (!st) { st = document.createElement("style"); st.id = "managerModeStyle"; document.head.appendChild(st); }
+        st.textContent = on ? MANAGER_HIDE_SELECTORS.join(",\n") + " { display: none !important; }" : "";
+        const banner = document.getElementById("managerBanner");
+        if (banner) banner.classList.toggle("d-none", !on);
+        if (on) {
+            const active = document.querySelector("#mainAppTabs .nav-link.active");
+            if (active && (active.id === "tab-builder-btn" || active.id === "tab-vendors-btn" || active.id === "tab-discover-btn")) {
+                const dash = document.getElementById("tab-dashboard-btn"); if (dash) dash.click();
+            }
+        }
+    }
+
+    function teamEsc(v) { return escapeHTML(v == null ? "" : String(v)); }
+
+    async function fetchTeam() {
+        try {
+            const res = await fetch("/api/team", { headers: getAuthHeaders() });
+            if (!res.ok) return null;
+            teamState = await res.json();
+            window.teamHasOthers = !!(teamState && (teamState.members.length > 0 || (teamState.me && !teamState.me.is_owner)));
+            applyManagerMode(!!(teamState && teamState.me && teamState.me.is_owner && teamState.members.length > 0));
+            return teamState;
+        } catch (e) { return null; }
+    }
+
+    function renderTeam() {
+        const t = teamState;
+        if (!t) return;
+        const isOwner = t.me && t.me.is_owner;
+        const seats = t.seats || {};
+        document.getElementById("teamSeatsLine").textContent =
+            (seats.plan ? seats.plan + " planı: " : "") + "üzv yeri " + (seats.used || 0) + " / " + (seats.limit == null ? "limitsiz" : seats.limit) + " (sahib sayılmır)";
+        document.getElementById("teamInviteBox").classList.toggle("d-none", !isOwner);
+
+        const rows = [];
+        rows.push(`<div class="d-flex justify-content-between align-items-center border rounded-3 px-3 py-2 mb-2">
+            <div><div class="fw-semibold">${teamEsc(t.owner.name)} <span class="badge bg-primary bg-opacity-10 text-primary ms-1">Sahib</span></div>
+            <div class="text-muted small">${teamEsc(t.owner.email)}</div></div></div>`);
+        t.members.forEach(m => {
+            const removeBtn = isOwner ? `<button type="button" class="btn btn-sm btn-outline-danger rounded-pill" onclick="removeTeamMember(${m.id})">Çıxar</button>` : "";
+            const me = t.me && Number(t.me.id) === Number(m.id) ? ' <span class="badge bg-success bg-opacity-10 text-success ms-1">Siz</span>' : "";
+            rows.push(`<div class="d-flex justify-content-between align-items-center border rounded-3 px-3 py-2 mb-2">
+                <div><div class="fw-semibold">${teamEsc(m.name)}${me} <span class="badge bg-light text-secondary border ms-1">Üzv</span></div>
+                <div class="text-muted small">${teamEsc(m.email)}</div></div>${removeBtn}</div>`);
+        });
+        document.getElementById("teamMembers").innerHTML = rows.join("");
+
+        const invBlock = document.getElementById("teamInvitesBlock");
+        invBlock.classList.toggle("d-none", !t.invites.length);
+        document.getElementById("teamInvites").innerHTML = t.invites.map(i => {
+            const actions = isOwner ? `<div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill" onclick="resendTeamInvite(${i.id})">Yenidən göndər</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill" onclick="cancelTeamInvite(${i.id})">Ləğv et</button></div>` : "";
+            return `<div class="d-flex justify-content-between align-items-center border rounded-3 px-3 py-2 mb-2 flex-wrap gap-2">
+                <div><div class="fw-semibold">${teamEsc(i.name || i.email)}</div><div class="text-muted small">${teamEsc(i.email)} · gözləyir</div></div>${actions}</div>`;
+        }).join("");
+    }
+
+    async function loadTeamActivity() {
+        const box = document.getElementById("teamActivity");
+        try {
+            const res = await fetch("/api/team/activity?limit=30", { headers: getAuthHeaders() });
+            const data = res.ok ? await res.json() : { activity: [] };
+            if (!data.activity.length) { box.innerHTML = '<span class="text-muted">Hələ fəaliyyət yoxdur.</span>'; return; }
+            box.innerHTML = data.activity.map(a => {
+                const when = a.created_at ? formatDateTime(a.created_at, true, false) : "";
+                const what = ACTIVITY_LABELS[a.action] || a.action;
+                return `<div class="py-1 border-bottom"><b>${teamEsc(a.user_name || "—")}</b> ${teamEsc(what)}${a.detail ? ' <span class="text-muted">· ' + teamEsc(a.detail) + '</span>' : ""} <span class="text-muted float-end">${teamEsc(when)}</span></div>`;
+            }).join("");
+        } catch (e) { box.innerHTML = ""; }
+    }
+
+    async function openTeamModal() {
+        await fetchTeam();
+        if (!teamState) { alert("Komanda məlumatı yüklənmədi."); return; }
+        renderTeam();
+        loadTeamActivity();
+        document.getElementById("teamInviteMsg").textContent = "";
+        bootstrap.Modal.getOrCreateInstance(document.getElementById("teamModal")).show();
+    }
+
+    async function inviteTeamMember() {
+        const email = document.getElementById("teamInviteEmail").value.trim();
+        const name = document.getElementById("teamInviteName").value.trim();
+        const msg = document.getElementById("teamInviteMsg");
+        const btn = document.getElementById("teamInviteBtn");
+        if (!email || email.indexOf("@") === -1) { msg.className = "small mt-2 text-danger"; msg.textContent = "E-poçt ünvanını düzgün yazın."; return; }
+        if (teamState && teamState.members.length === 0 && teamState.invites.length === 0) {
+            const ok = confirm("Diqqət: ilk üzv komandaya qoşulandan sonra hesabınız idarəçi rejiminə keçəcək. Siz prosesləri izləyəcək və komandanı idarə edəcəksiniz, sorğuları isə üzvlər yaradacaq. Davam edilsin?");
+            if (!ok) return;
+        }
+        btn.disabled = true;
+        msg.className = "small mt-2 text-muted"; msg.textContent = "Dəvət göndərilir...";
+        try {
+            const res = await fetch("/api/team/invite", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ email: email, name: name }) });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { msg.className = "small mt-2 text-danger"; msg.textContent = formatErrorDetail(data.detail); return; }
+            msg.className = "small mt-2 " + (data.email_sent ? "text-success" : "text-warning");
+            msg.textContent = data.message || "Dəvət göndərildi.";
+            if (!data.email_sent && data.invite_link) { msg.innerHTML += ` <br><span class="user-select-all">${teamEsc(data.invite_link)}</span>`; }
+            document.getElementById("teamInviteEmail").value = ""; document.getElementById("teamInviteName").value = "";
+            await fetchTeam(); renderTeam(); loadTeamActivity();
+        } catch (e) { msg.className = "small mt-2 text-danger"; msg.textContent = "Serverlə əlaqə qurulmadı!"; }
+        finally { btn.disabled = false; }
+    }
+
+    async function removeTeamMember(id) {
+        if (!confirm("Bu istifadəçi komandadan çıxarılsın? Onun girişi dərhal bağlanacaq; yaratdığı sorğular şirkətdə qalacaq.")) return;
+        try {
+            const res = await fetch("/api/team/members/" + id, { method: "DELETE", headers: getAuthHeaders() });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { alert(formatErrorDetail(data.detail)); return; }
+            await fetchTeam(); renderTeam(); loadTeamActivity();
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
+    async function cancelTeamInvite(id) {
+        try {
+            const res = await fetch("/api/team/invites/" + id, { method: "DELETE", headers: getAuthHeaders() });
+            if (!res.ok) { const d = await res.json().catch(() => ({})); alert(formatErrorDetail(d.detail)); return; }
+            await fetchTeam(); renderTeam(); loadTeamActivity();
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
+    async function resendTeamInvite(id) {
+        try {
+            const res = await fetch("/api/team/invites/" + id + "/resend", { method: "POST", headers: getAuthHeaders() });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) { alert(formatErrorDetail(data.detail)); return; }
+            alert(data.email_sent ? "Dəvət yenidən göndərildi." : "E-poçt göndərilmədi. Linki özünüz göndərin: " + (data.invite_link || ""));
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
+    // Üzv hesabı silə bilmir; sorğu kartlarında kim yaratdığı komanda olanda göstərilir
+    document.addEventListener("DOMContentLoaded", function () {
+        if (activeUser && activeUser.is_member) {
+            const del = document.getElementById("deleteAccountItem");
+            if (del) del.classList.add("d-none");
+        }
+        fetchTeam().then(() => { if (typeof filterRequests === "function" && globalRequestsCache && globalRequestsCache.length) filterRequests(); });
+    });
+
     // ===== Plan, demo və ödəniş ekranı =====
     // Mərhələ yazıları: uzun əməliyyatda "Yüklənir" əvəzinə hazırkı alt prosesin adı göstərilir
     function startProgressSteps(el, steps, intervalMs) {
@@ -5460,6 +5673,31 @@ function copyPublicLinkText() {
             "Bazada var": "In your base",
             "Təklif üçün son tarix": "Offer deadline",
             "Təkrarla": "Duplicate",
+            "Komanda": "Team",
+            "İdarəçi rejimi:": "Manager mode:",
+            "prosesləri (sorğular, gələn təkliflər, hesabatlar) izləyirsiniz. Sorğuları komanda üzvləri yaradır və idarə edir.": "you follow the processes (requests, incoming offers, reports). Requests are created and managed by team members.",
+            "Necə işləyir:": "How it works:",
+            "sahib hesabı və komandanı idarə edir, prosesləri izləyir. Sorğuları üzvlər yaradır və göndərir.": "the owner manages the account and the team and follows the processes. Members create and send the requests.",
+            "Üzvü olmayan sahib hesabdan əvvəlki kimi istifadə edə bilər; ilk üzv qoşulandan sonra idarəçi rejiminə keçir.": "An owner without members can use the account as before; after the first member joins, it switches to manager mode.",
+            "Kolleqanı dəvət edin": "Invite a colleague",
+            "Ad Soyad (məcburi deyil)": "Full name (optional)",
+            "Dəvət et": "Invite",
+            "İstifadəçilər": "Users",
+            "Gözləyən dəvətlər": "Pending invitations",
+            "Son fəaliyyət": "Recent activity",
+            "Hələ fəaliyyət yoxdur.": "No activity yet.",
+            "Sahib": "Owner",
+            "Üzv": "Member",
+            "Siz": "You",
+            "Çıxar": "Remove",
+            "Yenidən göndər": "Resend",
+            "Ləğv et": "Cancel",
+            "gözləyir": "pending",
+            "Yaradan:": "Created by:",
+            "E-poçt ünvanını düzgün yazın.": "Enter a valid email address.",
+            "Dəvət göndərilir...": "Sending invitation...",
+            "Dəvət göndərildi.": "Invitation sent.",
+            "Bu istifadəçi komandadan çıxarılsın? Onun girişi dərhal bağlanacaq; yaratdığı sorğular şirkətdə qalacaq.": "Remove this user from the team? Their access is closed immediately; the requests they created stay in the company.",
             "Başlıq (qrup)": "Subject (group)",
             "(məcburi deyil)": "(optional)",
             "məs: Sifarişçi: Azersun, Gürcüstan yükləri, Layihə A": "e.g. Client: Azersun, Georgia shipments, Project A",
