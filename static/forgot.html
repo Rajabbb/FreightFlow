@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Şifrəni bərpa et | Arachi</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="icon" type="image/png" href="/static/arachi-logo.png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand: #0037B8; --brand-2: #2F63E0; --line: #DCE4F7; --text: #0B1433; --muted: #56627F; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text); min-height: 100vh;
+            display: flex; align-items: center; justify-content: center; padding: 24px 12px;
+            background: radial-gradient(900px 480px at 100% -10%, rgba(77, 124, 242, 0.12), transparent 65%), #F6F8FE;
+        }
+        .card-box { background: #fff; border-radius: 26px; padding: 36px; width: 100%; max-width: 480px; border: 1px solid var(--line); box-shadow: 0 30px 60px -36px rgba(0, 55, 184, 0.5); }
+        .logo { height: 44px; width: 44px; object-fit: cover; border-radius: 13px; }
+        .form-label { font-weight: 600; font-size: 13px; }
+        .form-control { padding: 11px 14px; border-radius: 13px; border: 1px solid var(--line); background: #F8FAFF; font-size: 14px; font-weight: 500; }
+        .form-control:focus { background: #fff; border-color: var(--brand); box-shadow: 0 0 0 4px rgba(0, 55, 184, 0.10); }
+        .btn-primary { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-2) 100%); border: none; padding: 13px; border-radius: 14px; font-weight: 700; }
+        .btn-primary:disabled { background: linear-gradient(135deg, #7F96D6, #9AB0EA); }
+        @media (max-width: 576px) { .card-box { padding: 24px 18px; border-radius: 22px; } }
+    </style>
+</head>
+<body>
+    <div class="card-box">
+        <div class="text-center mb-4">
+            <img src="/static/arachi-logo.png" alt="Arachi" class="logo" onerror="this.style.display='none'">
+            <h4 class="fw-bold mt-3 mb-1">Şifrəni bərpa et</h4>
+            <p class="text-muted small mb-0">E-poçt ünvanınızı yazın, şifrəni yeniləmək üçün link göndərək.</p>
+        </div>
+
+        <form id="forgotForm" onsubmit="submitForgot(event)" novalidate>
+            <div class="mb-3">
+                <label class="form-label" for="email">E-poçt</label>
+                <input type="email" class="form-control" id="email" required autocomplete="email" placeholder="info@shirketiniz.com">
+            </div>
+            <button type="submit" class="btn btn-primary w-100" id="submitBtn">Bərpa linkini göndər</button>
+            <div id="errorMsg" class="text-danger small mt-3 text-center d-none"></div>
+        </form>
+
+        <div id="sent" class="d-none">
+            <div class="alert alert-success small" id="sentText"></div>
+        </div>
+
+        <div class="text-center mt-4 small"><a href="/login" class="fw-semibold text-decoration-none" style="color: var(--brand);">← Girişə qayıt</a></div>
+    </div>
+
+    <script>
+        async function submitForgot(e) {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const btn = document.getElementById('submitBtn');
+            const err = document.getElementById('errorMsg');
+            err.classList.add('d-none');
+            if (!email || email.indexOf('@') === -1) { err.textContent = 'E-poçt ünvanını düzgün yazın.'; err.classList.remove('d-none'); return; }
+            btn.disabled = true; btn.textContent = 'Göndərilir...';
+            try {
+                const res = await fetch('/api/auth/forgot-password', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.status === 429) {
+                    err.textContent = 'Çox sorğu göndərdiniz. Bir az sonra yenidən cəhd edin.'; err.classList.remove('d-none');
+                    btn.disabled = false; btn.textContent = 'Bərpa linkini göndər';
+                    return;
+                }
+                if (res.ok) {
+                    document.getElementById('forgotForm').classList.add('d-none');
+                    document.getElementById('sentText').textContent = data.message || 'Bərpa linki göndərildi.';
+                    document.getElementById('sent').classList.remove('d-none');
+                } else {
+                    err.textContent = typeof data.detail === 'string' ? data.detail : 'Xəta baş verdi.'; err.classList.remove('d-none');
+                    btn.disabled = false; btn.textContent = 'Bərpa linkini göndər';
+                }
+            } catch (e2) {
+                err.textContent = 'Sistemlə əlaqə kəsildi. İnterneti yoxlayın.'; err.classList.remove('d-none');
+                btn.disabled = false; btn.textContent = 'Bərpa linkini göndər';
+            }
+        }
+    </script>
+</body>
+</html>
