@@ -350,9 +350,41 @@
             });
         }
 
+        // --- YÜKÜN ADI: seçilmiş dilə uyğun göstərilir (məs. alma ↔ apple) ---
+        let cargoOriginal = "";
+        const cargoTr = {};   // dil -> tərcümə (yalnız server cavabı gələndən sonra)
+        function renderCargoName() {
+            const el = document.getElementById("cargo_type_text");
+            if (!el) return;
+            const tr = cargoTr[currentLang];
+            el.textContent = "";
+            if (!cargoOriginal) { el.textContent = "Not specified"; return; }
+            if (tr && tr.toLowerCase() !== cargoOriginal.toLowerCase()) {
+                el.appendChild(document.createTextNode(tr));
+                const orig = document.createElement("span");
+                orig.className = "ml-1 text-xs font-normal text-slate-400";
+                orig.textContent = "(" + cargoOriginal + ")";
+                el.appendChild(orig);
+            } else {
+                el.textContent = cargoOriginal;
+            }
+        }
+        async function ensureCargoTranslation() {
+            const lang = currentLang;
+            if (!cargoOriginal || !token || cargoTr[lang] !== undefined) { renderCargoName(); return; }
+            try {
+                const r = await fetch(`/quotes/translate-cargo/${encodeURIComponent(token)}?lang=${lang}`);
+                if (!r.ok) return;
+                const d = await r.json();
+                if (typeof d.text === "string" && d.text.trim()) cargoTr[lang] = d.text.trim();
+            } catch (e) { /* tərcümə alınmadısa orijinal ad qalır */ }
+            renderCargoName();
+        }
+
         // --- TƏRCÜMƏ FUNKSİYASI ---
         function changeLanguage(lang) {
             currentLang = lang;
+            ensureCargoTranslation();
             
             // 1. Statik mətnləri tərcümə et
             document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -557,8 +589,9 @@
                 const weightVolEl = document.getElementById("weight_volume_text");
                 if (weightVolEl) weightVolEl.innerText = `${escapeHTML(req.weight_kg || 0)} kg / ${escapeHTML(volumeText)}`;
                 
-                const cargoTypeEl = document.getElementById("cargo_type_text");
-                if (cargoTypeEl) cargoTypeEl.innerText = escapeHTML(req.cargo_type || "Not specified");
+                cargoOriginal = String(req.cargo_type || "").trim();
+                renderCargoName();
+                ensureCargoTranslation();
 
                 let loadingDateVal = null;
                 let offerDueMatch = null;
