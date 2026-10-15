@@ -5440,6 +5440,10 @@ function copyPublicLinkText() {
             if (del) del.classList.add("d-none");
         }
         fetchTeam().then(() => { if (typeof filterRequests === "function" && globalRequestsCache && globalRequestsCache.length) filterRequests(); });
+        // Üzv qoşulanda/çıxarılanda açıq qalmış panel də dəyişsin: pəncərəyə qayıdanda və 30 saniyədən bir yenilənir
+        setInterval(function () { if (!document.hidden) fetchTeam(); }, 30000);
+        document.addEventListener("visibilitychange", function () { if (!document.hidden) fetchTeam(); });
+        window.addEventListener("focus", function () { fetchTeam(); });
     });
 
     // ===== Plan, demo və ödəniş ekranı =====
@@ -5577,6 +5581,11 @@ function copyPublicLinkText() {
                 if (r.status === 402) {
                     const body = await r.clone().json().catch(() => ({}));
                     if (typeof body.detail === "string" && /demo/i.test(body.detail)) showPaymentRequired();
+                }
+                if (r.status === 423) {
+                    // Komanda artıq var: hesab idarəçi rejiminə keçib (səhifə köhnə qalmışdı), panel dərhal yenilənir
+                    const body = await r.clone().json().catch(() => ({}));
+                    if (body && body.manager_mode && typeof applyManagerMode === "function") applyManagerMode(true);
                 }
             } catch (e) {}
             return r;
