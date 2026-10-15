@@ -3,6 +3,7 @@ import uuid
 import traceback
 import io
 import json
+import hashlib
 import hmac
 import time
 import secrets
@@ -164,6 +165,40 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+_ACCT_CACHE: Dict[int, Any] = {}      # hesab id -> (bitmə vaxtı, məlumat)
+_ACCT_TTL_SECONDS = 15
+_TV_COLUMN_MISSING = False
+
+
+def _forget_account_cache(account_id: int) -> None:
+    _ACCT_CACHE.pop(int(account_id), None)
+
+
+def _account_info(account_id: int) -> Optional[Dict[str, Any]]:
+    """Hesabın şirkət bağlantısı və token versiyası (15 san keşlə). Baza xətasında None; sətir yoxdursa {'missing': True}."""
+    global _TV_COLUMN_MISSING
+    now = time.time()
+    hit = _ACCT_CACHE.get(account_id)
+    if hit and hit[0] > now:
+        return hit[1]
+    try:
+        cols = "id, company_id" if _TV_COLUMN_MISSING else "id, company_id, token_version"
+        try:
+            rows = supabase.table("customers").select(cols).eq("id", account_id).execute().data or []
+        except Exception as col_err:
+            if not _TV_COLUMN_MISSING and "token_version" in str(col_err):
+                _TV_COLUMN_MISSING = True   # miqrasiya hələ işlənməyib: versiya yoxlanılmır
+                rows = supabase.table("customers").select("id, company_id").eq("id", account_id).execute().data or []
+            else:
+                raise
+    except Exception:
+        return None
+    info: Dict[str, Any] = {"missing": True} if not rows else {"company_id": rows[0].get("company_id"), "tv": int(rows[0].get("token_version") or 0)}
+    if len(_ACCT_CACHE) > 5000: _ACCT_CACHE.clear()
+    _ACCT_CACHE[account_id] = (now + _ACCT_TTL_SECONDS, info)
+    return info
+
+
 def _decode_token(credentials: HTTPAuthorizationCredentials):
     try:
         payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
@@ -171,14 +206,21 @@ def _decode_token(credentials: HTTPAuthorizationCredentials):
         raise HTTPException(status_code=401, detail="Sessiyanın vaxtı bitib. Zəhmət olmasa yenidən giriş edin.")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Etibarsız token. Sistemə giriş qadağandır!")
-    # Komanda üzvünün tokeni (uid): üzv komandadan çıxarılıbsa token 7 gün gözləmədən dərhal keçərsiz olur
-    if payload.get("member") and payload.get("uid"):
+    # Müştəri tokenləri: (1) komanda üzvü çıxarılıbsa, (2) şifrə bərpa edilibsə token 7 gün gözləmədən dərhal keçərsiz olur
+    if payload.get("role") == "customer":
+        acct_id = payload.get("uid") if payload.get("member") else payload.get("sub")
         try:
-            rows = supabase.table("customers").select("id, company_id").eq("id", int(payload["uid"])).execute().data or []
-        except Exception:
-            raise HTTPException(status_code=503, detail="Sistem müvəqqəti əlçatmazdır. Bir az sonra yenidən cəhd edin.")
-        if not rows or str(rows[0].get("company_id")) != str(payload.get("sub")):
-            raise HTTPException(status_code=401, detail="Bu hesab komandadan çıxarılıb. Yenidən giriş edin.")
+            acct_id = int(acct_id)
+        except (TypeError, ValueError):
+            return payload
+        info = _account_info(acct_id)
+        if payload.get("member"):
+            if info is None:
+                raise HTTPException(status_code=503, detail="Sistem müvəqqəti əlçatmazdır. Bir az sonra yenidən cəhd edin.")
+            if info.get("missing") or str(info.get("company_id")) != str(payload.get("sub")):
+                raise HTTPException(status_code=401, detail="Bu hesab komandadan çıxarılıb. Yenidən giriş edin.")
+        if info and not info.get("missing") and int(payload.get("tv") or 0) != int(info.get("tv") or 0):
+            raise HTTPException(status_code=401, detail="Şifrə dəyişdirilib. Təhlükəsizlik üçün yenidən daxil olun.")
     return payload
 
 def verify_any_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -793,6 +835,8 @@ def robots_txt():
         "Disallow: /static/uploads/\n"
         "Disallow: /static/pages/\n"
         "Disallow: /auth/\n"
+        "Disallow: /forgot-password\n"
+        "Disallow: /reset-password\n"
         "Disallow: /carriers/\n"
         "Disallow: /requests/\n"
         "Disallow: /quotes/\n"
@@ -3539,6 +3583,7 @@ async def login(request: Request, data: LoginRequest):
                 "sub": str(owner["id"]), "role": "customer", "email": user["email"], "uname": user.get("name") or "",
                 "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access, "plan": plan
             }
+            claims["tv"] = int(user.get("token_version") or 0)
             if company_id:
                 claims.update({"uid": str(user["id"]), "member": True})
             token = create_access_token(claims)
@@ -3822,6 +3867,7 @@ def team_member_remove(member_id: int, current_user: dict = Depends(verify_token
         raise HTTPException(status_code=404, detail="Üzv tapılmadı.")
     supabase.table("customers").delete().eq("id", member_id).eq("company_id", company_id).execute()
     _forget_manager_cache(company_id)
+    _forget_account_cache(member_id)
     _log_activity(current_user, "member_removed", "member", member_id, rows[0].get("email") or "")
     return {"status": "success", "message": "Üzv komandadan çıxarıldı. Onun girişi dərhal bağlandı."}
 
@@ -3894,6 +3940,161 @@ def team_join(request: Request, data: TeamJoinRequest):
     _forget_manager_cache(owner["id"])
     _log_activity({"sub": owner["id"], "uid": member_id, "uname": name}, "member_joined", "member", member_id, email)
     return {"status": "success", "message": "Komandaya qoşuldunuz. İndi daxil ola bilərsiniz."}
+
+
+# ==========================================
+# ŞİFRƏ BƏRPASI
+# ==========================================
+RESET_TTL_MINUTES = 60
+RESET_MAX_PER_HOUR = 3
+RESET_GENERIC_MESSAGE = "Bu e-poçt ilə hesab varsa, şifrə bərpası linki göndərildi. Qutunuzu (və spam qovluğunu) yoxlayın. Link 1 saat etibarlıdır."
+
+
+def _hash_reset_token(token: str) -> str:
+    return hashlib.sha256((token or "").encode("utf-8")).hexdigest()
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
+
+
+def _find_account_for_reset(email: str):
+    """E-poçta uyğun hesab: müştəri (sahib və ya üzv), yoxsa daşıyıcı. Tapılmasa (None, None)."""
+    for candidate in dict.fromkeys([email, email.lower()]):
+        c = supabase.table("customers").select("id, email, name").eq("email", candidate).execute().data or []
+        if c:
+            return "customer", c[0]
+        k = supabase.table("carriers").select("id, email, company_name").eq("email", candidate).execute().data or []
+        if k:
+            return "carrier", k[0]
+    return None, None
+
+
+async def _send_reset_email(to_email: str, token: str) -> None:
+    link = f"{BASE_URL}/reset-password?token={token}"
+    html = (
+        '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:auto;color:#0b1433">'
+        '<h2 style="color:#0037b8">Şifrənin bərpası</h2>'
+        '<p>Arachi hesabınız üçün şifrə bərpası istənildi. Yeni şifrə təyin etmək üçün düyməyə basın.</p>'
+        f'<p><a href="{_html_escape(link)}" style="display:inline-block;background:#0037b8;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Şifrəni yenilə</a></p>'
+        f'<p style="color:#56627f;font-size:13px">Link {RESET_TTL_MINUTES} dəqiqə etibarlıdır və yalnız bir dəfə işləyir. Düymə işləmirsə: {_html_escape(link)}</p>'
+        '<p style="color:#8893ae;font-size:12px">Bu sorğunu siz etməmisinizsə, e-poçtu nəzərə almayın: şifrəniz dəyişməyəcək.</p></div>'
+    )
+    await fastmail.send_message(MessageSchema(subject="Arachi: şifrənin bərpası", recipients=[to_email], body=html, subtype=MessageType.html, from_name="Arachi"))
+
+
+async def _create_and_send_reset(email: str) -> None:
+    """Arxa planda işləyir: cavab müddəti hesabın mövcudluğunu açmasın. Xəta istifadəçiyə göstərilmir."""
+    try:
+        kind, row = _find_account_for_reset(email)
+        if not row:
+            return
+        recent = supabase.table("password_resets").select("id, created_at").eq("account_kind", kind).eq("account_id", row["id"]).execute().data or []
+        cutoff = datetime.utcnow() - timedelta(hours=1)
+        if sum(1 for r in recent if (_parse_ts(r.get("created_at")) or datetime.min) > cutoff) >= RESET_MAX_PER_HOUR:
+            return
+        token = secrets.token_urlsafe(32)
+        supabase.table("password_resets").insert({
+            "account_kind": kind, "account_id": row["id"], "token_hash": _hash_reset_token(token), "created_at": datetime.utcnow().isoformat(),
+            "expires_at": (datetime.utcnow() + timedelta(minutes=RESET_TTL_MINUTES)).isoformat(),
+        }).execute()
+        await _send_reset_email(str(row.get("email") or email), token)
+    except Exception:
+        traceback.print_exc()
+
+
+@app.post("/api/auth/forgot-password")
+@limiter.limit("5/hour")
+async def forgot_password(request: Request, data: ForgotPasswordRequest, background_tasks: BackgroundTasks):
+    background_tasks.add_task(_create_and_send_reset, str(data.email).strip())
+    return {"status": "success", "message": RESET_GENERIC_MESSAGE}
+
+
+def _valid_reset(token: str) -> Optional[Dict[str, Any]]:
+    if not token or len(token) > 200:
+        return None
+    rows = supabase.table("password_resets").select("*").eq("token_hash", _hash_reset_token(token)).execute().data or []
+    if not rows or rows[0].get("used_at"):
+        return None
+    exp = _parse_ts(rows[0].get("expires_at"))
+    if exp is not None and exp <= datetime.utcnow():
+        return None
+    return rows[0]
+
+
+@app.get("/api/auth/reset-check")
+@limiter.limit("30/minute")
+def reset_check(request: Request, token: str = ""):
+    return {"valid": _valid_reset(token) is not None}
+
+
+@app.post("/api/auth/reset-password")
+@limiter.limit("10/minute")
+def reset_password(request: Request, data: ResetPasswordRequest, background_tasks: BackgroundTasks):
+    if not _strong_password(data.password):
+        raise HTTPException(status_code=400, detail=_PASSWORD_RULE_MESSAGE)
+    rec = _valid_reset(data.token)
+    if not rec:
+        raise HTTPException(status_code=400, detail="Link etibarsızdır, istifadə edilib və ya müddəti bitib. Yeni bərpa linki istəyin.")
+    kind, acct = rec.get("account_kind"), int(rec["account_id"])
+    table = "customers" if kind == "customer" else "carriers"
+    rows = supabase.table(table).select("*").eq("id", acct).execute().data or []
+    if not rows:
+        raise HTTPException(status_code=400, detail="Hesab tapılmadı.")
+    update = {"password": pwd_context.hash(data.password)}
+    if kind == "customer":
+        update["token_version"] = int(rows[0].get("token_version") or 0) + 1   # bütün köhnə sessiyalar bağlanır
+    try:
+        supabase.table(table).update(update).eq("id", acct).execute()
+    except Exception as upd_err:
+        if "token_version" in update and "token_version" in str(upd_err):
+            update.pop("token_version", None)   # miqrasiya hələ işlənməyib: şifrə yenə də dəyişir
+            supabase.table(table).update(update).eq("id", acct).execute()
+        else:
+            raise
+    supabase.table("password_resets").update({"used_at": datetime.utcnow().isoformat()}).eq("account_kind", kind).eq("account_id", acct).execute()
+    _forget_account_cache(acct)
+    to_email = rows[0].get("email")
+    if to_email:
+        background_tasks.add_task(_send_password_changed_email, str(to_email))
+    return {"status": "success", "message": "Şifrəniz yeniləndi. İndi yeni şifrə ilə daxil ola bilərsiniz."}
+
+
+async def _send_password_changed_email(to_email: str) -> None:
+    html = (
+        '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:auto;color:#0b1433">'
+        '<h2 style="color:#0037b8">Şifrəniz dəyişdirildi</h2>'
+        '<p>Arachi hesabınızın şifrəsi indicə yeniləndi və bütün açıq sessiyalar bağlandı.</p>'
+        '<p style="color:#b42318">Bunu siz etməmisinizsə, dərhal info@arachi.co ünvanına yazın.</p></div>'
+    )
+    try:
+        await fastmail.send_message(MessageSchema(subject="Arachi: şifrəniz dəyişdirildi", recipients=[to_email], body=html, subtype=MessageType.html, from_name="Arachi"))
+    except Exception:
+        traceback.print_exc()
+
+
+def _static_page(name: str, token: str = "") -> HTMLResponse:
+    try:
+        with open(os.path.join("static", name), "r", encoding="utf-8") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content.replace("{{ token }}", _html_escape(token[:200])), headers=_NOINDEX_HEADERS)
+    except Exception:
+        return HTMLResponse("<h1>Səhifə tapılmadı.</h1>", status_code=404)
+
+
+@app.get("/forgot-password", response_class=HTMLResponse)
+def forgot_password_page():
+    return _static_page("forgot.html")
+
+
+@app.get("/reset-password", response_class=HTMLResponse)
+def reset_password_page(token: str = ""):
+    return _static_page("reset.html", token)
 
 
 @app.post("/api/change-password")
