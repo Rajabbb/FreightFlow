@@ -4,6 +4,8 @@ import traceback
 import io
 import json
 import hmac
+import time
+import secrets
 from html import escape as _html_escape
 import re
 import csv
@@ -153,7 +155,7 @@ security = HTTPBearer()
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:
     raise ValueError("JWT_SECRET təyin olunmayıb! Zəhmət olmasa .env faylına əlavə edin.")
-    
+
 JWT_ALGORITHM = "HS256"
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -164,11 +166,20 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 def _decode_token(credentials: HTTPAuthorizationCredentials):
     try:
-        return jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Sessiyanın vaxtı bitib. Zəhmət olmasa yenidən giriş edin.")
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Etibarsız token. Sistemə giriş qadağandır!")
+    # Komanda üzvünün tokeni (uid): üzv komandadan çıxarılıbsa token 7 gün gözləmədən dərhal keçərsiz olur
+    if payload.get("member") and payload.get("uid"):
+        try:
+            rows = supabase.table("customers").select("id, company_id").eq("id", int(payload["uid"])).execute().data or []
+        except Exception:
+            raise HTTPException(status_code=503, detail="Sistem müvəqqəti əlçatmazdır. Bir az sonra yenidən cəhd edin.")
+        if not rows or str(rows[0].get("company_id")) != str(payload.get("sub")):
+            raise HTTPException(status_code=401, detail="Bu hesab komandadan çıxarılıb. Yenidən giriş edin.")
+    return payload
 
 def verify_any_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Hər hansı etibarlı token (şifrə / e-poçt dəyişmə kimi ortaq əməliyyatlar üçün)."""
@@ -212,13 +223,13 @@ ALLOWED_MIME_TYPES = {
     "text/csv",
     "text/plain"
 }
-MAX_FILE_SIZE = 10 * 1024 * 1024  
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 async def validate_file(file: UploadFile):
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Təhlükəsizlik: Yalnız PDF, Word (DOC/DOCX), Excel (XLS/XLSX), CSV, TXT və ya Şəkil (PNG/JPG) yükləyə bilərsiniz."
         )
     file.file.seek(0, 2)
@@ -489,7 +500,7 @@ def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int, skip_duplic
 async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin: str, destination: str, token: str, custom_body: Optional[str] = None, custom_subject: Optional[str] = None, sender_company: str = "Arachi", is_reminder: bool = False, reply_to_email: Optional[str] = None):
     quote_link = f"{BASE_URL}/carrier_quote/quote?token={token}"
     tracking_pixel_url = f"{BASE_URL}/quotes/track/{token}"
-    
+
     # === HƏLL BURADADIR: Fərdi başlıq gəlibsə onu istifadə edirik, əks halda standartı ===
     if is_reminder:
         subject_line = f"⏰ Reminder: Submit a Proposal: {origin} - {destination}"
@@ -501,7 +512,7 @@ async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin:
         else:
             # Standart başlıq
             subject_line = f"📦 Submit a Proposal: {origin} - {destination}"
-            
+
         if custom_body and custom_body.strip():
             text_content = custom_body.replace("{{company_name}}", carrier_name).replace("{{sender_company}}", sender_company).replace("{{origin}}", origin).replace("{{destination}}", destination)
         else:
@@ -624,7 +635,7 @@ class CarrierBulkSetCategory(BaseModel):
     carrier_ids: List[int]
     category_id: Optional[int] = None
     sub_category_id: Optional[int] = None # YENİ ƏLAVƏ
-    
+
 class RegisterRequest(BaseModel):
     token: Optional[str] = None
     email: EmailStr
@@ -822,13 +833,13 @@ def sitemap_xml():
 
 
 @app.get("/", response_class=HTMLResponse)
-def get_home(): 
+def get_home():
     if os.path.exists("static/index.html"):
         return FileResponse("static/index.html", headers={"Cache-Control": "no-cache"})
     return "index.html tapılmadı", 404
 
 @app.get("/login", response_class=HTMLResponse)
-def get_login(): 
+def get_login():
     response = FileResponse("static/login.html")
     response.headers["X-Robots-Tag"] = "noindex, follow"
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
@@ -837,7 +848,7 @@ def get_login():
     return response
 
 @app.get("/customer")
-def get_customer_dashboard(): 
+def get_customer_dashboard():
     response = FileResponse("static/customer.html")
     response.headers["X-Robots-Tag"] = "noindex, nofollow"
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, private, max-age=0"
@@ -916,7 +927,7 @@ def set_carrier_category(payload: CarrierSetCategory, current_user: dict = Depen
     try:
         val_cat = payload.category_id if payload.category_id and payload.category_id > 0 else None
         val_sub = payload.sub_category_id if payload.sub_category_id and payload.sub_category_id > 0 else None
-        
+
         supabase.table("carriers").update({
             "category_id": val_cat,
             "sub_category_id": val_sub
@@ -933,10 +944,10 @@ def bulk_set_carrier_category(payload: CarrierBulkSetCategory, current_user: dic
     try:
         val_cat = payload.category_id if payload.category_id and payload.category_id > 0 else None
         val_sub = payload.sub_category_id if payload.sub_category_id and payload.sub_category_id > 0 else None
-        
+
         if not payload.carrier_ids:
             return {"status": "success"}
-            
+
         supabase.table("carriers").update({
             "category_id": val_cat,
             "sub_category_id": val_sub
@@ -985,23 +996,23 @@ def get_customer_stats(customer_id: int, current_user: dict = Depends(verify_tok
         requests = reqs_res.data or []
         active_rfqs = sum(1 for r in requests if r.get("status") == "open")
         completed_shipments = sum(1 for r in requests if r.get("status") == "closed")
-        
+
         req_ids = [r["id"] for r in requests]
         incoming_quotes_count = 0
         if req_ids:
             quotes_res = supabase.table("quotes").select("price, extra_details").in_("request_id", req_ids).execute()
             incoming_quotes_count = sum(1 for q in (quotes_res.data or []) if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True))
-        
+
         # HƏLL: Supabase-in xəta verdiyi "not_ilike" əmrini ləğv edib, Python ilə filtrləyirik
         carriers_res = supabase.table("carriers").select("id, email").eq("customer_id", customer_id).execute()
         all_carriers = carriers_res.data or []
         filtered_carriers = [c for c in all_carriers if not c.get("email", "").startswith("public_link_")]
-        
+
         return {
-            "status": "success", 
-            "active_rfqs": active_rfqs, 
-            "incoming_quotes": incoming_quotes_count, 
-            "completed_shipments": completed_shipments, 
+            "status": "success",
+            "active_rfqs": active_rfqs,
+            "incoming_quotes": incoming_quotes_count,
+            "completed_shipments": completed_shipments,
             "carriers_count": len(filtered_carriers)
         }
     except Exception as e:
@@ -1016,25 +1027,25 @@ def get_recent_quotes(customer_id: int, current_user: dict = Depends(verify_toke
         req_map = {r["id"]: {"origin": r["origin"], "destination": r["destination"]} for r in (req_res.data or [])}
         if not req_map:
             return {"status": "success", "quotes": []}
-        
+
         quotes_res = supabase.table("quotes").select("*, carriers(company_name, name)").in_("request_id", list(req_map.keys())).execute()
         quotes = quotes_res.data or []
-        
+
         recent_quotes = []
         for q in quotes:
             extra = q.get("extra_details") or {}
             is_submitted = q.get("price") is not None or extra.get("submitted") == True
-            
+
             if is_submitted:
                 carrier = q.get("carriers") or {}
-                
+
                 # ƏSAS HƏLL: Sürücünün formda yazdığı (məsələn, "lulu") adı birinci yoxlayırıq!
                 custom_name = extra.get("carrier_company")
                 if custom_name:
                     carrier_name = custom_name
                 else:
                     carrier_name = carrier.get("company_name") or carrier.get("name") or "Daşıyıcı"
-                    
+
                 recent_quotes.append({
                     "request_id": q["request_id"],
                     "quote_id": q["id"],
@@ -1043,14 +1054,14 @@ def get_recent_quotes(customer_id: int, current_user: dict = Depends(verify_toke
                     "carrier_name": carrier_name,
                     "price": q.get("price"),
                     "currency": q.get("currency", "AZN"),
-                    "submitted_at": q.get("created_at") 
+                    "submitted_at": q.get("created_at")
                 })
         recent_quotes.sort(key=lambda x: x["quote_id"], reverse=True)
         return {"status": "success", "quotes": recent_quotes[:10]}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-        
+
 def format_excel_date(date_str: Any, is_utc: bool = False, use_ampm: bool = False) -> str:
     if not date_str or str(date_str).strip() in ("-", "None", ""):
         return "-"
@@ -1070,13 +1081,13 @@ def format_excel_date(date_str: Any, is_utc: bool = False, use_ampm: bool = Fals
             elif len(clean_str) == 16:
                 clean_str += ":00"
             dt = datetime.strptime(clean_str, "%Y-%m-%d %H:%M:%S")
-        
+
         if is_utc:
             dt = dt + timedelta(hours=4)
-        
+
         if dt.hour == 0 and dt.minute == 0 and dt.second == 0 and not is_utc:
             return dt.strftime("%Y-%m-%d")
-        
+
         if use_ampm:
             return dt.strftime("%Y-%m-%d %I:%M %p")
         else:
@@ -1092,13 +1103,13 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
         all_reqs = all_reqs_res.data or []
         total_reqs = len(all_reqs)
         display_id_map = {req["id"]: (total_reqs - i) for i, req in enumerate(all_reqs)}
-        
+
         query = supabase.table("shipment_requests").select("*, quotes(*, carriers(company_name, email))").eq("customer_id", payload.customer_id)
         if payload.report_type == "selected" and payload.rfq_ids:
             query = query.in_("id", payload.rfq_ids)
         res = query.order("id", desc=True).execute()
         reqs = res.data or []
-        
+
         filtered_reqs = []
         today_str = datetime.utcnow().strftime("%Y-%m-%d")
         for r in reqs:
@@ -1109,14 +1120,14 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                 if payload.start_date and created_date < payload.start_date: continue
                 if payload.end_date and created_date > payload.end_date: continue
             filtered_reqs.append(r)
-        
+
         report_data = []
 
         if payload.report_category == "rfq":
             for r in filtered_reqs:
                 disp_id = display_id_map.get(r.get("id"), r.get("id"))
                 req_fields = r.get("required_fields") or []
-                
+
                 opts = {"Incoterm": "", "ADR": "", "Temperature": "", "Delivery": "", "Info": "", "Mode": ""}
                 for f in req_fields:
                     f_str = str(f)
@@ -1168,21 +1179,21 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                 dest = r.get("destination") or ""
                 route = f"{origin} -> {dest}"
                 quotes = r.get("quotes") or []
-                
+
                 for q in quotes:
                     extra = q.get("extra_details") or {}
                     if q.get("price") is None and not extra.get("submitted"):
                         continue
 
                     carrier = q.get("carriers") or {}
-                    
+
                     # 1. YENİ ƏLAVƏ: Əvvəlcə formdakı xüsusi adı yoxlayırıq
                     custom_name = extra.get("carrier_company")
                     if custom_name:
                         carrier_name = custom_name
                     else:
                         carrier_name = carrier.get("company_name", "Daşıyıcı")
-                    
+
                     extra_str = "; ".join([f"{k}: {v}" for k, v in extra.items() if k not in ("submitted", "submitted_at", "is_alternative") and not str(k).startswith("_") and v])
                     if extra.get("is_alternative"): extra_str = "Alternativ təklif" + ("; " + extra_str if extra_str else "")
                     date_val = extra.get("submitted_at") or q.get("updated_at") or q.get("created_at")
@@ -1618,7 +1629,7 @@ async def upload_carriers_text(request: Request, current_user: dict = Depends(ve
         content_type = request.headers.get("content-type", "")
         if "application/json" in content_type: body = await request.json()
         else: body = dict(await request.form())
-        
+
         customer_id = body.get("customer_id") or request.query_params.get("customer_id")
         if not customer_id: raise HTTPException(status_code=400, detail="customer_id tələb olunur.")
         check_ownership(int(customer_id), current_user)
@@ -1680,10 +1691,10 @@ def get_customer_carriers(customer_id: int, current_user: dict = Depends(verify_
         # Bütün daşıyıcıları bazadan çəkirik
         res = supabase.table("carriers").select("*").eq("customer_id", customer_id).range(0, 9999).execute()
         all_carriers = res.data or []
-        
+
         # Python vasitəsilə yalnız "public_link" OLMAYANLARI saxlayırıq (Qüsursuz üsul)
         filtered_carriers = [c for c in all_carriers if not c.get("email", "").startswith("public_link_")]
-        
+
         return filtered_carriers
     except Exception as e:
         traceback.print_exc()
@@ -2261,8 +2272,8 @@ async def parse_document_with_ai(request: Request, file: UploadFile = File(...),
         response = await aclient.chat.completions.create(
             model="gpt-4o",
             messages=messages,
-            temperature=0.0, 
-            response_format={ "type": "json_object" } 
+            temperature=0.0,
+            response_format={ "type": "json_object" }
         )
 
         res_text = response.choices[0].message.content.strip()
@@ -2293,7 +2304,7 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
         raise HTTPException(status_code=400, detail="Analiz üçün mətn daxil edilməyib.")
 
     prompt = _ai_system_prompt()
-    
+
     try:
         messages = [
             {"role": "system", "content": prompt},
@@ -2303,8 +2314,8 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
         response = await aclient.chat.completions.create(
             model="gpt-4o",
             messages=messages,
-            temperature=0.0, 
-            response_format={ "type": "json_object" } 
+            temperature=0.0,
+            response_format={ "type": "json_object" }
         )
 
         res_text = response.choices[0].message.content.strip()
@@ -2319,7 +2330,7 @@ async def parse_text_with_ai(request: Request, payload: TextParseRequest, curren
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Aİ analizi xətası: {str(e)}")
-        
+
 def create_public_link_quote(customer_id: int, request_id: int, all_carriers: list) -> str:
     """Sorğu üçün ictimai (public) təklif linki yaradır və həmin linkin URL-ni qaytarır.
     Yalnız link rejimində də, e-poçt + link (hibrid) rejimində də istifadə olunur."""
@@ -2383,37 +2394,41 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
         }
         subject_val = _clean_subject(payload.subject)
         if subject_val: insert_row["subject"] = subject_val
+        actor = str(current_user.get("uname") or "").strip()[:100]
+        if actor: insert_row["created_by_name"] = actor
         try:
             response = supabase.table("shipment_requests").insert(insert_row).execute()
         except Exception as ins_err:
-            # subject sütunu hələ yaradılmayıbsa (miqrasiya gözlənilir) sorğu yenə də yaradılır
-            if "subject" in insert_row and "subject" in str(ins_err):
-                insert_row.pop("subject", None)
+            # subject / created_by_name sütunu hələ yaradılmayıbsa (miqrasiya gözlənilir) sorğu yenə də yaradılır
+            dropped = [c for c in ("subject", "created_by_name") if c in insert_row and c in str(ins_err)]
+            if dropped:
+                for c in dropped: insert_row.pop(c, None)
                 response = supabase.table("shipment_requests").insert(insert_row).execute()
             else:
                 raise
-        
+
         shipment_data = response.data[0]
         request_id = shipment_data["id"]
+        _log_activity(current_user, "rfq_created", "rfq", request_id, f"{payload.origin} → {payload.destination}")
 
         cust_res = supabase.table("customers").select("*").eq("id", payload.customer_id).execute()
         sender_company, customer_email = "Arachi", None
         if cust_res.data:
             c_data = cust_res.data[0]
             sender_company = c_data.get("company_name") or c_data.get("name") or "Arachi"
-            customer_email = c_data.get("email")
+            customer_email = current_user.get("email") or c_data.get("email")   # cavablar göndərən şəxsə gedir
 
         all_carriers = supabase.table("carriers").select("*").eq("customer_id", payload.customer_id).range(0, 9999).execute().data or []
-        
+
         send_opt = getattr(payload, "send_option", "all")
 
         # --- YENİ: LİNK YARATMA REJİMİ (yalnız link) ---
         if send_opt == "public_link":
             public_url = create_public_link_quote(payload.customer_id, request_id, all_carriers)
-            
+
             return {
-                "status": "success", 
-                "message": f"Sorğu #{request_id} yaradıldı!", 
+                "status": "success",
+                "message": f"Sorğu #{request_id} yaradıldı!",
                 "public_link": public_url,
                 "request_details": shipment_data
             }
@@ -2449,7 +2464,7 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
                 background_tasks.add_task(
                     send_carrier_email_link, carrier_email=carrier_email, carrier_name=carrier_name,
                     origin=payload.origin, destination=payload.destination, token=unique_token,
-                    custom_body=active_custom_body, custom_subject=active_custom_subject, 
+                    custom_body=active_custom_body, custom_subject=active_custom_subject,
                     sender_company=sender_company, reply_to_email=customer_email
                 )
 
@@ -2518,6 +2533,7 @@ async def send_existing_request(request_id: int, payload: SendRequestPayload, ba
                     sender_company=sender_company, reply_to_email=customer_email)
             sent.append({"carrier_id": carrier["id"], "company_name": carrier.get("company_name"), "email": email, "token": unique_token})
         result = {"status": "success", "request_id": request_id, "sent": sent, "skipped_already_sent": [c["id"] for c in skipped]}
+        _log_activity(current_user, "rfq_sent", "rfq", request_id, f"{len(sent)} daşıyıcıya göndərildi")
         if payload.also_create_link:
             result["public_link"] = create_public_link_quote(customer_id, request_id, all_carriers)
         return result
@@ -2670,29 +2686,29 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
         quotes_res = supabase.table("quotes").select("*, carriers(*)").eq("request_id", request_id).execute()
         result_carriers = []
         has_public_link = False
-        
+
         for item in (quotes_res.data or []):
             carrier = item.get("carriers") or {}
             extra = item.get("extra_details") or {}
             if "public_link_" in (carrier.get("email") or ""):
                 has_public_link = True
             has_submitted = item.get("price") is not None or extra.get("submitted") == True
-            
+
             # İctimai (Public) əsas linki tapırıq
             is_public_base = "public_link" in carrier.get("email", "") and not has_submitted
-            
+
             # ƏSAS HƏLL: Əgər bu əsas public linkdirsə, onu siyahıya ÜMUMİYYƏTLƏ ƏLAVƏ ETMƏ (Gizlət)
             if is_public_base:
                 continue
-            
+
             custom_name = extra.get("carrier_company")
             display_name = custom_name if custom_name else carrier.get("company_name", "Daşıyıcı")
-            
+
             result_carriers.append({
-                "quote_id": item.get("id"), "carrier_id": item.get("carrier_id"), 
+                "quote_id": item.get("id"), "carrier_id": item.get("carrier_id"),
                 "company_name": display_name,
-                "email": carrier.get("email", ""), 
-                "mail_status": item.get("mail_status", "pending"), 
+                "email": carrier.get("email", ""),
+                "mail_status": item.get("mail_status", "pending"),
                 "is_viewed": item.get("is_viewed", False),
                 "has_submitted": has_submitted, "token": item.get("token"),
                 "auto_reminded_at": extra.get("_auto_reminded_at"),
@@ -2721,7 +2737,7 @@ def get_request_carriers_status(request_id: int, current_user: dict = Depends(ve
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-        
+
 def _optional_payload(request: Request) -> Optional[dict]:
     auth = request.headers.get("authorization") or ""
     if not auth.lower().startswith("bearer "): return None
@@ -2736,13 +2752,13 @@ def get_request_details(target_id: str, request: Request):
     quote_res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", target_id).execute()
     if quote_res.data:
         quote = quote_res.data[0]
-        
+
         if not quote.get("is_viewed"):
             try:
                 supabase.table("quotes").update({"is_viewed": True}).eq("id", quote["id"]).execute()
             except Exception:
                 pass
-        
+
         shipment = quote.get("shipment_requests") or {}
         if isinstance(shipment, dict):
             shipment.pop("subject", None)
@@ -2752,19 +2768,19 @@ def get_request_details(target_id: str, request: Request):
             if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]: shipment["volume_m3"] = "Qeyd edilməyib"
             deadline = shipment.get("deadline")
             if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()): shipment["deadline"] = None
-        
+
         all_quotes_data = []
         req_id = quote.get("request_id")
         car_id = quote.get("carrier_id")
-        
+
         carrier_email = ""
         if car_id:
             car_res = supabase.table("carriers").select("email").eq("id", car_id).execute()
             if car_res.data:
                 carrier_email = car_res.data[0].get("email", "")
-        
+
         is_public_link = "public_link_" in quote.get("token", "") or "public_link_" in carrier_email
-        
+
         # -------------------------------------------------------------------------
         # ƏN VACİB HİSSƏ: Public Linkdirsə, bazada nə olur olsun hər şeyi sıfırlayırıq!
         # -------------------------------------------------------------------------
@@ -2772,7 +2788,7 @@ def get_request_details(target_id: str, request: Request):
             quote["price"] = None
             quote["transit_time_days"] = None
             quote["extra_details"] = {}
-        
+
         # Digər təklifləri (Option tabs) yalnız ənənəvi linklərdə göstəririk
         if req_id and car_id and not is_public_link:
             all_q_res = supabase.table("quotes").select("*").eq("request_id", req_id).eq("carrier_id", car_id).order("id").execute()
@@ -2788,15 +2804,15 @@ def get_request_details(target_id: str, request: Request):
         cleaned_extra = dict(extra)
         cleaned_extra.pop("submitted", None)
         quote["extra_details"] = cleaned_extra
-        
+
         return {
-            "already_submitted": is_already_submitted, 
-            "request": shipment, 
+            "already_submitted": is_already_submitted,
+            "request": shipment,
             "quote": quote,
             "all_quotes": all_quotes_data,
             "is_public": is_public_link  # Frontendə bunun public olduğunu açıq deyirik
         }
-    
+
     if target_id.isdigit():
         # Nömrə ardıcıldır: giriş və sahiblik yoxlanılmasa hər kəs bütün sorğuları (və fayl linklərini) oxuya bilərdi
         who = _optional_payload(request)
@@ -2814,7 +2830,7 @@ def get_request_details(target_id: str, request: Request):
                 deadline = shipment.get("deadline")
                 if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()): shipment["deadline"] = None
             return {"request": shipment, "already_submitted": False}
-            
+
     raise HTTPException(status_code=404, detail="Sorğu tapılmadı.")
 
 @app.get("/quotes/form/{token}")
@@ -2822,7 +2838,7 @@ def get_quote_form_details(token: str):
     res = supabase.table("quotes").select("*, shipment_requests(*)").eq("token", token).execute()
     if not res.data: raise HTTPException(status_code=404, detail="Keçərsiz link!")
     quote = res.data[0]
-    
+
     # --- YENİ EKLENEN KISIM: LİNK AÇILDIĞINDA BAXILDI (VIEWED) OLARAK İŞARETLE ---
     if not quote.get("is_viewed"):
         try:
@@ -2830,7 +2846,7 @@ def get_quote_form_details(token: str):
         except Exception:
             pass
     # ----------------------------------------------------------------------------
-    
+
     shipment = quote.get("shipment_requests")
     if isinstance(shipment, dict):
         shipment.pop("subject", None)
@@ -2839,9 +2855,9 @@ def get_quote_form_details(token: str):
         if vol is None or vol == 0 or vol == 0.0 or str(vol).strip() in ["0", "0.0", ""]: shipment["volume_m3"] = "Qeyd edilməyib"
         deadline = shipment.get("deadline")
         if deadline and str(deadline) in note_val and ("loading" in note_val.lower() or "tarix" in note_val.lower()): shipment["deadline"] = None
-        
+
     return {"already_submitted": quote.get("price") is not None, "quote": quote}
-    
+
 @app.post("/quotes/check-bounces")
 async def check_bounces_endpoint():
     if not ENABLE_BOUNCE_CHECK: return {"status": "disabled", "message": "Bounce yoxlaması hazırda deaktivdir."}
@@ -2955,7 +2971,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
         res = supabase.table("quotes").select("*").eq("token", token).execute()
         if not res.data: raise HTTPException(status_code=404, detail="Xətalı link!")
         quote = res.data[0]
-        
+
         parsed_price = float(price) if price and str(price).strip() else None
         parsed_extra = json.loads(extra_details) if extra_details else {}
         parsed_extra["submitted"] = True
@@ -2974,7 +2990,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
             pass
 
         is_public_link = "public_link_" in quote.get("token", "") or "public_link_" in carrier_email
-        
+
         form_carrier_name = request.query_params.get("carrier_company") or parsed_extra.get("carrier_company")
         if not form_carrier_name:
             form_data_dict = await request.form()
@@ -2985,7 +3001,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
 
         if form_carrier_name:
             parsed_extra["carrier_company"] = form_carrier_name.strip()
-            # DİQQƏT: Orjinal "İctimai Link" profilinin adını ARTIQ DƏYİŞMİRİK. 
+            # DİQQƏT: Orjinal "İctimai Link" profilinin adını ARTIQ DƏYİŞMİRİK.
 
         # Daşıyıcı özü "alternativ təklif" seçibsə (ictimai link olmayan halda), təklif belə işarələnir
         explicitly_alternative = (is_alternative or "").lower() == "true" and not is_public_link
@@ -2995,7 +3011,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
         # --- ƏSAS HƏLL: Public Linkdirsə əsas linki boş saxlamaq üçün həmişə YENİ təklif yaradırıq ---
         if is_public_link:
             is_alternative = "true"
-                    
+
         if carrier_file and carrier_file.filename:
             await validate_file(carrier_file)
             file_ext = os.path.splitext(carrier_file.filename)[1]
@@ -3040,13 +3056,13 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
             history.append(old_state)
 
         update_res = supabase.table("quotes").update({
-            "price": parsed_price, 
-            "transit_time_days": transit_value, 
-            "extra_details": parsed_extra, 
+            "price": parsed_price,
+            "transit_time_days": transit_value,
+            "extra_details": parsed_extra,
             "currency": parsed_currency,
             "quote_history": history
         }).eq("token", token).execute()
-        
+
         return {"status": "success", "message": "Təklif qəbul edildi!", "data": update_res.data}
     except HTTPException as he:
         raise he
@@ -3323,6 +3339,7 @@ def select_winner_path(quote_id: int, current_user: dict = Depends(verify_token)
     supabase.table("quotes").update({"is_winner": False}).eq("request_id", request_id).execute()
     supabase.table("quotes").update({"is_winner": True}).eq("id", quote_id).execute()
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", request_id).execute()
+    _log_activity(current_user, "winner_selected", "rfq", request_id, f"təklif #{quote_id}")
     return {"status": "success", "message": "Təklif qalib olaraq seçildi!"}
 
 @app.post("/quotes/cancel-winner/{quote_id}")
@@ -3330,12 +3347,12 @@ def cancel_winner_path(quote_id: int, current_user: dict = Depends(verify_token)
     quote_res = supabase.table("quotes").select("request_id").eq("id", quote_id).execute()
     if not quote_res.data: raise HTTPException(status_code=404, detail="Təklif tapılmadı.")
     _own_request(quote_res.data[0]["request_id"], current_user)
-    
+
     request_id = quote_res.data[0]["request_id"]
-    
+
     supabase.table("quotes").update({"is_winner": False}).eq("request_id", request_id).execute()
     supabase.table("shipment_requests").update({"status": "open"}).eq("id", request_id).execute()
-    
+
     return {"status": "success", "message": "Qalib seçimi ləğv edildi. Başqa təklif seçə bilərsiniz!"}
 
 @app.post("/quotes/select-winner")
@@ -3346,6 +3363,7 @@ async def select_winner_body(payload: SelectWinnerRequest, current_user: dict = 
     supabase.table("quotes").update({"is_winner": False}).eq("request_id", payload.request_id).execute()
     supabase.table("quotes").update({"is_winner": True}).eq("id", payload.quote_id).execute()
     supabase.table("shipment_requests").update({"status": "closed"}).eq("id", payload.request_id).execute()
+    _log_activity(current_user, "winner_selected", "rfq", payload.request_id, f"təklif #{payload.quote_id}")
     return {"status": "success", "message": "Qalib təklif uğurla təsdiqləndi!"}
 
 INVITE_TYPES = {"importer": "İdxalçı / İxracçı", "forwarder": "Freight forwarder (müştəri paneli ilə)"}
@@ -3415,7 +3433,7 @@ def register_page(request: Request, token: str = None):
 def process_registration(request: Request, data: RegisterRequest):
     if len(data.password) < 8 or not re.search(r"[A-Z]", data.password) or not re.search(r"[a-z]", data.password) or not re.search(r"[0-9]", data.password):
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Təhlükəsizlik: Şifrə ən azı 8 simvol olmalı, həmçinin ən azı 1 böyük hərf, 1 kiçik hərf və 1 rəqəm ehtiva etməlidir!"
         )
 
@@ -3505,16 +3523,29 @@ async def login(request: Request, data: LoginRequest):
     if customer.data:
         user = customer.data[0]
         if _verify_password(data.password, user.get("password", "")):
-            account_type = user.get("account_type") or "importer_exporter"
-            customer_access = user.get("customer_access") is not False
-            forwarder_access = user.get("forwarder_access") is True
-            sub_state = _subscription_state(user)
+            owner = user
+            company_id = user.get("company_id")
+            if company_id:   # komanda üzvü: plan, giriş hüquqları və məlumat şirkət sahibinin hesabındandır
+                owner_rows = supabase.table("customers").select("*").eq("id", company_id).execute().data or []
+                if not owner_rows:
+                    raise HTTPException(status_code=400, detail="Şirkət hesabı tapılmadı. Şirkət sahibinə müraciət edin.")
+                owner = owner_rows[0]
+            account_type = owner.get("account_type") or "importer_exporter"
+            customer_access = owner.get("customer_access") is not False
+            forwarder_access = owner.get("forwarder_access") is True
+            sub_state = _subscription_state(owner)
             plan = sub_state["plan"]
-            token = create_access_token({
-                "sub": str(user["id"]), "role": "customer", "email": user["email"],
+            claims = {
+                "sub": str(owner["id"]), "role": "customer", "email": user["email"], "uname": user.get("name") or "",
                 "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access, "plan": plan
-            })
-            safe_user = {k: v for k, v in user.items() if k != "password"}   # parol heş-i brauzerə göndərilmir
+            }
+            if company_id:
+                claims.update({"uid": str(user["id"]), "member": True})
+            token = create_access_token(claims)
+            safe_user = {k: v for k, v in owner.items() if k != "password"}   # parol heş-i brauzerə göndərilmir
+            if company_id:
+                safe_user.update({"email": user["email"], "is_member": True, "member_id": user["id"],
+                                  "member_name": user.get("name") or "", "company_id": owner["id"]})
             home = "/forwarder" if (forwarder_access and not customer_access) else "/customer"
             return {"status": "success", "role": "customer", "token": token, "user": safe_user, "home": home,
                     "account_type": account_type, "customer_access": customer_access, "forwarder_access": forwarder_access,
@@ -3534,32 +3565,363 @@ async def login(request: Request, data: LoginRequest):
     _verify_password(data.password, _DUMMY_HASH)
     raise HTTPException(status_code=400, detail="Yanlış e-poçt və ya parol.")
 
+# ==========================================
+# KOMANDA: şirkət hesabı (sahib + üzvlər)
+# ==========================================
+# Bir ödəyən şirkət sahibi hesabı var; üzvlər dəvətlə qoşulur, hər biri öz e-poçtu və şifrəsi ilə girir.
+# Üzvün tokenində sub = şirkət (sahib) id-si olduğu üçün bütün məlumat endpointləri şirkətin məlumatı ilə işləyir;
+# uid = üzvün öz id-si (şifrə, e-poçt və jurnal üçün). Yer sayı plandan və əlavə yerlərdən gəlir.
+INVITE_TTL_DAYS = 7
+
+
+def _is_member(user: dict) -> bool:
+    return bool(user.get("member"))
+
+
+def _acting_id(user: dict) -> int:
+    """Əməliyyatı edən real şəxs: üzvdürsə öz id-si, deyilsə hesabın id-si."""
+    return int(user.get("uid") or user.get("sub"))
+
+
+def _require_owner(user: dict) -> None:
+    if _is_member(user):
+        raise HTTPException(status_code=403, detail="Bu əməliyyat yalnız şirkət sahibi üçündür.")
+
+
+def _log_activity(user: dict, action: str, target_type: Optional[str] = None, target_id: Optional[int] = None, detail: str = "") -> None:
+    """Komanda fəaliyyət jurnalına yazır. Jurnal yazıla bilmirsə əsas əməliyyat pozulmur."""
+    try:
+        supabase.table("company_activity").insert({
+            "company_id": int(user["sub"]), "user_id": _acting_id(user), "user_name": str(user.get("uname") or "")[:100],
+            "action": action, "target_type": target_type, "target_id": target_id, "detail": str(detail)[:300],
+        }).execute()
+    except Exception:
+        pass
+
+
+def _pending_invites(company_id: int) -> List[Dict[str, Any]]:
+    rows = supabase.table("team_invites").select("*").eq("company_id", company_id).execute().data or []
+    now = datetime.utcnow()
+    out = []
+    for r in rows:
+        if r.get("used_at"): continue
+        exp = _parse_ts(r.get("expires_at"))
+        if exp is not None and exp <= now: continue
+        out.append(r)
+    return out
+
+
+def _seat_info(owner: Dict[str, Any]) -> Dict[str, Any]:
+    state = _subscription_state(owner)
+    base = state.get("users")
+    extra = int(owner.get("extra_seats") or 0)
+    limit = None if base is None else int(base) + extra
+    members = supabase.table("customers").select("id").eq("company_id", owner["id"]).execute().data or []
+    pending = _pending_invites(owner["id"])
+    # Şirkət sahibi yer sayına daxil deyil: yerlər yalnız üzvlər (və gözləyən dəvətlər) üçündür
+    return {"limit": limit, "used": len(members) + len(pending), "members": len(members), "pending": len(pending),
+            "extra": extra, "plan": state["label"]}
+
+
+_PASSWORD_RULE_MESSAGE = "Şifrə ən azı 8 simvol olmalı, 1 böyük hərf, 1 kiçik hərf və 1 rəqəm ehtiva etməlidir."
+
+
+def _strong_password(password: str) -> bool:
+    return len(password or "") >= 8 and bool(re.search(r"[A-Z]", password)) and bool(re.search(r"[a-z]", password)) and bool(re.search(r"[0-9]", password))
+
+
+def _email_in_use(email: str) -> bool:
+    if (supabase.table("customers").select("id").eq("email", email).execute().data or []):
+        return True
+    return bool(supabase.table("carriers").select("id").eq("email", email).execute().data or [])
+
+
+class TeamInviteRequest(BaseModel):
+    email: EmailStr
+    name: Optional[str] = ""
+
+
+@app.get("/api/team")
+def team_overview(current_user: dict = Depends(verify_token)):
+    company_id = int(current_user["sub"])
+    owner = _load_customer_row(company_id)
+    members = supabase.table("customers").select("id, name, email, created_at").eq("company_id", company_id).execute().data or []
+    invites = _pending_invites(company_id)
+    return {
+        "status": "success",
+        "company": {"id": company_id, "name": owner.get("name") or ""},
+        "owner": {"id": owner["id"], "name": owner.get("name") or "", "email": owner.get("email") or ""},
+        "me": {"id": _acting_id(current_user), "is_owner": not _is_member(current_user)},
+        "members": [{"id": m["id"], "name": m.get("name") or "", "email": m.get("email") or "", "joined_at": m.get("created_at")} for m in members],
+        "invites": [{"id": i["id"], "email": i.get("email"), "name": i.get("name") or "", "expires_at": i.get("expires_at"), "created_at": i.get("created_at")} for i in invites],
+        "seats": _seat_info(owner),
+    }
+
+
+@app.get("/api/team/activity")
+def team_activity(limit: int = 50, current_user: dict = Depends(verify_token)):
+    company_id = int(current_user["sub"])
+    limit = max(1, min(int(limit), 200))
+    try:
+        rows = supabase.table("company_activity").select("*").eq("company_id", company_id).order("id", desc=True).limit(limit).execute().data or []
+    except Exception:
+        rows = []
+    return {"status": "success", "activity": [
+        {"id": r["id"], "user_name": r.get("user_name") or "", "action": r.get("action"), "target_type": r.get("target_type"),
+         "target_id": r.get("target_id"), "detail": r.get("detail") or "", "created_at": r.get("created_at")} for r in rows]}
+
+
+async def _send_invite_email(invite: Dict[str, Any], company_name: str, inviter_name: str) -> bool:
+    link = f"{BASE_URL}/join?token={invite['token']}"
+    who = _html_escape(inviter_name or company_name)
+    html = (
+        '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:auto;color:#0b1433">'
+        f'<h2 style="color:#0037b8">Arachi komandasına dəvət</h2>'
+        f'<p><b>{who}</b> sizi <b>{_html_escape(company_name)}</b> şirkətinin Arachi hesabına dəvət edir. '
+        'Qoşulmaq üçün aşağıdakı düyməyə basın, adınızı və şifrənizi təyin edin. Hesabınız öz e-poçtunuz və şifrənizlə olacaq.</p>'
+        f'<p><a href="{_html_escape(link)}" style="display:inline-block;background:#0037b8;color:#fff;padding:12px 22px;border-radius:8px;text-decoration:none;font-weight:bold">Dəvəti qəbul et</a></p>'
+        f'<p style="color:#56627f;font-size:13px">Link {INVITE_TTL_DAYS} gün etibarlıdır və yalnız bir dəfə işləyir. Düymə işləmirsə: {_html_escape(link)}</p>'
+        '<p style="color:#8893ae;font-size:12px">Bu dəvəti gözləmirdinizsə, e-poçtu nəzərə almayın.</p></div>'
+    )
+    safe_company = " ".join(str(company_name).split())[:80]
+    subject_line = f"Arachi: {safe_company} sizi komandaya dəvət edir"
+    try:
+        await fastmail.send_message(MessageSchema(
+            subject=subject_line,
+            recipients=[invite["email"]], body=html, subtype=MessageType.html, from_name="Arachi"))
+        return True
+    except Exception:
+        traceback.print_exc()
+        return False
+
+
+# ==========================================
+# İDARƏÇİ REJİMİ: komandası olan şirkətin sahibi prosesləri izləyir, işi üzvlər görür
+# ==========================================
+# Üzvü olmayan sahib (təkbaşına istifadəçi) əvvəlki kimi işləyir. Komandada ən azı bir üzv olanda sahib yalnız
+# oxuya bilər (sorğular, təkliflər, hesabatlar) və hesabı idarə edə bilər (komanda, şifrə, plan, hesabı silmək).
+# Bütün yazma əməliyyatları bir yerdə dayandırılır ki, hansısa endpoint unudulmasın.
+MANAGER_LOCK_MESSAGE = "Komandanız olduğu üçün hesabınız idarəçi rejimindədir: prosesləri izləyə və komandanı idarə edə bilərsiniz. Sorğuları komanda üzvləri yaradır və idarə edir."
+_MGR_ALLOWED_PREFIXES = (
+    "/api/team", "/api/change-password", "/api/change-email", "/api/delete-account", "/reports/generate",
+    "/quotes/check-bounces", "/quotes/submit/", "/forwarder/profile", "/auth/", "/api/register", "/api/ai/exchange",
+)
+_MGR_CACHE: Dict[int, Any] = {}   # şirkət id -> (bitmə vaxtı, üzv var?)
+_MGR_TTL_SECONDS = 10
+
+
+def _company_has_members(company_id: int) -> bool:
+    now = time.time()
+    hit = _MGR_CACHE.get(company_id)
+    if hit and hit[0] > now:
+        return hit[1]
+    rows = supabase.table("customers").select("id").eq("company_id", company_id).limit(1).execute().data or []
+    has = len(rows) > 0
+    _MGR_CACHE[company_id] = (now + _MGR_TTL_SECONDS, has)
+    return has
+
+
+def _forget_manager_cache(company_id: int) -> None:
+    _MGR_CACHE.pop(int(company_id), None)
+
+
+@app.middleware("http")
+async def manager_mode_guard(request: Request, call_next):
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        auth = request.headers.get("authorization") or ""
+        if auth.lower().startswith("bearer "):
+            try:
+                payload = jwt.decode(auth[7:].strip(), JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            except Exception:
+                payload = None
+            # Üzvlər və Aİ sessiyası (üzvün işi) toxunulmur; yalnız sahibin öz paneli
+            if payload and payload.get("role") == "customer" and not payload.get("member") and payload.get("via") != "ai":
+                path = request.url.path
+                if not any(path.startswith(pref) for pref in _MGR_ALLOWED_PREFIXES):
+                    try:
+                        locked = _company_has_members(int(payload.get("sub")))
+                    except Exception:
+                        locked = False
+                    if locked:
+                        return JSONResponse({"detail": MANAGER_LOCK_MESSAGE, "manager_mode": True}, status_code=423)
+    return await call_next(request)
+
+
+@app.post("/api/team/invite")
+@limiter.limit("20/hour")
+async def team_invite(request: Request, data: TeamInviteRequest, current_user: dict = Depends(verify_token)):
+    _require_owner(current_user)
+    company_id = int(current_user["sub"])
+    owner = _require_active_subscription(company_id)
+    email = str(data.email).strip().lower()
+    name = _clean_text(data.name, 100)
+    if email == str(owner.get("email") or "").lower() or _email_in_use(email):
+        raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq Arachi-də istifadə olunur.")
+    seats = _seat_info(owner)
+    # eyni e-poçta əvvəlki gözləyən dəvət varsa o əvəz olunur (yer ikiqat tutulmur)
+    old = [i for i in _pending_invites(company_id) if str(i.get("email") or "").lower() == email]
+    used = seats["used"] - len(old)
+    if seats["limit"] is not None and used >= seats["limit"]:
+        raise HTTPException(status_code=403, detail=f"{seats['plan']} planında {seats['limit']} istifadəçi yeri var və hamısı doludur. Əlavə yer üçün planı yeniləyin.")
+    for i in old:
+        supabase.table("team_invites").delete().eq("id", i["id"]).execute()
+    invite = {
+        "company_id": company_id, "email": email, "name": name, "token": secrets.token_urlsafe(32),
+        "created_by": _acting_id(current_user),
+        "expires_at": (datetime.utcnow() + timedelta(days=INVITE_TTL_DAYS)).isoformat(),
+    }
+    ins = supabase.table("team_invites").insert(invite).execute()
+    row = ins.data[0] if ins.data else invite
+    sent = await _send_invite_email(row, owner.get("name") or "", str(current_user.get("uname") or ""))
+    _log_activity(current_user, "member_invited", "invite", row.get("id"), email)
+    return {"status": "success", "email_sent": sent, "invite_link": f"{BASE_URL}/join?token={invite['token']}",
+            "message": "Dəvət göndərildi." if sent else "Dəvət yaradıldı, amma e-poçt göndərilmədi. Linki özünüz göndərin."}
+
+
+@app.get("/api/team/mode")
+def team_mode(current_user: dict = Depends(verify_token)):
+    """Panelin rejimi: üzv, idarəçi (komandası olan sahib) və ya təkbaşına istifadəçi."""
+    if _is_member(current_user):
+        return {"status": "success", "mode": "member"}
+    company_id = int(current_user["sub"])
+    _forget_manager_cache(company_id)
+    return {"status": "success", "mode": "manager" if _company_has_members(company_id) else "solo"}
+
+
+@app.post("/api/team/invites/{invite_id}/resend")
+@limiter.limit("20/hour")
+async def team_invite_resend(request: Request, invite_id: int, current_user: dict = Depends(verify_token)):
+    _require_owner(current_user)
+    company_id = int(current_user["sub"])
+    rows = [i for i in _pending_invites(company_id) if i["id"] == invite_id]
+    if not rows:
+        raise HTTPException(status_code=404, detail="Dəvət tapılmadı və ya müddəti bitib.")
+    owner = _load_customer_row(company_id)
+    sent = await _send_invite_email(rows[0], owner.get("name") or "", str(current_user.get("uname") or ""))
+    return {"status": "success", "email_sent": sent, "invite_link": f"{BASE_URL}/join?token={rows[0]['token']}"}
+
+
+@app.delete("/api/team/invites/{invite_id}")
+def team_invite_cancel(invite_id: int, current_user: dict = Depends(verify_token)):
+    _require_owner(current_user)
+    company_id = int(current_user["sub"])
+    rows = supabase.table("team_invites").select("id, email").eq("id", invite_id).eq("company_id", company_id).execute().data or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="Dəvət tapılmadı.")
+    supabase.table("team_invites").delete().eq("id", invite_id).execute()
+    _log_activity(current_user, "invite_cancelled", "invite", invite_id, rows[0].get("email") or "")
+    return {"status": "success"}
+
+
+@app.delete("/api/team/members/{member_id}")
+def team_member_remove(member_id: int, current_user: dict = Depends(verify_token)):
+    _require_owner(current_user)
+    company_id = int(current_user["sub"])
+    rows = supabase.table("customers").select("id, email, name").eq("id", member_id).eq("company_id", company_id).execute().data or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="Üzv tapılmadı.")
+    supabase.table("customers").delete().eq("id", member_id).eq("company_id", company_id).execute()
+    _forget_manager_cache(company_id)
+    _log_activity(current_user, "member_removed", "member", member_id, rows[0].get("email") or "")
+    return {"status": "success", "message": "Üzv komandadan çıxarıldı. Onun girişi dərhal bağlandı."}
+
+
+def _invite_by_token(token: str) -> Optional[Dict[str, Any]]:
+    if not token or len(token) > 200:
+        return None
+    rows = supabase.table("team_invites").select("*").eq("token", token).execute().data or []
+    if not rows or rows[0].get("used_at"):
+        return None
+    exp = _parse_ts(rows[0].get("expires_at"))
+    if exp is not None and exp <= datetime.utcnow():
+        return None
+    return rows[0]
+
+
+@app.get("/api/team/invite-info")
+@limiter.limit("30/minute")
+def team_invite_info(request: Request, token: str = ""):
+    invite = _invite_by_token(token)
+    if not invite:
+        raise HTTPException(status_code=404, detail="Dəvət linki etibarsızdır, istifadə edilib və ya müddəti bitib.")
+    owner = _load_customer_row(int(invite["company_id"]))
+    return {"status": "success", "company_name": owner.get("name") or "", "email": invite.get("email"), "name": invite.get("name") or ""}
+
+
+class TeamJoinRequest(BaseModel):
+    token: str
+    name: str
+    password: str
+    accepted_terms: bool = False
+
+
+@app.get("/join", response_class=HTMLResponse)
+def join_page(request: Request, token: str = ""):
+    try:
+        with open(os.path.join("static", "join.html"), "r", encoding="utf-8") as f:
+            html_content = f.read()
+        return HTMLResponse(content=html_content.replace("{{ token }}", _html_escape(token[:200])), headers=_NOINDEX_HEADERS)
+    except Exception:
+        return HTMLResponse("<h1>Səhifə tapılmadı.</h1>", status_code=404)
+
+
+@app.post("/api/team/join")
+@limiter.limit("10/minute")
+def team_join(request: Request, data: TeamJoinRequest):
+    invite = _invite_by_token(data.token)
+    if not invite:
+        raise HTTPException(status_code=400, detail="Dəvət linki etibarsızdır, istifadə edilib və ya müddəti bitib.")
+    name = _clean_text(data.name, 100)
+    if not name:
+        raise HTTPException(status_code=400, detail="Adınızı yazın.")
+    if not _strong_password(data.password):
+        raise HTTPException(status_code=400, detail=_PASSWORD_RULE_MESSAGE)
+    if not data.accepted_terms:
+        raise HTTPException(status_code=400, detail="Davam etmək üçün İstifadə Şərtləri və Məxfilik Siyasəti ilə razılaşmalısınız.")
+    email = str(invite["email"]).strip().lower()
+    if _email_in_use(email):
+        raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq Arachi-də istifadə olunur.")
+    owner = _load_customer_row(int(invite["company_id"]))
+    new_member = {
+        "email": email, "password": pwd_context.hash(data.password), "name": name,
+        "account_type": owner.get("account_type") or "importer_exporter",
+        "customer_access": owner.get("customer_access") is not False, "forwarder_access": owner.get("forwarder_access") is True,
+        "company_id": owner["id"],
+    }
+    ins = supabase.table("customers").insert(new_member).execute()
+    member_id = ins.data[0]["id"] if ins.data else None
+    supabase.table("team_invites").update({"used_at": datetime.utcnow().isoformat()}).eq("id", invite["id"]).execute()
+    _forget_manager_cache(owner["id"])
+    _log_activity({"sub": owner["id"], "uid": member_id, "uname": name}, "member_joined", "member", member_id, email)
+    return {"status": "success", "message": "Komandaya qoşuldunuz. İndi daxil ola bilərsiniz."}
+
+
 @app.post("/api/change-password")
 @limiter.limit("5/minute")
 def change_password(request: Request, data: ChangePasswordRequest, current_user: dict = Depends(verify_any_token)):
-    user_id = current_user.get("sub")
+    user_id = _acting_id(current_user)
     role = current_user.get("role")
-    
+
     if role != "customer":
         raise HTTPException(status_code=403, detail="Yalnız müştərilər şifrəsini dəyişə bilər.")
-        
+
     user_res = supabase.table("customers").select("*").eq("id", user_id).execute()
     if not user_res.data:
         raise HTTPException(status_code=404, detail="İstifadəçi tapılmadı.")
     user = user_res.data[0]
-    
+
     if not _verify_password(data.current_password, user.get("password", "")):
         raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
-        
+
     if len(data.new_password) < 8 or not re.search(r"[A-Z]", data.new_password) or not re.search(r"[a-z]", data.new_password) or not re.search(r"[0-9]", data.new_password):
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail="Təhlükəsizlik: Yeni şifrə ən azı 8 simvol olmalı, 1 böyük hərf, 1 kiçik hərf və 1 rəqəm ehtiva etməlidir!"
         )
-        
+
     new_hashed_password = pwd_context.hash(data.new_password)
     supabase.table("customers").update({"password": new_hashed_password}).eq("id", user_id).execute()
-    
+
     return {"status": "success", "message": "Şifrəniz uğurla dəyişdirildi!"}
 
 class DeleteAccountRequest(BaseModel):
@@ -3590,6 +3952,8 @@ def delete_account(request: Request, data: DeleteAccountRequest, current_user: d
         raise HTTPException(status_code=403, detail="Yalnız müştəri hesabı silinə bilər.")
     if current_user.get("via") == "ai":
         raise HTTPException(status_code=403, detail="Hesab yalnız arachi.co saytından, öz girişinizlə silinə bilər.")
+    if current_user.get("member"):
+        raise HTTPException(status_code=403, detail="Şirkət hesabını yalnız şirkət sahibi silə bilər.")
     customer_id = int(current_user.get("sub"))
     res = supabase.table("customers").select("*").eq("id", customer_id).execute()
     if not res.data:
@@ -3613,6 +3977,12 @@ def delete_account(request: Request, data: DeleteAccountRequest, current_user: d
         _delete_where("carrier_categories", "customer_id", customer_id)
         _delete_where("forwarder_profiles", "customer_id", customer_id)
         _delete_where("ai_sso_jti", "customer_id", customer_id)
+        # Komanda: üzvlər, dəvətlər və fəaliyyət jurnalı da silinir (cədvəllər yoxdursa keçilir)
+        for table in ("team_invites", "company_activity"):
+            try: supabase.table(table).delete().eq("company_id", customer_id).execute()
+            except Exception: pass
+        try: supabase.table("customers").delete().eq("company_id", customer_id).execute()
+        except Exception: pass
         supabase.table("customers").delete().eq("id", customer_id).execute()
         _delete_profile_photo_file(profile.get("photo_url"))
     except Exception as e:
@@ -3624,26 +3994,26 @@ def delete_account(request: Request, data: DeleteAccountRequest, current_user: d
 @app.post("/api/change-email")
 @limiter.limit("5/minute")
 def change_email(request: Request, data: ChangeEmailRequest, current_user: dict = Depends(verify_any_token)):
-    user_id = current_user.get("sub")
+    user_id = _acting_id(current_user)
     role = current_user.get("role")
-    
+
     if role != "customer":
         raise HTTPException(status_code=403, detail="Yalnız müştərilər e-poçtunu dəyişə bilər.")
-        
+
     user_res = supabase.table("customers").select("*").eq("id", user_id).execute()
     if not user_res.data:
         raise HTTPException(status_code=404, detail="İstifadəçi tapılmadı.")
     user = user_res.data[0]
-    
+
     if not _verify_password(data.current_password, user.get("password", "")):
         raise HTTPException(status_code=400, detail="Cari şifrə yanlışdır.")
-        
+
     existing_cust = supabase.table("customers").select("id").eq("email", data.new_email).execute()
     if existing_cust.data and str(existing_cust.data[0]["id"]) != str(user_id):
         raise HTTPException(status_code=400, detail="Bu e-poçt ünvanı artıq başqa müştəri hesabı tərəfindən istifadə olunur.")
-        
+
     supabase.table("customers").update({"email": data.new_email}).eq("id", user_id).execute()
-    
+
     return {"status": "success", "message": "E-poçtunuz uğurla dəyişdirildi!"}
 
 # YENİ ƏLAVƏ: Təklifin Müştəriyə PDF Üçün Yadda Saxlanılması
