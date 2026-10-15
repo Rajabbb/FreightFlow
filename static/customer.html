@@ -833,13 +833,13 @@
             </a>
             <div class="ms-auto d-flex align-items-center flex-wrap justify-content-end gap-2">
                 <!-- DİL SEÇİMİ (Language Selector) -->
-<div class="position-relative d-inline-flex align-items-center">
-    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
-    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
-        <option value="az">AZ</option>
-        <option value="en">EN</option>
-    </select>
-</div>
+                <div class="position-relative d-inline-flex align-items-center">
+                    <i class="bi bi-globe2 position-absolute text-secondary" style="left: 12px; pointer-events: none; font-size: 14px;"></i>
+                    <select id="langSelector" onchange="changeLanguage(this.value)" class="form-select form-select-sm rounded-pill shadow-sm fw-semibold text-secondary" style="width: 90px; padding-left: 34px; font-size: 13px; cursor: pointer;" aria-label="Language / Dil">
+                        <option value="az">AZ</option>
+                        <option value="en">EN</option>
+                    </select>
+                </div>
                 <button id="aiLaunchBtn" type="button" onclick="launchAI()" class="btn btn-sm px-3 py-1.5 rounded-pill text-nowrap d-none fw-bold ai-launch-btn" style="font-size: 12.5px;">
                     <i class="bi bi-stars me-1"></i> Aİ istifadə et
                 </button>
@@ -1288,22 +1288,22 @@
                         <input type="text" class="form-control" id="cargo_type" required placeholder="məs: Quru yük / Tekstil">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Çəki (kq) <span class="text-danger">*</span></label>
-                        <input type="number" step="any" class="form-control" id="weight_kg" required placeholder="1000">
+                        <label class="form-label">Çəki (kq)</label>
+                        <input type="number" step="any" class="form-control" id="weight_kg" placeholder="1000">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label">Həcm / Palet <span class="text-danger">*</span></label>
+                        <label class="form-label">Həcm / Palet</label>
                         <div class="input-group">
                             <select class="form-select border-end-0 bg-white shadow-sm" id="volume_type" style="max-width: 110px; cursor: pointer; font-weight: 600;">
                                 <option value="CBM">CBM</option>
                                 <option value="Palet">Palet</option>
                             </select>
-                            <input type="number" step="any" class="form-control shadow-sm" id="volume_cbm" required placeholder="Miqdarı yazın (məs: 15)">
+                            <input type="number" step="any" class="form-control shadow-sm" id="volume_cbm" placeholder="Miqdarı yazın (məs: 15)">
                         </div>
                     </div>
                     <div class="col-12">
-                        <label class="form-label">Daşınma növü <span class="text-danger">*</span></label>
-                        <select class="form-select" id="transportation_mode" required>
+                        <label class="form-label">Daşınma növü</label>
+                        <select class="form-select" id="transportation_mode">
                             <option value="">Daşınma növünü seçin...</option>
                             <option value="Quru (Road)">Quru</option>
                             <option value="Hava (Air)">Hava</option>
@@ -2102,6 +2102,12 @@ Best regards,
         let globalRequestsCache = [];
         let globalCarriersCache = [];
         let globalCategoriesCache = [];
+
+        // Tranzit müddəti: daşıyıcı aralıq yazıbsa ("5-12") o göstərilir, yoxsa ədədi dəyər
+        function transitValue(o) {
+            const r = o && o.extra_details && o.extra_details.transit_range;
+            return r ? r : (o ? o.transit_time_days : "");
+        }
 
         function escapeHTML(str) {
             if (str === null || str === undefined) return '';
@@ -3724,7 +3730,7 @@ function loadBulkSubCategories(categoryId) {
             const volumeVal = document.getElementById("volume_cbm")?.value.trim();
             const transportModeVal = document.getElementById("transportation_mode")?.value;
 
-            if (!originVal || !destinationVal || !cargoTypeVal || !weightVal || !volumeVal || !transportModeVal) {
+            if (!originVal || !destinationVal || !cargoTypeVal) {
                 alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!"); return;
             }
 
@@ -3935,7 +3941,7 @@ function loadBulkSubCategories(categoryId) {
                         <div class="request-meta-box mb-3">
                             <div class="row text-muted small fw-medium g-2">
                                 <div class="col-6 col-lg-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${escapeHTML(req.cargo_type || req.cargo || '—')}</strong></div>
-                                <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki / Həcm: <strong class="text-dark">${escapeHTML(req.weight_kg || req.weight || 0)} kq${volDisplay}</strong></div>
+                                <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki / Həcm: <strong class="text-dark">${(req.weight_kg || req.weight) ? escapeHTML(req.weight_kg || req.weight) + ' kq' : '—'}${volDisplay}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${formattedDeadline}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
                                 ${offerDueOf(req) ? `<div class="col-12 col-lg-6"><i class="bi bi-hourglass-split me-1 text-primary"></i> Təklif son tarixi: ${offerDueHtml(req)}</div>` : ''}
@@ -4058,7 +4064,7 @@ function loadBulkSubCategories(categoryId) {
                     }
                 }
 
-                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") ? `${escapeHTML(q.transit_time_days)} gün` : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
+                let transitDisplay = (q.transit_time_days !== null && q.transit_time_days !== undefined && q.transit_time_days !== "null") ? `${escapeHTML(transitValue(q))} gün` : `<span class="text-muted fst-italic">Qeyd olunmayıb</span>`;
                 let isRevised = q.quote_history && q.quote_history.length > 0;
                 let revisedBadge = isRevised ? `<br><span class="badge bg-warning text-dark px-1 py-0 mt-1" style="font-size:9px;">Yenilənib (v${q.quote_history.length + 1})</span>` : "";
                 let priceDisplay = (q.price !== null && q.price !== undefined && q.price !== "null") ? `${escapeHTML(q.price)} <span class="text-muted small">${escapeHTML(q.currency || 'AZN')}</span>${revisedBadge}` : `<span class="text-muted fst-italic">Qiymət yoxdur</span>`;
@@ -4169,7 +4175,7 @@ function loadBulkSubCategories(categoryId) {
 
                 q.quote_history.forEach((hist, index) => {
                     let hPrice = hist.price !== null ? `${escapeHTML(hist.price)} ${escapeHTML(hist.currency || 'AZN')}` : "Yoxdur";
-                    let hTransit = hist.transit_time_days ? `${escapeHTML(hist.transit_time_days)} gün` : "Yoxdur";
+                    let hTransit = hist.transit_time_days ? `${escapeHTML(transitValue(hist))} gün` : "Yoxdur";
 
                     historyHtml += `
                         <div class="p-2 border rounded small d-flex justify-content-between flex-wrap gap-1 history-item"
@@ -4180,7 +4186,7 @@ function loadBulkSubCategories(categoryId) {
                 });
 
                 let currPrice = q.price !== null ? `${escapeHTML(q.price)} ${escapeHTML(q.currency || 'AZN')}` : "Yoxdur";
-                let currTransit = q.transit_time_days ? `${escapeHTML(q.transit_time_days)} gün` : "Yoxdur";
+                let currTransit = q.transit_time_days ? `${escapeHTML(transitValue(q))} gün` : "Yoxdur";
                 let lastIndex = q.quote_history.length;
 
                 historyHtml += `
@@ -4241,7 +4247,7 @@ function loadBulkSubCategories(categoryId) {
             }
 
             let modalTransitDisplay = (targetData.transit_time_days !== null && targetData.transit_time_days !== undefined && targetData.transit_time_days !== "null")
-                ? `${escapeHTML(targetData.transit_time_days)} <span class="fs-6 text-muted">gün</span>` : `<span class="fs-6 text-muted fst-italic">Qeyd olunmayıb</span>`;
+                ? `${escapeHTML(transitValue(targetData))} <span class="fs-6 text-muted">gün</span>` : `<span class="fs-6 text-muted fst-italic">Qeyd olunmayıb</span>`;
 
             let modalPriceDisplay = (targetData.price !== null && targetData.price !== undefined && targetData.price !== "null")
                 ? `${escapeHTML(targetData.price)} <span class="fs-6 text-muted">${escapeHTML(targetData.currency || 'AZN')}</span>` : `<span class="fs-6 text-muted fst-italic">Yoxdur</span>`;
