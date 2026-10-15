@@ -862,49 +862,90 @@ async def process_inbound_raw(raw: bytes) -> Dict[str, Any]:
     return {"status": "needs_review", "id": inbound_id, "reasons": reasons}
 
 
-def _fetch_inbound_raw(seen_uids: set) -> List[Tuple[bytes, bytes]]:
-    """Son günlərin cavab ünvanına gələn mesajları oxuyur (mesajlar oxunmuş işarələnmir)."""
+_INBOUND_STATE: Dict[str, Any] = {
+    "enabled": False, "last_run": None, "scanned": 0, "matched": 0, "processed": {}, "last_error": None, "runs": 0,
+}
+
+
+def _fetch_inbound_raw(seen_uids: set) -> Tuple[List[Tuple[bytes, bytes]], int]:
+    """Son günlərin poçtunu oxuyur (mesajlar oxunmuş işarələnmir). Əvvəl yalnız ünvan başlıqlarına baxılır,
+    cavab ünvanına (info+token@) gələnlər tam yüklənir. (mesajlar, baxılan say) qaytarır."""
     if not ENABLE_INBOUND_REPLIES or not IMAP_USERNAME or not IMAP_PASSWORD:
-        return []
+        return [], 0
     out: List[Tuple[bytes, bytes]] = []
+    scanned = 0
     imap = imaplib.IMAP4_SSL(IMAP_HOST, IMAP_PORT)
     try:
         imap.login(IMAP_USERNAME, IMAP_PASSWORD)
         imap.select("INBOX", readonly=True)
         since = (datetime.utcnow() - timedelta(days=INBOUND_LOOKBACK_DAYS)).strftime("%d-%b-%Y")
-        local = INBOUND_REPLY_BASE.split("@", 1)[0].split("+")[0] if "@" in INBOUND_REPLY_BASE else ""
-        criteria = ["SINCE", since]
-        if local: criteria += ["HEADER", "TO", f"{local}+"]
-        status, data = imap.uid("search", None, *criteria)
+        status, data = imap.uid("search", None, "SINCE", since)
         if status != "OK" or not data or not data[0]:
-            return []
-        for uid in data[0].split()[-300:]:
-            if uid in seen_uids: continue
+            return [], 0
+        for uid in data[0].split()[-500:]:
+            if uid in seen_uids:
+                continue
+            scanned += 1
+            st, hd = imap.uid("fetch", uid, "(BODY.PEEK[HEADER.FIELDS (TO CC DELIVERED-TO X-ORIGINAL-TO ENVELOPE-TO X-FORWARDED-TO)])")
+            if st != "OK" or not hd or not isinstance(hd[0], tuple):
+                continue
+            head = hd[0][1].decode("utf-8", errors="ignore")
+            if not _UUID_IN_ADDRESS.search(head):
+                seen_uids.add(uid)   # bu mesaj RFQ cavabı deyil: təkrar baxılmır
+                continue
             st, md = imap.uid("fetch", uid, "(BODY.PEEK[])")
             if st == "OK" and md and md[0] and isinstance(md[0], tuple):
                 out.append((uid, md[0][1]))
     finally:
         try: imap.logout()
         except Exception: pass
-    return out
+    return out, scanned
 
 
 async def _inbound_reply_loop():
     seen: set = set()
+    _INBOUND_STATE["enabled"] = True
     while True:
         try:
-            batch = await asyncio.to_thread(_fetch_inbound_raw, seen)
+            batch, scanned = await asyncio.to_thread(_fetch_inbound_raw, seen)
+            _INBOUND_STATE["scanned"] = scanned
+            _INBOUND_STATE["matched"] = len(batch)
             for uid, raw in batch:
                 try:
                     res = await process_inbound_raw(raw)
                     seen.add(uid)
-                    if res.get("status") not in ("nomatch", "duplicate"):
-                        print(f"[inbound] {res.get('status')}: {res.get('reasons') or res.get('reason') or ''}")
-                except Exception:
+                    st = res.get("status") or "?"
+                    _INBOUND_STATE["processed"][st] = _INBOUND_STATE["processed"].get(st, 0) + 1
+                    if st not in ("nomatch", "duplicate"):
+                        print(f"[inbound] {st}: {res.get('reasons') or res.get('reason') or ''}")
+                except Exception as one_err:
+                    _INBOUND_STATE["last_error"] = f"{type(one_err).__name__}: {str(one_err)[:200]}"
                     traceback.print_exc()
-        except Exception:
+            _INBOUND_STATE["last_error"] = _INBOUND_STATE["last_error"] if batch else None
+        except Exception as e:
+            _INBOUND_STATE["last_error"] = f"{type(e).__name__}: {str(e)[:200]}"
             traceback.print_exc()
+        _INBOUND_STATE["runs"] += 1
+        _INBOUND_STATE["last_run"] = datetime.utcnow().isoformat()
         await asyncio.sleep(INBOUND_CHECK_INTERVAL_SECONDS)
+
+
+@app.get("/admin/inbound-status")
+@limiter.limit("20/minute")
+def inbound_status(request: Request, secret: str = None):
+    """Gələn cavabların vəziyyəti (yalnız admin açarı ilə): aktivdirmi, poçt qutusu oxunurmu, son xəta."""
+    admin_key = os.getenv("ADMIN_SECRET_KEY")
+    provided = request.headers.get("x-admin-secret") or secret or ""
+    if not admin_key or not hmac.compare_digest(provided.encode(), admin_key.encode()):
+        raise HTTPException(status_code=403, detail="Giriş qadağandır.")
+    local, _, domain = INBOUND_REPLY_BASE.partition("@")
+    return {
+        "enabled_flag": ENABLE_INBOUND_REPLIES, "imap_user_set": bool(IMAP_USERNAME), "imap_password_set": bool(IMAP_PASSWORD),
+        "imap_host": IMAP_HOST, "reply_base_set": "@" in INBOUND_REPLY_BASE,
+        "reply_address_example": f"{local.split('+')[0]}+<token>@{domain}" if "@" in INBOUND_REPLY_BASE else None,
+        "base_matches_imap_user": bool(IMAP_USERNAME) and INBOUND_REPLY_BASE.lower() == IMAP_USERNAME.lower(),
+        "loop": dict(_INBOUND_STATE), "interval_seconds": INBOUND_CHECK_INTERVAL_SECONDS, "lookback_days": INBOUND_LOOKBACK_DAYS,
+    }
 
 
 @app.on_event("startup")
