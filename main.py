@@ -1195,7 +1195,7 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                         "Qiymət": q.get("price", "Yoxdur") if q.get("price") is not None else "Yoxdur",
                         "Valyuta": q.get("currency", "AZN"),
                         "AZN qarşılığı": _azn_value(q.get("price"), q.get("currency", "AZN"), report_fx["rates"]) if q.get("price") is not None else "Yoxdur",
-                        "Tranzit Müddəti (gün)": q.get("transit_time_days", "Qeyd edilməyib") if q.get("transit_time_days") is not None else "Qeyd edilməyib",
+                        "Tranzit Müddəti (gün)": (q.get("extra_details") or {}).get("transit_range") or (q.get("transit_time_days", "Qeyd edilməyib") if q.get("transit_time_days") is not None else "Qeyd edilməyib"),
                         "Qalibdir?": "Bəli" if q.get("is_winner") else "Xeyr",
                         "Əlavə Detallar": extra_str if extra_str else "Yoxdur",
                         "Təklif Tarixi": format_excel_date(date_val, is_utc=True, use_ampm=False)
@@ -2190,9 +2190,8 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
             shown = ", ".join(f"{v / 1000:g} ton" if v >= 1000 else f"{v:g} kq" for v in values)
             warnings.append(f"Mətndə bir neçə fərqli çəki var ({shown}). Bir neçə yük ola bilər, yalnız birincisi dolduruldu. Mətni yoxlayın.")
 
-    missing = [label for key, label in (("origin", "yükləmə yeri"), ("destination", "boşaltma yeri"), ("weight_kg", "çəki"), ("cargo_type", "yükün növü")) if not data.get(key)]
-    if not data.get("volume_m3"):
-        missing.append("həcm / palet")
+    # Məcburi yalnız bu üçdür; çəki, həcm və daşınma növü ixtiyaridir
+    missing = [label for key, label in (("origin", "yükləmə yeri"), ("destination", "boşaltma yeri"), ("cargo_type", "yükün növü")) if not data.get(key)]
     meaningful = any(data.get(k) for k in ("origin", "destination", "cargo_type", "weight_kg", "volume_m3"))
     return {"data": data, "warnings": warnings, "missing": missing, "empty": not meaningful}
 
@@ -2923,9 +2922,35 @@ def create_quote_direct(payload: DynamicQuoteSubmit):
     res = supabase.table("quotes").insert({"request_id": payload.request_id, "price": payload.price, "transit_time_days": payload.transit_time_days, "extra_details": payload.extra_details, "currency": payload.currency or "AZN"}).execute()
     return {"status": "success", "message": "Təklif qəbul edildi!", "data": res.data}
 
+_TRANSIT_RANGE = re.compile(r"^\s*(\d{1,3})\s*(?:[-\u2013\u2014~/]|to|dən|ilə)\s*(\d{1,3})\s*(?:gün|gun|days?|d)?\s*$", re.IGNORECASE)
+_TRANSIT_ONE = re.compile(r"^\s*(\d{1,3})\s*(?:gün|gun|days?|d)?\s*$", re.IGNORECASE)
+
+
+def _parse_transit(value: Any):
+    """Tranzit müddəti: '7' və ya '5-12'. (yuxarı sərhəd, aralıq mətni | None) qaytarır; boşdursa (None, None).
+    Ədədi sütunda yuxarı sərhəd saxlanılır (müqayisə, hesabat və Aİ üçün), aralıq mətni təklifin əlavə məlumatındadır."""
+    text = str(value if value is not None else "").strip()
+    if not text:
+        return None, None
+    m = _TRANSIT_RANGE.match(text)
+    if m:
+        low, high = int(m.group(1)), int(m.group(2))
+        if low > high: low, high = high, low
+        if high > 365:
+            raise HTTPException(status_code=400, detail="Tranzit müddəti 365 gündən çox ola bilməz.")
+        return high, (f"{low}-{high}" if low != high else None)
+    m = _TRANSIT_ONE.match(text)
+    if m:
+        n = int(m.group(1))
+        if n > 365:
+            raise HTTPException(status_code=400, detail="Tranzit müddəti 365 gündən çox ola bilməz.")
+        return n, None
+    raise HTTPException(status_code=400, detail="Tranzit müddəti rəqəm və ya aralıq olmalıdır (məsələn 7 və ya 5-12).")
+
+
 @app.post("/quotes/submit/{token}")
 @limiter.limit("5/minute")
-async def submit_quote(request: Request, token: str, price: Optional[str] = Form(None), currency: Optional[str] = Form("AZN"), transit_time_days: Optional[int] = Form(None), extra_details: Optional[str] = Form("{}"), carrier_file: Optional[UploadFile] = File(None), is_alternative: str = Form("false")):
+async def submit_quote(request: Request, token: str, price: Optional[str] = Form(None), currency: Optional[str] = Form("AZN"), transit_time_days: Optional[str] = Form(None), extra_details: Optional[str] = Form("{}"), carrier_file: Optional[UploadFile] = File(None), is_alternative: str = Form("false")):
     try:
         res = supabase.table("quotes").select("*").eq("token", token).execute()
         if not res.data: raise HTTPException(status_code=404, detail="Xətalı link!")
@@ -2935,6 +2960,9 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
         parsed_extra = json.loads(extra_details) if extra_details else {}
         parsed_extra["submitted"] = True
         parsed_extra["submitted_at"] = datetime.utcnow().isoformat()
+        transit_value, transit_range = _parse_transit(transit_time_days)
+        if transit_range: parsed_extra["transit_range"] = transit_range
+        else: parsed_extra.pop("transit_range", None)
 
         # Public link yoxlaması
         carrier_email = ""
@@ -2987,7 +3015,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
                 "token": new_token,
                 "price": parsed_price,
                 "currency": parsed_currency,
-                "transit_time_days": transit_time_days,
+                "transit_time_days": transit_value,
                 "extra_details": parsed_extra,
                 "mail_status": "delivered",
                 "is_viewed": True
@@ -3013,7 +3041,7 @@ async def submit_quote(request: Request, token: str, price: Optional[str] = Form
 
         update_res = supabase.table("quotes").update({
             "price": parsed_price, 
-            "transit_time_days": transit_time_days, 
+            "transit_time_days": transit_value, 
             "extra_details": parsed_extra, 
             "currency": parsed_currency,
             "quote_history": history
