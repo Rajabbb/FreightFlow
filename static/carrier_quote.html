@@ -183,7 +183,8 @@
                 <i data-lucide="timer" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-3 md:-ml-9"></i>
                 <div class="w-full">
                     <label class="block font-medium mb-1.5 text-sm text-slate-700" data-i18n="transit_time">Transit Time (Days)</label>
-                    <input type="number" id="transit_time_days" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" data-i18n-placeholder="eg_days" placeholder="e.g.: 5">
+                    <input type="text" inputmode="text" maxlength="14" autocomplete="off" id="transit_time_days" class="w-full border border-slate-200 rounded-lg p-2.5 text-sm text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition" data-i18n-placeholder="eg_days" placeholder="e.g.: 7 or 5-12">
+                    <p class="text-xs text-slate-500 mt-1" data-i18n="transit_hint">An exact number of days or an approximate range, e.g. 5-12.</p>
                 </div>
             </div>
 
@@ -261,7 +262,9 @@
                 enter_company: "Enter your company name...",
                 offered_price: "Offered Price",
                 transit_time: "Transit Time (Days)",
-                eg_days: "e.g.: 5",
+                eg_days: "e.g.: 7 or 5-12",
+                transit_hint: "An exact number of days or an approximate range, e.g. 5-12.",
+                transit_invalid: "Transit time must be a number or a range, e.g. 7 or 5-12.",
                 additional_notes: "Additional Notes or Terms (From Carrier)",
                 offer_due: "Quote deadline",
                 offer_due_passed: "The quote deadline has passed. You can still submit, but the customer may have already decided.",
@@ -302,7 +305,9 @@
                 enter_company: "Şirkətinizin adını daxil edin...",
                 offered_price: "Təklif Edilən Qiymət",
                 transit_time: "Tranzit Müddəti (Gün)",
-                eg_days: "məsələn: 5",
+                eg_days: "məsələn: 7 və ya 5-12",
+                transit_hint: "Dəqiq gün sayı və ya təxmini aralıq yaza bilərsiniz, məsələn 5-12.",
+                transit_invalid: "Tranzit müddəti rəqəm və ya aralıq olmalıdır, məsələn 7 və ya 5-12.",
                 additional_notes: "Əlavə Qeydlər və ya Şərtlər (Daşıyıcıdan)",
                 offer_due: "Təklif üçün son tarix",
                 offer_due_passed: "Təklif üçün son tarix keçib. Yenə də göndərə bilərsiniz, amma müştəri artıq qərar vermiş ola bilər.",
@@ -511,7 +516,7 @@
 
             document.getElementById("price").value = q.price !== null ? q.price : "";
             document.getElementById("currency").value = q.currency || "AZN";
-            document.getElementById("transit_time_days").value = q.transit_time_days !== null ? q.transit_time_days : "";
+            document.getElementById("transit_time_days").value = (q.extra_details && q.extra_details.transit_range) ? q.extra_details.transit_range : (q.transit_time_days !== null && q.transit_time_days !== undefined ? q.transit_time_days : "");
 
             if (q.extra_details && q.extra_details["Carrier Note"]) {
                 document.getElementById("carrier_note").value = q.extra_details["Carrier Note"];
@@ -587,7 +592,7 @@
                         } else {
                             document.getElementById("price").value = data.quote.price || "";
                             document.getElementById("currency").value = data.quote.currency || "USD";
-                            document.getElementById("transit_time_days").value = data.quote.transit_time_days || "";
+                            document.getElementById("transit_time_days").value = (data.quote.extra_details && data.quote.extra_details.transit_range) || data.quote.transit_time_days || "";
                             if (data.quote.extra_details && data.quote.extra_details["Carrier Note"]) {
                                 document.getElementById("carrier_note").value = data.quote.extra_details["Carrier Note"];
                             }
@@ -779,7 +784,15 @@
                 formData.append("currency", currencyEl ? currencyEl.value : "USD");
             }
             if (transitEl && transitEl.value.trim() !== "") {
-                formData.append("transit_time_days", transitEl.value);
+                const transitText = transitEl.value.trim().replace(/\s+/g, " ");
+                if (!/^\d{1,3}(\s?(-|\u2013|\u2014|~|\/)\s?\d{1,3})?(\s?(g\u00fcn|gun|days?|d))?$/i.test(transitText)) {
+                    alert(translations[currentLang].transit_invalid);
+                    quoteSubmitting = false;
+                    setQuoteButtonsLocked(false);
+                    transitEl.focus();
+                    return;
+                }
+                formData.append("transit_time_days", transitText);
             }
 
             const fileInput = document.getElementById("carrier_file");
