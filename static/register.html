@@ -169,6 +169,7 @@
 
             <button type="submit" class="btn btn-primary w-100" id="submitBtn">Qeydiyyatı Tamamla</button>
             <div id="errorMsg" class="text-danger small mt-3 text-center d-none"></div>
+            <div class="text-center mt-3 small text-muted" id="demoHint" hidden>Pulsuz demo ilə müştəri panelini sınamaq istəyirsiniz? <a href="/register?demo=importer" class="fw-semibold text-decoration-none" style="color: var(--brand);">İdxalçı / İxracçı demo</a> · <a href="/register?demo=forwarder" class="fw-semibold text-decoration-none" style="color: var(--brand);">Forwarder demo</a></div>
             <div class="text-center mt-3 small text-muted">Artıq hesabınız var? <a href="/login" class="fw-semibold text-decoration-none" style="color: var(--brand);">Daxil olun</a></div>
         </form>
     </div>
@@ -181,8 +182,13 @@
         // Linkin növü (server yerləşdirir): importer | forwarder. Boşdursa seçimi istifadəçi edir.
         let inviteType = (document.getElementById('invite_type') ? document.getElementById('invite_type').value : '').trim();
         if (inviteType.indexOf('{{') !== -1 || !hasToken) inviteType = '';
-        // Linksiz açılış = pulsuz forwarder qeydiyyatı: seçim ekranı yoxdur, birbaşa forma açılır
-        const lockedMode = inviteType || (hasToken ? '' : 'free');
+        // ?demo=importer | forwarder: linksiz 14 günlük demo hesabı
+        let demoType = '';
+        try { demoType = (new URLSearchParams(location.search).get('demo') || '').trim().toLowerCase(); } catch (e) {}
+        if (demoType !== 'importer' && demoType !== 'forwarder') demoType = '';
+        if (hasToken) demoType = '';
+        // Linksiz açılış = pulsuz forwarder qeydiyyatı (və ya demo): seçim ekranı yoxdur, birbaşa forma açılır
+        const lockedMode = inviteType || (demoType ? 'demo-' + demoType : (hasToken ? '' : 'free'));
 
         const $ = id => document.getElementById(id);
         // Geri: əvvəlki səhifə bu saytdandırsa ora, əks halda ana səhifəyə
@@ -205,7 +211,11 @@
                 $('detailsLabel').textContent = '1. Məlumatlarınız';
                 const banner = $('inviteBanner');
                 banner.classList.remove('d-none');
-                banner.innerHTML = lockedMode === 'free'
+                banner.innerHTML = lockedMode === 'demo-importer'
+                    ? '<i class="bi bi-stars me-1"></i> <strong>14 günlük pulsuz demo</strong> (İdxalçı / İxracçı): kart tələb olunmur, 2 istifadəçi hesabı və Aİ köməkçidə 100 sorğu. Demo bitəndən sonra davam etmək üçün plan seçirsiniz.'
+                    : lockedMode === 'demo-forwarder'
+                    ? '<i class="bi bi-stars me-1"></i> <strong>14 günlük pulsuz demo</strong> (Freight forwarder): forwarder paneli və müştəri paneli eyni girişlə, kart tələb olunmur, 2 istifadəçi hesabı və Aİ köməkçidə 100 sorğu.'
+                    : lockedMode === 'free'
                     ? '<i class="bi bi-person-badge-fill me-1"></i> <strong>İctimai Freight forwarder</strong> hesabı yaradırsınız: şirkət profiliniz idxalçı və ixracçılara görünəcək. Sorğu göndərmək üçün müştəri paneli də lazımdırsa, <a href="mailto:info@arachi.co?subject=Arachi%20-%20Forwarder%20(m%C3%BC%C5%9Ft%C9%99ri%20paneli%20il%C9%99)" class="fw-semibold">bizə yazın</a>.'
                     : lockedMode === 'forwarder'
                     ? '<i class="bi bi-truck-front-fill me-1"></i> <strong>Freight forwarder</strong> hesabı yaradırsınız: forwarder paneli və müştəri paneli eyni girişlə açılacaq.'
@@ -236,6 +246,7 @@
         else if (inviteType === 'importer' || hasToken) { $('type_importer').checked = true; }
         else { $('type_forwarder').checked = true; $('panel_forwarder').checked = true; }
         applyRules();
+        if (lockedMode === 'free') $('demoHint').hidden = false;
 
         async function submitRegistration(e) {
             e.preventDefault();
@@ -243,11 +254,12 @@
             const errorMsg = $('errorMsg');
             const fail = msg => { errorMsg.innerText = msg; errorMsg.classList.remove('d-none'); btn.disabled = false; btn.innerText = 'Qeydiyyatı Tamamla'; };
 
-            const accountType = checked('account_type');
+            const isDemo = !!demoType;
+            const accountType = isDemo ? (demoType === 'forwarder' ? 'forwarder' : 'importer_exporter') : checked('account_type');
             if (!accountType) { fail('Hesab növünü seçin.'); return; }
-            const panelAccess = accountType === 'forwarder' ? checked('panel_access') : 'customer';
+            const panelAccess = isDemo ? (demoType === 'forwarder' ? 'both' : 'customer') : (accountType === 'forwarder' ? checked('panel_access') : 'customer');
             if (accountType === 'forwarder' && !panelAccess) { fail('Panel seçimini edin.'); return; }
-            const needsLink = applyRules();
+            const needsLink = isDemo ? false : applyRules();
             if (needsLink && !hasToken) { fail('Bu seçim üçün sizə göndərilmiş qeydiyyat linki lazımdır.'); return; }
 
             const company = $('company_name').value.trim();
@@ -263,13 +275,14 @@
 
             const payload = { company_name: company, email: email, password: password, account_type: accountType, panel_access: panelAccess };
             payload.accepted_terms = true;
+            if (isDemo) payload.start_demo = true;
             if (needsLink && hasToken) payload.token = token;
 
             try {
                 const res = await fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 const data = await res.json().catch(() => ({}));
                 if (res.ok) {
-                    alert('Hesabınız uğurla yaradıldı! İndi daxil ola bilərsiniz.');
+                    alert(isDemo ? 'Demo hesabınız yaradıldı! 14 gün ərzində bütün imkanlardan istifadə edə bilərsiniz. İndi daxil olun.' : 'Hesabınız uğurla yaradıldı! İndi daxil ola bilərsiniz.');
                     window.location.href = '/login';
                 } else {
                     fail(typeof data.detail === 'string' ? data.detail : 'Xəta baş verdi');
