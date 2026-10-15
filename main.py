@@ -14,6 +14,7 @@ import asyncio
 import imaplib
 import tempfile
 import email as email_lib
+from email.message import EmailMessage as _EmailMessage
 from datetime import datetime, timedelta, timezone
 from email.header import decode_header
 import pandas as pd
@@ -471,17 +472,25 @@ _FREEMAIL_DOMAINS = {
     "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk", "outlook.com", "hotmail.com", "live.com", "icloud.com",
     "mail.ru", "yandex.ru", "yandex.com", "bk.ru", "inbox.ru", "list.ru", "proton.me", "protonmail.com", "aol.com", "msn.com",
 }
-_UUID_IN_ADDRESS = re.compile(r"\+([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})@")
+_UUID_IN_ADDRESS = re.compile(r"(?<![0-9A-Za-z-])([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})@")
 _INCLUDE_LABELS = {
     "customs": "Gömrük rüsumları", "loading": "Yükləmə/boşaltma", "insurance": "Sığorta",
     "terminal": "Terminal xərcləri", "door": "Qapıya çatdırılma", "fuel": "Yanacaq əlavəsi",
 }
 
 
+INBOUND_REPLY_DOMAIN = os.getenv("INBOUND_REPLY_DOMAIN", "").strip().lower().lstrip("@")
+
+
 def _inbound_address(token: str) -> Optional[str]:
-    """Cavab ünvanı: info+<token>@domen. Qeyri-aktivdirsə None (cavab müştərinin öz e-poçtuna gedir)."""
+    """Cavab ünvanı: kod@<INBOUND_REPLY_DOMAIN> (Resend qəbulu) və ya info+kod@domen (poçt qutusu).
+    Qeyri-aktivdirsə None (cavab müştərinin öz e-poçtuna gedir)."""
+    if not ENABLE_INBOUND_REPLIES or not token:
+        return None
+    if INBOUND_REPLY_DOMAIN:
+        return f"{token}@{INBOUND_REPLY_DOMAIN}"
     base = INBOUND_REPLY_BASE
-    if not ENABLE_INBOUND_REPLIES or "@" not in base or not token:
+    if "@" not in base:
         return None
     local, domain = base.split("@", 1)
     return f"{local.split('+')[0]}+{token}@{domain}"
@@ -945,7 +954,116 @@ def inbound_status(request: Request, secret: str = None):
         "reply_address_example": f"{local.split('+')[0]}+<token>@{domain}" if "@" in INBOUND_REPLY_BASE else None,
         "base_matches_imap_user": bool(IMAP_USERNAME) and INBOUND_REPLY_BASE.lower() == IMAP_USERNAME.lower(),
         "loop": dict(_INBOUND_STATE), "interval_seconds": INBOUND_CHECK_INTERVAL_SECONDS, "lookback_days": INBOUND_LOOKBACK_DAYS,
+        "resend_mode": bool(INBOUND_REPLY_DOMAIN), "reply_domain": INBOUND_REPLY_DOMAIN or None,
+        "resend_api_key_set": bool(RESEND_API_KEY), "resend_webhook_secret_set": bool(RESEND_WEBHOOK_SECRET),
+        "webhook_url": f"{BASE_URL}/api/inbound/resend",
     }
+
+
+# ---------------- Resend ilə qəbul (poçt qutusu lazım deyil) ----------------
+# Resend domen üçün gələn emailləri qəbul edir, email.received webhook-u göndərir; biz tam emaili Resend API-dən
+# (raw faylı da daxil) götürüb eyni emal boru kəmərindən keçiririk. Webhook imzası (Svix) yoxlanılır.
+RESEND_API_KEY = (os.getenv("RESEND_API_KEY", "") or (os.getenv("MAIL_PASSWORD", "") if os.getenv("MAIL_PASSWORD", "").startswith("re_") else "")).strip()
+RESEND_WEBHOOK_SECRET = os.getenv("RESEND_WEBHOOK_SECRET", "").strip()
+RESEND_API_BASE = "https://api.resend.com"
+WEBHOOK_TOLERANCE_SECONDS = 300
+
+
+def _verify_svix_signature(body: bytes, headers: Any, secret: str) -> bool:
+    """Svix/Resend webhook imzası: HMAC-SHA256(secret_bytes, "{id}.{timestamp}.{body}"), base64, 'v1,<imza>'."""
+    msg_id = headers.get("svix-id") or headers.get("webhook-id") or ""
+    timestamp = headers.get("svix-timestamp") or headers.get("webhook-timestamp") or ""
+    sig_header = headers.get("svix-signature") or headers.get("webhook-signature") or ""
+    if not (secret and msg_id and timestamp and sig_header):
+        return False
+    try:
+        if abs(time.time() - int(timestamp)) > WEBHOOK_TOLERANCE_SECONDS:
+            return False
+        key = base64.b64decode(secret.split("_", 1)[1] if secret.startswith("whsec_") else secret)
+    except Exception:
+        return False
+    expected = base64.b64encode(hmac.new(key, f"{msg_id}.{timestamp}.".encode() + body, hashlib.sha256).digest()).decode()
+    candidates = [part.split(",", 1)[1] for part in sig_header.split() if part.startswith("v1,") and "," in part]
+    return any(hmac.compare_digest(expected, c) for c in candidates)
+
+
+def _http_get(url: str, headers: Optional[Dict[str, str]] = None, timeout: int = 20) -> bytes:
+    req = urllib.request.Request(url, headers=headers or {"User-Agent": "arachi-inbound/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read(30 * 1024 * 1024)
+
+
+def _synthetic_raw(meta: Dict[str, Any]) -> bytes:
+    """Raw fayl yoxdursa Resend-in verdiyi sahələrdən email qurulur (əlavələr olmadan)."""
+    m = _EmailMessage()
+    m["From"] = str(meta.get("from") or "")
+    m["To"] = ", ".join(meta.get("to") or [])
+    if meta.get("cc"): m["Cc"] = ", ".join(meta.get("cc") or [])
+    m["Subject"] = str(meta.get("subject") or "")
+    m["Message-ID"] = str(meta.get("message_id") or "")
+    text = meta.get("text") or _strip_html(str(meta.get("html") or ""))
+    m.set_content(str(text or ""))
+    return m.as_bytes()
+
+
+async def _process_resend_email(email_id: str) -> Dict[str, Any]:
+    """Resend-də saxlanmış gələn emaili götürür və emal edir."""
+    if not RESEND_API_KEY:
+        return {"status": "failed", "reason": "RESEND_API_KEY təyin olunmayıb"}
+    auth = {"Authorization": f"Bearer {RESEND_API_KEY}", "User-Agent": "arachi-inbound/1.0"}
+    meta = json.loads(await asyncio.to_thread(_http_get, f"{RESEND_API_BASE}/emails/receiving/{email_id}?html_format=cid", auth))
+    raw: Optional[bytes] = None
+    url = (meta.get("raw") or {}).get("download_url")
+    if url:
+        try:
+            raw = await asyncio.to_thread(_http_get, url)
+        except Exception:
+            traceback.print_exc()
+    if not raw:
+        raw = _synthetic_raw(meta)
+    a = meta.get("authentication") or {}
+    if a:
+        header = f"Authentication-Results: resend; spf={a.get('spf') or 'none'}; dkim={a.get('dkim') or 'none'}; dmarc={a.get('dmarc') or 'none'}\r\n"
+        raw = header.encode() + raw
+    return await process_inbound_raw(raw)
+
+
+@app.post("/api/inbound/resend")
+async def resend_inbound_webhook(request: Request, background_tasks: BackgroundTasks):
+    """Resend 'email.received' webhook-u. İmza yoxlanılır; ağır iş arxa planda gedir ki, webhook gec cavab almasın."""
+    body = await request.body()
+    if not RESEND_WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail="Webhook gizli açarı təyin olunmayıb.")
+    if not _verify_svix_signature(body, request.headers, RESEND_WEBHOOK_SECRET):
+        raise HTTPException(status_code=401, detail="İmza yanlışdır.")
+    try:
+        payload = json.loads(body.decode("utf-8"))
+    except Exception:
+        raise HTTPException(status_code=400, detail="Yanlış sorğu.")
+    if payload.get("type") != "email.received":
+        return {"status": "ignored"}
+    data = payload.get("data") or {}
+    _INBOUND_STATE.setdefault("webhook", {"received": 0, "last_at": None, "last_result": None})
+    _INBOUND_STATE["webhook"]["received"] += 1
+    _INBOUND_STATE["webhook"]["last_at"] = datetime.utcnow().isoformat()
+    recipients = " ".join(str(x) for k in ("to", "cc", "bcc", "received_for") for x in (data.get(k) or []))
+    if not _UUID_IN_ADDRESS.search(recipients) or not data.get("email_id"):
+        _INBOUND_STATE["webhook"]["last_result"] = "nomatch"
+        return {"status": "nomatch"}
+
+    async def work(email_id: str):
+        try:
+            res = await _process_resend_email(email_id)
+            _INBOUND_STATE["webhook"]["last_result"] = res.get("status")
+            _INBOUND_STATE["processed"][res.get("status") or "?"] = _INBOUND_STATE["processed"].get(res.get("status") or "?", 0) + 1
+            print(f"[inbound/resend] {res.get('status')}: {res.get('reasons') or res.get('reason') or ''}")
+        except Exception as e:
+            _INBOUND_STATE["last_error"] = f"{type(e).__name__}: {str(e)[:200]}"
+            _INBOUND_STATE["webhook"]["last_result"] = "error"
+            traceback.print_exc()
+
+    background_tasks.add_task(work, str(data["email_id"]))
+    return {"status": "accepted"}
 
 
 @app.on_event("startup")
