@@ -869,6 +869,24 @@
 
     <div id="subscriptionBanner" class="d-none"></div>
 
+    <div class="modal fade" id="emailPreviewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title fw-bold"><i class="bi bi-eye me-2 text-primary"></i>Email önbaxışı</h5>
+                        <p class="text-muted small mb-0" id="emailPreviewSubject"></p>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Bağla"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-light border small">Nümunə məlumatla göstərilir (daşıyıcı: «Nümunə Daşıyıcı», yük və marşrut formadakı məlumatdan götürülür). Real göndərişdə hər daşıyıcının adı və sorğunun bütün detalları yazılır.</div>
+                    <iframe id="emailPreviewFrame" sandbox="" style="width:100%; height:520px; border:1px solid #dee2e6; border-radius:8px; background:#fff;"></iframe>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="inboundEmailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg rounded-4">
@@ -1529,11 +1547,25 @@ Best regards,
                     <div class="form-check mb-3">
                         <input class="form-check-input" type="radio" name="emailTemplateOption" id="customTemplateRadio" onchange="toggleEmailTemplateFields()">
                         <label class="form-check-label fw-bold text-dark" for="customTemplateRadio">
-                            Öz Şablonumu Daxil Et (Custom)
+                            Öz Şablonumu Daxil Et / Saxlanmış Şablon Seç
                         </label>
                     </div>
 
                     <div id="customEmailContainer" class="d-none mt-3 p-3 bg-light border rounded-3 shadow-sm">
+    <!-- Saxlanmış şablonlar -->
+    <div class="mb-3 p-2 border rounded-3 bg-white">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <label class="small fw-bold mb-0" for="emailTemplateSelect"><i class="bi bi-bookmark-star me-1 text-primary"></i>Saxlanmış şablon:</label>
+            <select id="emailTemplateSelect" class="form-select form-select-sm w-auto" style="max-width: 220px;" onchange="applyEmailTemplate()">
+                <option value="">— Saxlanmamış mətn —</option>
+            </select>
+            <button type="button" class="btn btn-sm btn-primary fw-semibold" onclick="saveEmailTemplate(false)">Yadda saxla</button>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="saveEmailTemplate(true)">Yeni ad ilə saxla</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDefaultEmailTemplate()">Standart et</button>
+            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteEmailTemplate()">Sil</button>
+        </div>
+        <div class="form-text mt-1" style="font-size: 11px;" id="emailTemplateHint">Şablonda yalnız mətni yazın: sorğu detalları (yük, çəki, tarixlər) hər sorğuda avtomatik əlavə olunur.</div>
+    </div>
     <!-- E-poçt Mövzusu (Subject) Bölməsi -->
     <div class="mb-3">
         <label for="custom_email_subject" class="form-label fw-bold text-dark small mb-1">
@@ -1542,7 +1574,7 @@ Best regards,
         <input type="text" class="form-control text-muted" id="custom_email_subject" name="custom_email_subject"
                value="📦 Submit a Proposal: {{origin}} - {{destination}}" style="font-size: 13px;">
         <div class="form-text" style="font-size: 11px;">
-            Dinamik dəyişənlər: <code>{{origin}}</code>, <code>{{destination}}</code>
+            Dinamik dəyişənlər: <code>{{origin}}</code>, <code>{{destination}}</code>, <code>{{cargo}}</code>, <code>{{company_name}}</code>, <code>{{sender_company}}</code>
         </div>
     </div>
 
@@ -1559,9 +1591,23 @@ Thank you.
 
 Best regards,
 {{sender_company}}</textarea>
-        <div class="form-text" style="font-size: 11px;">
-            Dinamik dəyişənlər: <code>{{company_name}}</code>, <code>{{sender_company}}</code>
+        <div class="d-flex flex-wrap gap-1 mt-2" id="templatePlaceholderChips">
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('company_name')" title="Daşıyıcının şirkət adı">{{company_name}}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('sender_company')" title="Sizin şirkətin adı">{{sender_company}}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('origin')">{{origin}}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('destination')">{{destination}}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('cargo')" title="Yükün adı">{{cargo}}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('offer_due')" title="Təklif üçün son tarix">{{offer_due}}</button>
+            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="insertTemplateVar('rfq_details')" title="Sorğu detalları cədvəlinin yeri">{{rfq_details}}</button>
         </div>
+        <div class="form-text" style="font-size: 11px;">
+            Düymələrə basın, dəyişən kursorun yerinə yazılır. <code>{{rfq_details}}</code> detallar cədvəlinin yerini göstərir; yazmasanız cədvəl mətnin altına özü əlavə olunur. «Təklifi göndər» düyməsi həmişə sistem tərəfindən qoyulur.
+        </div>
+        <div class="d-flex gap-2 mt-3">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="previewEmailTemplate()"><i class="bi bi-eye me-1"></i>Önbaxış</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="testSendEmailTemplate()"><i class="bi bi-send me-1"></i>Özümə test göndər</button>
+        </div>
+        <div id="templateTestMsg" class="small mt-2"></div>
     </div>
 </div>
 
@@ -3325,6 +3371,7 @@ async function toggleSubCategoriesDisplay(parentId, isChecked) {
 
             if (useCustom.checked) {
                 container.classList.remove("d-none");
+                try { ensureDefaultEmailTemplate(); } catch (e) {}
             } else {
                 container.classList.add("d-none");
                 // Qutunun içini silən kodu sildik ki, mətn itməsin.
@@ -5301,6 +5348,141 @@ function copyPublicLinkText() {
 
 
 
+
+    // ===== Email şablonları =====
+    let emailTemplates = [];
+    let lastTemplateField = null;
+
+    async function loadEmailTemplates(selectId) {
+        try {
+            const res = await fetch("/api/email-templates", { headers: getAuthHeaders() });
+            if (!res.ok) return;
+            const d = await res.json();
+            emailTemplates = d.templates || [];
+        } catch (e) { return; }
+        const sel = document.getElementById("emailTemplateSelect");
+        if (!sel) return;
+        const keep = selectId !== undefined ? String(selectId) : sel.value;
+        sel.innerHTML = '<option value="">— Saxlanmamış mətn —</option>' +
+            emailTemplates.map(t => `<option value="${t.id}">${escapeHTML(t.name)}${t.is_default ? " ★" : ""}</option>`).join("");
+        if (keep && emailTemplates.some(t => String(t.id) === keep)) sel.value = keep;
+    }
+
+    function currentEmailTemplate() {
+        const sel = document.getElementById("emailTemplateSelect");
+        return sel && sel.value ? emailTemplates.find(t => String(t.id) === sel.value) : null;
+    }
+
+    function applyEmailTemplate() {
+        const t = currentEmailTemplate();
+        if (!t) return;
+        document.getElementById("custom_email_subject").value = t.subject || "";
+        document.getElementById("custom_email_body").value = t.body || "";
+    }
+
+    // Öz şablonu seçiləndə standart şablon (varsa) avtomatik yazılır
+    function ensureDefaultEmailTemplate() {
+        const sel = document.getElementById("emailTemplateSelect");
+        if (!sel || sel.value) return;
+        const def = emailTemplates.find(t => t.is_default);
+        if (def) { sel.value = String(def.id); applyEmailTemplate(); }
+    }
+
+    function insertTemplateVar(name) {
+        const field = lastTemplateField && document.body.contains(lastTemplateField) ? lastTemplateField : document.getElementById("custom_email_body");
+        const text = "{{" + name + "}}";
+        const start = field.selectionStart ?? field.value.length, end = field.selectionEnd ?? field.value.length;
+        field.value = field.value.slice(0, start) + text + field.value.slice(end);
+        field.focus();
+        field.selectionStart = field.selectionEnd = start + text.length;
+    }
+
+    async function saveEmailTemplate(asNew) {
+        const subject = document.getElementById("custom_email_subject").value.trim();
+        const body = document.getElementById("custom_email_body").value.trim();
+        if (!body) { alert("Şablonun mətni boşdur."); return; }
+        const cur = currentEmailTemplate();
+        let url = "/api/email-templates", method = "POST", name;
+        if (cur && !asNew) { url += "/" + cur.id; method = "PUT"; name = cur.name; }
+        else {
+            name = prompt("Şablonun adı (məs: Standart AZ, İngilis dilində):", asNew && cur ? cur.name + " (surət)" : "");
+            if (name === null) return;
+            name = name.trim(); if (!name) { alert("Ad yazın."); return; }
+        }
+        try {
+            const res = await fetch(url, { method, headers: getAuthHeaders(), body: JSON.stringify({ name, subject, body, is_default: cur && !asNew ? !!cur.is_default : false }) });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) { alert(formatErrorDetail(d.detail)); return; }
+            await loadEmailTemplates(d.template.id);
+            let msg = "Şablon saxlanıldı.";
+            if (d.unknown_placeholders && d.unknown_placeholders.length) msg += " Diqqət: tanınmayan dəyişən: " + d.unknown_placeholders.map(x => "{{" + x + "}}").join(", ");
+            document.getElementById("templateTestMsg").className = "small mt-2 text-success";
+            document.getElementById("templateTestMsg").textContent = msg;
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
+    async function setDefaultEmailTemplate() {
+        const cur = currentEmailTemplate();
+        if (!cur) { alert("Əvvəl şablonu yadda saxlayın."); return; }
+        try {
+            const res = await fetch("/api/email-templates/" + cur.id, { method: "PUT", headers: getAuthHeaders(),
+                body: JSON.stringify({ name: cur.name, subject: document.getElementById("custom_email_subject").value.trim(), body: document.getElementById("custom_email_body").value.trim(), is_default: true }) });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) { alert(formatErrorDetail(d.detail)); return; }
+            await loadEmailTemplates(cur.id);
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
+    async function deleteEmailTemplate() {
+        const cur = currentEmailTemplate();
+        if (!cur) { alert("Silmək üçün saxlanmış şablon seçin."); return; }
+        if (!confirm("«" + cur.name + "» şablonu silinsin?")) return;
+        try {
+            const res = await fetch("/api/email-templates/" + cur.id, { method: "DELETE", headers: getAuthHeaders() });
+            if (!res.ok) { const d = await res.json().catch(() => ({})); alert(formatErrorDetail(d.detail)); return; }
+            await loadEmailTemplates("");
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
+    // Önbaxış və test üçün formadakı məlumat (olduğu qədər)
+    function emailTemplateSample() {
+        const val = id => (document.getElementById(id)?.value || "").trim();
+        const fields = [];
+        const vol = val("volume_cbm"); if (vol) fields.push("Həcm / Palet: " + vol + " " + (val("volume_type") || "CBM"));
+        const mode = document.getElementById("transportation_mode"); if (mode && mode.value) fields.push("Transportation Mode: " + mode.value);
+        return { origin: val("origin"), destination: val("destination"), cargo_type: val("cargo_type"), weight_kg: parseFloat(val("weight_kg")) || 0,
+                 additional_notes: document.getElementById("chk_info")?.checked ? val("inp_info_text") : "", required_fields: fields };
+    }
+
+    async function previewEmailTemplate() {
+        const body = { subject: document.getElementById("custom_email_subject").value, body: document.getElementById("custom_email_body").value, shipment: emailTemplateSample() };
+        try {
+            const res = await fetch("/api/email-templates/preview", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify(body) });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) { alert(formatErrorDetail(d.detail)); return; }
+            document.getElementById("emailPreviewSubject").textContent = "Mövzu: " + d.subject;
+            document.getElementById("emailPreviewFrame").srcdoc = d.html;
+            bootstrap.Modal.getOrCreateInstance(document.getElementById("emailPreviewModal")).show();
+        } catch (e) { alert("Serverlə əlaqə qurulmadı!"); }
+    }
+
+    async function testSendEmailTemplate() {
+        const msg = document.getElementById("templateTestMsg");
+        msg.className = "small mt-2 text-muted"; msg.textContent = "Test emaili göndərilir...";
+        const body = { subject: document.getElementById("custom_email_subject").value, body: document.getElementById("custom_email_body").value, shipment: emailTemplateSample() };
+        try {
+            const res = await fetch("/api/email-templates/test-send", { method: "POST", headers: getAuthHeaders(), body: JSON.stringify(body) });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) { msg.className = "small mt-2 text-danger"; msg.textContent = formatErrorDetail(d.detail); return; }
+            msg.className = "small mt-2 text-success"; msg.textContent = "Test emaili " + d.sent_to + " ünvanına göndərildi.";
+        } catch (e) { msg.className = "small mt-2 text-danger"; msg.textContent = "Serverlə əlaqə qurulmadı!"; }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        ["custom_email_subject", "custom_email_body"].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener("focus", () => { lastTemplateField = el; }); });
+        loadEmailTemplates();
+    });
+
     // ===== Gələn email cavabları: Aİ ilə çıxarılmış təkliflər və yoxlama gözləyənlər =====
     function inboundExtractedHtml(ex) {
         if (!ex || !Array.isArray(ex.offers) || !ex.offers.length) return '<div class="text-muted small">Aİ cavabdan təklif çıxara bilmədi.</div>';
@@ -5782,6 +5964,17 @@ function copyPublicLinkText() {
             "Təklif üçün son tarix": "Offer deadline",
             "Təkrarla": "Duplicate",
             "Komanda": "Team",
+            "Saxlanmış şablon:": "Saved template:",
+            "— Saxlanmamış mətn —": "— Unsaved text —",
+            "Yeni ad ilə saxla": "Save as new",
+            "Standart et": "Make default",
+            "Sil": "Delete",
+            "Önbaxış": "Preview",
+            "Özümə test göndər": "Send a test to myself",
+            "Email önbaxışı": "Email preview",
+            "Şablonda yalnız mətni yazın: sorğu detalları (yük, çəki, tarixlər) hər sorğuda avtomatik əlavə olunur.": "Write only the text in the template: request details (cargo, weight, dates) are added automatically for every request.",
+            "Test emaili göndərilir...": "Sending the test email...",
+            "Şablon saxlanıldı.": "Template saved.",
             "Daşıyıcının cavabı": "Carrier's reply",
             "Orijinal email mətni": "Original email text",
             "orijinala bax": "view original",
@@ -6008,7 +6201,7 @@ function copyPublicLinkText() {
             "Əlavə fayl yüklə (istəyə bağlı):": "Upload additional file (optional):",
             "Daşıyıcılara Göndəriləcək Email Məzmunu": "Email Content to Be Sent to Carriers",
             "Standart Şablon": "Standard Template",
-            "Öz Şablonumu Daxil Et (Custom)": "Enter My Own Template (Custom)",
+            "Öz Şablonumu Daxil Et / Saxlanmış Şablon Seç": "Write My Own Template / Choose a Saved Template",
             "E-poçt Mövzusu (Subject)": "Email Subject",
             "Dinamik dəyişənlər:": "Dynamic variables:",
             "Əsas Mətn (Body)": "Email Body",
