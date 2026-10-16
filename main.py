@@ -1221,41 +1221,77 @@ def process_dataframe_and_insert(df: pd.DataFrame, customer_id: int, skip_duplic
         raw_list.append({"name": company, "email": clean_email})
     return filter_and_insert_carriers(customer_id, raw_list, skip_duplicates)
 
-async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin: str, destination: str, token: str, custom_body: Optional[str] = None, custom_subject: Optional[str] = None, sender_company: str = "Arachi", is_reminder: bool = False, reply_to_email: Optional[str] = None):
-    quote_link = f"{BASE_URL}/carrier_quote/quote?token={token}"
-    tracking_pixel_url = f"{BASE_URL}/quotes/track/{token}"
+# ==========================================
+# EMAİL ŞABLONLARI: müştəri öz mətnini yazır, sorğu detalları sistem tərəfindən avtomatik əlavə olunur
+# ==========================================
+# Şablonda yalnız insan mətni (salamlaşma, şərtlər) yazılır; dəyişənlər sorğunun məlumatı ilə doldurulur.
+# {{rfq_details}} detallar cədvəlinin yerini göstərir; yazılmasa cədvəl mətnin altına əlavə olunur.
+# "Təklifi göndər" düyməsi və cavab bloku həmişə sistem tərəfindən qoyulur (silinə bilməz).
+TEMPLATE_PLACEHOLDERS = ("company_name", "sender_company", "origin", "destination", "offer_due", "cargo", "rfq_details")
+MAX_EMAIL_TEMPLATES = 10
+_PLACEHOLDER_RE = re.compile(r"\{\{\s*([a-zA-Z_]+)\s*\}\}")
+_DETAILS_MARK = "\x00RFQ_DETAILS\x00"
 
-    # === HƏLL BURADADIR: Fərdi başlıq gəlibsə onu istifadə edirik, əks halda standartı ===
+
+def _offer_due_text(shipment: Dict[str, Any]) -> str:
+    """'Offer Due: 2026-10-16 17:00' sətrindən oxunaqlı son tarix ('16.10.2026 17:00'); yoxdursa boş."""
+    for line in (shipment or {}).get("required_fields") or []:
+        if isinstance(line, str):
+            m = re.match(r"^\s*offer due\s*:\s*(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2}))?", line, re.IGNORECASE)
+            if m:
+                return f"{m.group(3)}.{m.group(2)}.{m.group(1)}" + (f" {int(m.group(4)):02d}:{m.group(5)}" if m.group(4) else "")
+    return ""
+
+
+def _fill_placeholders(text: str, values: Dict[str, str], keep_details_marker: bool = True) -> str:
+    def sub(m):
+        name = m.group(1)
+        if name == "rfq_details":
+            return _DETAILS_MARK if keep_details_marker else ""
+        return str(values[name]) if name in values else m.group(0)
+    return _PLACEHOLDER_RE.sub(sub, text or "")
+
+
+def _template_unknown_placeholders(*texts: str) -> List[str]:
+    found = {m.group(1) for t in texts for m in _PLACEHOLDER_RE.finditer(t or "")}
+    return sorted(n for n in found if n not in TEMPLATE_PLACEHOLDERS)
+
+
+def _render_carrier_email(carrier_name: str, origin: str, destination: str, token: str, custom_body: Optional[str],
+                          custom_subject: Optional[str], sender_company: str, is_reminder: bool,
+                          shipment: Optional[Dict[str, Any]], preview: bool = False) -> Tuple[str, str]:
+    """Daşıyıcıya gedən emailin mövzusu və HTML-i. Göndərmə və önbaxış eyni funksiyadan keçir."""
+    shipment = shipment or {}
+    quote_link = "#" if preview else f"{BASE_URL}/carrier_quote/quote?token={token}"
+    tracking_pixel = "" if preview else f'<img src="{BASE_URL}/quotes/track/{token}" width="1" height="1" style="display:none;" />'
+    values = {
+        "company_name": carrier_name, "sender_company": sender_company, "origin": origin, "destination": destination,
+        "offer_due": _offer_due_text(shipment), "cargo": str(shipment.get("cargo_type") or ""),
+    }
     if is_reminder:
         subject_line = f"⏰ Reminder: Submit a Proposal: {origin} - {destination}"
         text_content = f"""Dear {carrier_name},\n\nThis is a gentle reminder regarding the shipment request from {origin} to {destination}. Please kindly submit your quotation using the link below if you haven't already.\n\nThank you.\n\nBest regards,\n{sender_company}"""
     else:
         if custom_subject and custom_subject.strip():
-            # Əgər müştəri custom subject göndəribsə, içindəki {{origin}} və {{destination}} taglərini dəyişdirib istifadə edirik
-            subject_line = custom_subject.replace("{{origin}}", origin).replace("{{destination}}", destination)
+            subject_line = _fill_placeholders(custom_subject, values, keep_details_marker=False)
         else:
-            # Standart başlıq
             subject_line = f"📦 Submit a Proposal: {origin} - {destination}"
-
         if custom_body and custom_body.strip():
-            text_content = custom_body.replace("{{company_name}}", carrier_name).replace("{{sender_company}}", sender_company).replace("{{origin}}", origin).replace("{{destination}}", destination)
+            text_content = _fill_placeholders(custom_body, values)
         else:
             text_content = f"""Dear {carrier_name},\n\nPlease review the shipment details below and kindly complete the quotation form using the link provided.\n\nThank you.\n\nBest regards,\n{sender_company}"""
 
-    # Yeni sətir və başlıqda sətir sonu təmizlənir, mətn HTML-ə çevrilmədən əvvəl escape olunur (başqasının adından saxta link göndərmək olmasın)
-    subject_line = re.sub(r"[\r\n]+", " ", subject_line)
+    # Mövzuda sətir sonu təmizlənir, mətn HTML-ə çevrilmədən əvvəl escape olunur (başqasının adından saxta link göndərmək olmasın)
+    subject_line = re.sub(r"[\r\n\x00]+", " ", subject_line).strip()[:250]
     safe_origin, safe_destination = _html_escape(str(origin)), _html_escape(str(destination))
     formatted_text = _html_escape(text_content).replace("\n", "<br>")
-    # RFQ-nun bütün detalları emailin özündə yazılır: daşıyıcı linkə basmadan oxuya və cavab yaza bilsin
-    details_html = ""
-    try:
-        rows = supabase.table("quotes").select("request_id, shipment_requests(*)").eq("token", token).execute().data or []
-        if rows and isinstance(rows[0].get("shipment_requests"), dict):
-            details_html = _rfq_details_html(rows[0]["shipment_requests"])
-    except Exception:
-        details_html = ""
-    reply_address = _inbound_address(token)
-    reply_html = _reply_template_html() if reply_address else ""
+    details_html = _rfq_details_html(shipment) if shipment else ""
+    inline_details = _DETAILS_MARK in formatted_text
+    if inline_details:
+        formatted_text = formatted_text.replace(_DETAILS_MARK, details_html)
+    after_route_details = "" if inline_details else details_html
+    reply_address = None if preview else _inbound_address(token)
+    reply_html = _reply_template_html() if (reply_address or preview and ENABLE_INBOUND_REPLIES) else ""
     html_content = f"""
     <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px;">
         <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 30px; border: 1px solid #e0e0e0;">
@@ -1263,15 +1299,176 @@ async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin:
             <div style="background: #f8f9fa; padding: 15px; border-left: 4px solid #1a73e8; margin: 20px 0;">
                 <p style="margin: 5px 0;"><strong>Route:</strong> {safe_origin} ➔ {safe_destination}</p>
             </div>
-            {details_html}
+            {after_route_details}
             {reply_html}
             <div style="text-align: center; margin: 30px 0;">
                 <a href="{quote_link}" style="background-color: #1a73e8; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">👉 Submit Your Proposal</a>
             </div>
         </div>
-        <img src="{tracking_pixel_url}" width="1" height="1" style="display:none;" />
+        {tracking_pixel}
     </div>
     """
+    return subject_line, html_content
+
+
+class EmailTemplateIn(BaseModel):
+    name: str
+    subject: Optional[str] = ""
+    body: str
+    is_default: bool = False
+
+
+def _clean_template(data: EmailTemplateIn) -> Dict[str, Any]:
+    name = _clean_text(data.name, 60)
+    subject = re.sub(r"[\r\n\x00]+", " ", data.subject or "").strip()[:200]
+    body = (data.body or "").replace("\r\n", "\n").replace("\x00", "").strip()[:4000]
+    if not name:
+        raise HTTPException(status_code=400, detail="Şablonun adını yazın.")
+    if not body:
+        raise HTTPException(status_code=400, detail="Şablonun mətni boş ola bilməz.")
+    return {"name": name, "subject": subject, "body": body}
+
+
+def _template_public(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {"id": row["id"], "name": row.get("name") or "", "subject": row.get("subject") or "", "body": row.get("body") or "",
+            "is_default": bool(row.get("is_default")), "updated_at": row.get("updated_at") or row.get("created_at")}
+
+
+def _own_template(template_id: int, current_user: dict) -> Dict[str, Any]:
+    rows = supabase.table("email_templates").select("*").eq("id", template_id).execute().data or []
+    if not rows:
+        raise HTTPException(status_code=404, detail="Şablon tapılmadı.")
+    check_ownership(rows[0].get("customer_id"), current_user)
+    return rows[0]
+
+
+def _template_texts(customer_id: int, template_id: Optional[int]) -> Tuple[Optional[str], Optional[str]]:
+    """Şablonun (mövzu, mətn) cütü; tapılmasa və ya başqasınındırsa (None, None)."""
+    if not template_id:
+        return None, None
+    try:
+        rows = supabase.table("email_templates").select("*").eq("id", int(template_id)).eq("customer_id", int(customer_id)).execute().data or []
+    except Exception:
+        return None, None
+    return (rows[0].get("subject") or None, rows[0].get("body") or None) if rows else (None, None)
+
+
+@app.get("/api/email-templates")
+def list_email_templates(current_user: dict = Depends(verify_token)):
+    try:
+        rows = supabase.table("email_templates").select("*").eq("customer_id", int(current_user["sub"])).execute().data or []
+    except Exception:
+        rows = []
+    rows.sort(key=lambda r: (not r.get("is_default"), (r.get("name") or "").lower()))
+    return {"status": "success", "templates": [_template_public(r) for r in rows], "placeholders": list(TEMPLATE_PLACEHOLDERS), "max": MAX_EMAIL_TEMPLATES}
+
+
+def _unset_default(customer_id: int, except_id: Optional[int] = None) -> None:
+    for r in supabase.table("email_templates").select("id, is_default").eq("customer_id", customer_id).execute().data or []:
+        if r.get("is_default") and r["id"] != except_id:
+            supabase.table("email_templates").update({"is_default": False}).eq("id", r["id"]).execute()
+
+
+@app.post("/api/email-templates")
+def create_email_template(data: EmailTemplateIn, current_user: dict = Depends(verify_token)):
+    customer_id = int(current_user["sub"])
+    fields = _clean_template(data)
+    existing = supabase.table("email_templates").select("id, name").eq("customer_id", customer_id).execute().data or []
+    if len(existing) >= MAX_EMAIL_TEMPLATES:
+        raise HTTPException(status_code=400, detail=f"Ən çox {MAX_EMAIL_TEMPLATES} şablon saxlamaq olar. Lazımsızını silin.")
+    if any((e.get("name") or "").lower() == fields["name"].lower() for e in existing):
+        raise HTTPException(status_code=400, detail="Bu adla şablon artıq var. Başqa ad yazın və ya mövcud şablonu yeniləyin.")
+    row = {"customer_id": customer_id, **fields, "is_default": bool(data.is_default), "created_by_name": str(current_user.get("uname") or "")[:100]}
+    try:
+        ins = supabase.table("email_templates").insert(row).execute()
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Şablon saxlanmadı. Verilənlər bazasında 'email_templates' cədvəlinin yaradıldığını yoxlayın.")
+    saved = ins.data[0]
+    if data.is_default: _unset_default(customer_id, saved["id"])
+    return {"status": "success", "template": _template_public(saved), "unknown_placeholders": _template_unknown_placeholders(fields["subject"], fields["body"])}
+
+
+@app.put("/api/email-templates/{template_id}")
+def update_email_template(template_id: int, data: EmailTemplateIn, current_user: dict = Depends(verify_token)):
+    current = _own_template(template_id, current_user)
+    customer_id = int(current_user["sub"])
+    fields = _clean_template(data)
+    for e in supabase.table("email_templates").select("id, name").eq("customer_id", customer_id).execute().data or []:
+        if e["id"] != template_id and (e.get("name") or "").lower() == fields["name"].lower():
+            raise HTTPException(status_code=400, detail="Bu adla başqa şablon var.")
+    supabase.table("email_templates").update({**fields, "is_default": bool(data.is_default), "updated_at": datetime.utcnow().isoformat()}).eq("id", template_id).execute()
+    if data.is_default: _unset_default(customer_id, template_id)
+    row = (supabase.table("email_templates").select("*").eq("id", template_id).execute().data or [current])[0]
+    return {"status": "success", "template": _template_public(row), "unknown_placeholders": _template_unknown_placeholders(fields["subject"], fields["body"])}
+
+
+@app.delete("/api/email-templates/{template_id}")
+def delete_email_template(template_id: int, current_user: dict = Depends(verify_token)):
+    _own_template(template_id, current_user)
+    supabase.table("email_templates").delete().eq("id", template_id).execute()
+    return {"status": "success"}
+
+
+class TemplatePreviewIn(BaseModel):
+    subject: Optional[str] = ""
+    body: str = ""
+    shipment: Optional[Dict[str, Any]] = None
+
+
+def _preview_shipment(raw: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    """Önbaxış üçün formadakı (və ya nümunə) məlumat; yalnız bilinən sahələr və uzunluq məhdudiyyəti ilə."""
+    raw = raw or {}
+    fields = [str(f)[:300] for f in (raw.get("required_fields") or []) if isinstance(f, str)][:30]
+    return {
+        "origin": str(raw.get("origin") or "Bakı, Azərbaycan")[:200], "destination": str(raw.get("destination") or "İstanbul, Türkiyə")[:200],
+        "cargo_type": str(raw.get("cargo_type") or "Nümunə yük")[:200], "weight_kg": raw.get("weight_kg") or 0,
+        "additional_notes": str(raw.get("additional_notes") or "")[:600], "deadline": raw.get("deadline"), "required_fields": fields,
+    }
+
+
+def _preview_email(data: TemplatePreviewIn, current_user: dict) -> Tuple[str, str]:
+    cust = _load_customer_row(int(current_user["sub"]))
+    ship = _preview_shipment(data.shipment)
+    return _render_carrier_email("Nümunə Daşıyıcı", ship["origin"], ship["destination"], "preview", (data.body or "")[:4000],
+                                 (data.subject or "")[:200], cust.get("name") or "Arachi", False, ship, preview=True)
+
+
+@app.post("/api/email-templates/preview")
+@limiter.limit("60/minute")
+def preview_email_template(request: Request, data: TemplatePreviewIn, current_user: dict = Depends(verify_token)):
+    subject, html = _preview_email(data, current_user)
+    return {"status": "success", "subject": subject, "html": html, "unknown_placeholders": _template_unknown_placeholders(data.subject or "", data.body or "")}
+
+
+@app.post("/api/email-templates/test-send")
+@limiter.limit("10/hour")
+async def test_send_email_template(request: Request, data: TemplatePreviewIn, current_user: dict = Depends(verify_token)):
+    """Şablonun nümunə məlumatla göndərilmiş halını yalnız özünüzün e-poçtuna göndərir (daşıyıcılara yox)."""
+    to = _addr_of(str(current_user.get("email") or ""))
+    if not to:
+        raise HTTPException(status_code=400, detail="Hesabda e-poçt ünvanı yoxdur.")
+    subject, html = _preview_email(data, current_user)
+    try:
+        await fastmail.send_message(MessageSchema(subject=f"[Test] {subject}"[:250], recipients=[to], body=html, subtype=MessageType.html, from_name="Arachi"))
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Test emaili göndərilmədi.")
+    return {"status": "success", "sent_to": to}
+
+
+async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin: str, destination: str, token: str, custom_body: Optional[str] = None, custom_subject: Optional[str] = None, sender_company: str = "Arachi", is_reminder: bool = False, reply_to_email: Optional[str] = None):
+    # RFQ-nun bütün detalları emailin özündə yazılır: daşıyıcı linkə basmadan oxuya və cavab yaza bilsin
+    shipment: Dict[str, Any] = {}
+    try:
+        rows = supabase.table("quotes").select("request_id, shipment_requests(*)").eq("token", token).execute().data or []
+        if rows and isinstance(rows[0].get("shipment_requests"), dict):
+            shipment = rows[0]["shipment_requests"]
+    except Exception:
+        shipment = {}
+    subject_line, html_content = _render_carrier_email(carrier_name, origin, destination, token, custom_body, custom_subject,
+                                                       sender_company, is_reminder, shipment)
+    reply_address = _inbound_address(token)
     message_kwargs = dict(subject=subject_line, recipients=[carrier_email], body=html_content, subtype=MessageType.html, from_name=(sender_company or "Arachi").strip() or "Arachi")
     # Cavab Arachi-nin ünvanına gedir (Aİ təklifi çıxarır); aktiv deyilsə müştərinin öz e-poçtuna
     if reply_address: message_kwargs["reply_to"] = [reply_address]
@@ -1314,6 +1511,7 @@ class ShipmentRequestCreate(BaseModel):
     email_body: Optional[str] = None
     custom_email_body: Optional[str] = None
     custom_email_subject: Optional[str] = None
+    template_id: Optional[int] = None
 
 class DynamicQuoteSubmit(BaseModel):
     request_id: Optional[int] = None
@@ -3192,6 +3390,10 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
 
         active_custom_body = payload.custom_email_body or payload.email_body
         active_custom_subject = payload.custom_email_subject
+        if not active_custom_body and payload.template_id:
+            t_subject, t_body = _template_texts(payload.customer_id, payload.template_id)
+            if t_body:
+                active_custom_body, active_custom_subject = t_body, (active_custom_subject or t_subject)
 
         for carrier in target_carriers:
             unique_token = str(uuid.uuid4())
@@ -3221,6 +3423,7 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
         raise HTTPException(status_code=500, detail=str(e))
 
 class SendRequestPayload(BaseModel):
+    template_id: Optional[int] = None
     carrier_ids: Optional[List[int]] = []
     category_ids: Optional[List[int]] = []
     send_to_all: bool = False
@@ -3262,6 +3465,7 @@ async def send_existing_request(request_id: int, payload: SendRequestPayload, ba
         if not targets and not payload.also_create_link:
             raise HTTPException(status_code=400, detail="Göndəriləcək yeni daşıyıcı tapılmadı (seçilənlərə artıq göndərilib və ya seçim boşdur).")
         sent = []
+        tpl_subject, tpl_body = _template_texts(customer_id, payload.template_id)
         for carrier in targets:
             unique_token = str(uuid.uuid4())
             email = carrier.get("email")
@@ -3270,6 +3474,7 @@ async def send_existing_request(request_id: int, payload: SendRequestPayload, ba
                 background_tasks.add_task(
                     send_carrier_email_link, carrier_email=email, carrier_name=carrier.get("company_name") or "Daşıyıcı",
                     origin=shipment["origin"], destination=shipment["destination"], token=unique_token,
+                    custom_body=tpl_body, custom_subject=tpl_subject,
                     sender_company=sender_company, reply_to_email=customer_email)
             sent.append({"carrier_id": carrier["id"], "company_name": carrier.get("company_name"), "email": email, "token": unique_token})
         result = {"status": "success", "request_id": request_id, "sent": sent, "skipped_already_sent": [c["id"] for c in skipped]}
