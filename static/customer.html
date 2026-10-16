@@ -1368,15 +1368,29 @@
                         <label class="form-label">Boşaltma yeri <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="destination" required placeholder="məs: İstanbul, Türkiyə">
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="multiCargoToggle" onchange="toggleMultiCargo(this.checked)">
+                            <label class="form-check-label fw-semibold" for="multiCargoToggle">Bir neçə fərqli yük var <span class="text-muted fw-normal">(hər yük üçün ayrıca çəki, HS kod və s.; hamısı bir RFQ-da birlikdə daşınır)</span></label>
+                        </div>
+                    </div>
+                    <div class="col-12 d-none" id="cargoItemsBuilder">
+                        <div id="cargoItemsList" class="d-flex flex-column gap-2"></div>
+                        <div class="d-flex flex-wrap align-items-center gap-3 mt-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="addCargoItemBtn" onclick="addCargoItem()"><i class="bi bi-plus-lg me-1"></i>Yük əlavə et</button>
+                            <span class="small fw-bold text-dark" id="cargoItemsTotal"></span>
+                        </div>
+                        <div class="form-text" style="font-size: 11.5px;">Ən çox 10 yük. Cəmi çəki/həcm avtomatik hesablanır. Daşıyıcı bütün yüklər üçün bir ümumi qiymət yazır.</div>
+                    </div>
+                    <div class="col-12 col-md-6 single-cargo-field">
                         <label class="form-label">Yükün növü <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="cargo_type" required placeholder="məs: Quru yük / Tekstil">
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-6 single-cargo-field">
                         <label class="form-label">Çəki (kq)</label>
                         <input type="number" step="any" class="form-control" id="weight_kg" placeholder="1000">
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-6 single-cargo-field">
                         <label class="form-label">Həcm / Palet</label>
                         <div class="input-group">
                             <select class="form-select border-end-0 bg-white shadow-sm" id="volume_type" style="max-width: 110px; cursor: pointer; font-weight: 600;">
@@ -1419,7 +1433,7 @@
                         <input type="text" class="form-control opt-input d-none mt-2" id="inp_truck_type" placeholder="məs: Tentli / Refrijerator">
                     </div>
 
-                    <div class="opt-row">
+                    <div class="opt-row single-cargo-opt">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_hs_code" onchange="toggleOptField('hs_code')">
                             <label class="form-check-label fw-bold text-dark" for="chk_hs_code">HS Code</label>
@@ -1427,7 +1441,7 @@
                         <input type="text" class="form-control opt-input d-none mt-2" id="inp_hs_code" placeholder="məs: 1234.56">
                     </div>
 
-                    <div class="opt-row">
+                    <div class="opt-row single-cargo-opt">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_stackable" onchange="toggleOptField('stackable')">
                             <label class="form-check-label fw-bold text-dark" for="chk_stackable">Stackable / Non-stackable</label>
@@ -1453,7 +1467,7 @@
                         </select>
                     </div>
 
-                    <div class="opt-row">
+                    <div class="opt-row single-cargo-opt">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_incoterm" onchange="toggleOptField('incoterm')">
                             <label class="form-check-label fw-bold text-dark" for="chk_incoterm">Incoterm</label>
@@ -1474,7 +1488,7 @@
                         </select>
                     </div>
 
-                    <div class="opt-row">
+                    <div class="opt-row single-cargo-opt">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_adr" onchange="toggleOptField('adr')">
                             <label class="form-check-label fw-bold text-dark" for="chk_adr">Təhlükəli yük (ADR)</label>
@@ -1482,7 +1496,7 @@
                         <input type="text" class="form-control opt-input d-none mt-2" id="inp_adr" placeholder="məs: Klass 3">
                     </div>
 
-                    <div class="opt-row">
+                    <div class="opt-row single-cargo-opt">
                         <div class="form-check mb-1">
                             <input class="form-check-input opt-check" type="checkbox" id="chk_temp" onchange="toggleOptField('temp')">
                             <label class="form-check-label fw-bold text-dark" for="chk_temp">Temperatur tələbi (Reefer)</label>
@@ -1829,6 +1843,7 @@ Best regards,
                         <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə tarixi: <strong class="text-dark" id="detailDeadline">—</strong></div>
                         <div class="col-6 col-lg-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark" id="detailCreatedAt">—</strong></div>
                     </div>
+                    <div id="detailCargoItems" class="mb-3 d-none"></div>
                     <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3" style="font-size: 12px;" data-bs-toggle="modal" data-bs-target="#requestExtraModal">
                         <i class="bi bi-info-circle me-1"></i> Daha ətraflı məlumat
                     </button>
@@ -2573,6 +2588,8 @@ async function parseTextWithAI() {
                         }
                     }
 
+                    if (Array.isArray(d.cargo_items) && d.cargo_items.length >= 2) applyAiCargoItems(d.cargo_items);
+
                     if(d.additional_notes) {
                         document.getElementById("chk_info").checked = true;
                         toggleOptField('info');
@@ -2666,6 +2683,8 @@ async function parseTextWithAI() {
                         }
                     }
 
+                    if (Array.isArray(d.cargo_items) && d.cargo_items.length >= 2) applyAiCargoItems(d.cargo_items);
+
                     if(d.additional_notes) {
                         document.getElementById("chk_info").checked = true;
                         toggleOptField('info');
@@ -2706,6 +2725,7 @@ async function parseTextWithAI() {
             });
             const volTypeEl = document.getElementById("volume_type");
             if (volTypeEl) volTypeEl.value = "CBM";
+            resetMultiCargo();
 
             // 2. Nəqliyyat növünü sıfırlayırıq (ilk seçimə qaytarırıq)
             const transportSelect = document.getElementById("transportation_mode");
@@ -3840,10 +3860,20 @@ function loadBulkSubCategories(categoryId) {
 
             const originVal = document.getElementById("origin")?.value.trim();
             const destinationVal = document.getElementById("destination")?.value.trim();
-            const cargoTypeVal = document.getElementById("cargo_type")?.value.trim();
-            const weightVal = document.getElementById("weight_kg")?.value;
-            const volumeVal = document.getElementById("volume_cbm")?.value.trim();
+            let cargoTypeVal = document.getElementById("cargo_type")?.value.trim();
+            let weightVal = document.getElementById("weight_kg")?.value;
+            let volumeVal = document.getElementById("volume_cbm")?.value.trim();
             const transportModeVal = document.getElementById("transportation_mode")?.value;
+
+            // Bir neçə fərqli yük: ümumi göstəricilər yüklərdən hesablanır
+            let cargoItemsVal = [];
+            if (multiCargoOn()) {
+                cargoItemsVal = collectCargoItems();
+                if (cargoItemsVal.length < 2) { alert("Bir neçə yük rejimində ən azı 2 yükün adını yazın (və ya rejimi söndürün)."); return; }
+                const totals = cargoItemsTotals(cargoItemsVal);
+                cargoTypeVal = cargoItemsVal.map(i => i.name).slice(0, 3).join(" + ") + (cargoItemsVal.length > 3 ? ` (+${cargoItemsVal.length - 3})` : "");
+                weightVal = totals.weight || ""; volumeVal = totals.volume || "";
+            }
 
             if (!originVal || !destinationVal || !cargoTypeVal) {
                 alert("Zəhmət olmasa bütün məcburi (*) sahələri doldurun!"); return;
@@ -3860,7 +3890,7 @@ function loadBulkSubCategories(categoryId) {
             // CBM veya Palet növünü alırıq
             const volTypeSelected = document.getElementById("volume_type")?.value || "CBM";
            // Arka plan hata vermesin diye sadece rakamı alıyoruz
-            const parsedVolume = parseFloat(volumeVal) || 0;
+            const parsedVolume = cargoItemsVal.length >= 2 ? 0 : (parseFloat(volumeVal) || 0);
 
           // Tür bilgisinin kaybolmaması için zorunlu alanlara (notlara) ekliyoruz
           if(parsedVolume > 0) {
@@ -3883,6 +3913,7 @@ function loadBulkSubCategories(categoryId) {
                 email_template_type: useCustomTemplate ? "custom" : "standard",
                 custom_email_subject: customEmailSubjectVal,
                 custom_email_body: customEmailBodyVal,
+                cargo_items: cargoItemsVal.length >= 2 ? cargoItemsVal : undefined,
                 transportation_mode: transportModeVal,
                 send_to_all: (sendOpt === 'all'), send_option: sendOpt, also_create_link: alsoCreateLink, carrier_ids: selectedCarriers, category_ids: selectedCategories
             };
@@ -3925,6 +3956,7 @@ function loadBulkSubCategories(categoryId) {
 
                     window.isPublicLinkMode = false; window.alsoCreateLink = false;
                     document.getElementById("rfqForm").reset();
+                    resetMultiCargo();
                     document.querySelectorAll('.opt-input').forEach(el => el.classList.add('d-none'));
                     const infoContainer = document.getElementById('inp_info_container');
                     if(infoContainer) infoContainer.classList.add('d-none');
@@ -4015,6 +4047,7 @@ function loadBulkSubCategories(categoryId) {
             opt("temp", line(/^Temperature Requirement:\s*(.+)$/i));
             const notes = String(req.additional_notes || req.note || "").replace(/\s*\|?\s*Təklif üçün son tarix:[^|]*/g, "").trim();
             if (notes) { const chk = document.getElementById("chk_info"); if (chk) { chk.checked = true; toggleOptField("info"); setVal("inp_info_text", notes); } }
+            if (Array.isArray(req.cargo_items) && req.cargo_items.length >= 2) applyAiCargoItems(req.cargo_items);
             const builderBtn = document.getElementById("tab-builder-btn");
             if (builderBtn) builderBtn.click();
             alert(`RFQ #${req.display_id || req.id} kopyalandı. Yükləmə/çatdırılma tarixlərini və təklif son tarixini yeniləyin, daşıyıcıları seçib göndərin.`);
@@ -4055,7 +4088,7 @@ function loadBulkSubCategories(categoryId) {
                         </div>
                         <div class="request-meta-box mb-3">
                             <div class="row text-muted small fw-medium g-2">
-                                <div class="col-6 col-lg-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${escapeHTML(req.cargo_type || req.cargo || '—')}</strong></div>
+                                <div class="col-6 col-lg-3"><i class="bi bi-box-seam me-1 text-primary"></i> Növ: <strong class="text-dark">${escapeHTML(req.cargo_type || req.cargo || '—')}</strong>${cargoItemsOf(req).length >= 2 ? ` <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25">${cargoItemsOf(req).length} yük</span>` : ''}</div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-speedometer2 me-1 text-primary"></i> Çəki / Həcm: <strong class="text-dark">${(req.weight_kg || req.weight) ? escapeHTML(req.weight_kg || req.weight) + ' kq' : '—'}${volDisplay}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-calendar-check me-1 text-primary"></i> Yükləmə: <strong class="text-dark">${formattedDeadline}</strong></div>
                                 <div class="col-6 col-lg-3"><i class="bi bi-clock-history me-1 text-primary"></i> Yaradılıb: <strong class="text-dark">${formattedCreatedAt}</strong></div>
@@ -4084,7 +4117,7 @@ function loadBulkSubCategories(categoryId) {
                 const matchesStatus = (selectedStatus === 'all') || ((req.status || 'open').toLowerCase() === selectedStatus);
                 const origin = (req.origin || req.loading_location || '').toLowerCase();
                 const destination = (req.destination || req.delivery_location || '').toLowerCase();
-                const cargo = (req.cargo_type || req.cargo || '').toLowerCase();
+                const cargo = ((req.cargo_type || req.cargo || '') + ' ' + cargoItemsOf(req).map(i => i.name || '').join(' ')).toLowerCase();
                 const idStr = String(req.display_id || req.id || '').toLowerCase();
                 const subj = String(req.subject || '').toLowerCase();
                 const matchesSearch = origin.includes(query) || destination.includes(query) || cargo.includes(query) || idStr.includes(query) || subj.includes(query);
@@ -4513,6 +4546,14 @@ function loadBulkSubCategories(categoryId) {
                 weightStr += ` / ${escapeHTML(req.volume_m3)} m³`;
             }
             document.getElementById("detailWeight").textContent = weightStr;
+            (function () {
+                const box = document.getElementById("detailCargoItems");
+                const items = cargoItemsOf(req);
+                if (!box) return;
+                box.classList.toggle("d-none", items.length < 2);
+                box.innerHTML = items.length < 2 ? "" : `<div class="small fw-bold text-dark mb-1"><i class="bi bi-boxes me-1 text-primary"></i>Yüklər (${items.length})</div><div class="d-flex flex-column gap-1">` +
+                    items.map((it, i) => `<div class="small border rounded-3 bg-white px-2 py-1">${i + 1}. ${escapeHTML(cargoItemLine(it))}</div>`).join("") + `</div>`;
+            })();
 
             document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false, true) : "—";
             document.getElementById("detailCreatedAt").textContent = req.created_at ? formatDateTime(req.created_at, true, false) : "—";
@@ -4990,7 +5031,7 @@ function loadBulkSubCategories(categoryId) {
                                 <table style="width: 100%; font-size: 12.5px; line-height: 1.5; border-collapse: collapse; table-layout: fixed;">
                                     <tr><td style="padding-bottom: 6px; width: 130px; font-weight: 700;">${T.from}</td><td style="padding-bottom: 6px; word-wrap: break-word;">${escapeHTML(origin)}</td></tr>
                                     <tr><td style="padding-bottom: 6px; font-weight: 700;">${T.to}</td><td style="padding-bottom: 6px; word-wrap: break-word;">${escapeHTML(destination)}</td></tr>
-                                    <tr><td style="padding-bottom: 6px; font-weight: 700;">${T.cargo}</td><td style="padding-bottom: 6px; word-wrap: break-word;">${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}</td></tr>
+                                    <tr><td style="padding-bottom: 6px; font-weight: 700;">${T.cargo}</td><td style="padding-bottom: 6px; word-wrap: break-word;">${cargoItemsOf(req).length >= 2 ? cargoItemsOf(req).map((it, i) => `${i + 1}. ${escapeHTML(cargoItemLine(it))}`).join("<br>") + (weightStr ? `<br><strong>${weightStr}</strong>` : '') : `${escapeHTML(cargo)} ${weightStr ? `(${weightStr})` : ''}`}</td></tr>
                                 </table>
                             </div>
 
@@ -5348,6 +5389,151 @@ function copyPublicLinkText() {
 
 
 
+
+
+    // ===== Bir RFQ-da bir neçə fərqli yük =====
+    const MAX_CARGO_ITEMS = 10;
+    function cargoItemsOf(req) {
+        return Array.isArray(req && req.cargo_items) ? req.cargo_items.filter(i => i && typeof i === "object") : [];
+    }
+    function cargoItemLine(it) {
+        const parts = [];
+        if (it.weight_kg) parts.push(`${it.weight_kg} kq`);
+        if (it.volume_m3) parts.push(`${it.volume_m3} m³`);
+        if (it.pallets) parts.push(`${it.pallets} palet`);
+        if (it.dimensions) parts.push(it.dimensions);
+        if (it.hs_code) parts.push(`HS ${it.hs_code}`);
+        if (it.incoterm) parts.push(it.incoterm);
+        if (it.adr) parts.push(`ADR: ${it.adr}`);
+        if (it.stackable === true) parts.push("stackable");
+        if (it.stackable === false) parts.push("non-stackable");
+        if (it.temperature) parts.push(it.temperature);
+        if (it.notes) parts.push(it.notes);
+        return `${it.name || ""}${parts.length ? " — " + parts.join(" · ") : ""}`;
+    }
+    function multiCargoOn() { const t = document.getElementById("multiCargoToggle"); return !!(t && t.checked); }
+
+    function toggleMultiCargo(on) {
+        const builder = document.getElementById("cargoItemsBuilder");
+        if (builder) builder.classList.toggle("d-none", !on);
+        document.querySelectorAll(".single-cargo-field").forEach(el => el.classList.toggle("d-none", on));
+        const ct = document.getElementById("cargo_type");
+        if (ct) ct.required = !on;
+        document.querySelectorAll(".single-cargo-opt").forEach(row => {
+            row.classList.toggle("d-none", on);
+            const chk = row.querySelector(".opt-check");
+            if (on && chk && chk.checked) { chk.checked = false; chk.dispatchEvent(new Event("change")); }
+        });
+        if (on && document.querySelectorAll("#cargoItemsList .cargo-item").length === 0) { addCargoItem(); addCargoItem(); }
+        updateCargoItemsTotal();
+    }
+
+    function addCargoItem(data) {
+        const list = document.getElementById("cargoItemsList");
+        if (!list || list.querySelectorAll(".cargo-item").length >= MAX_CARGO_ITEMS) return;
+        const d = data || {};
+        const v = (x) => (x === undefined || x === null) ? "" : escapeHTML(String(x));
+        const stack = d.stackable === true || /^stackable$/i.test(String(d.stackable || "")) ? "Stackable" : (d.stackable === false || /^non/i.test(String(d.stackable || "")) ? "Non-stackable" : "");
+        const hasMore = d.dimensions || d.hs_code || d.incoterm || d.adr || stack || d.temperature || d.notes;
+        const sel = (cur, arr) => arr.map(o => `<option value="${o}"${o === cur ? " selected" : ""}>${o || "—"}</option>`).join("");
+        const el = document.createElement("div");
+        el.className = "cargo-item border rounded-3 bg-white p-2";
+        el.innerHTML = `
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <span class="badge bg-primary ci-num">1</span>
+                <input type="text" class="form-control form-control-sm ci-name" maxlength="200" placeholder="Yükün adı (məs: Meyvə) *" value="${v(d.name)}">
+                <button type="button" class="btn btn-sm btn-outline-danger" title="Yükü sil" onclick="removeCargoItem(this)"><i class="bi bi-trash"></i></button>
+            </div>
+            <div class="row g-2">
+                <div class="col-6 col-md-3"><input type="number" step="any" min="0" class="form-control form-control-sm ci-weight" placeholder="Çəki (kq)" value="${v(d.weight_kg)}"></div>
+                <div class="col-6 col-md-3"><input type="number" step="any" min="0" class="form-control form-control-sm ci-volume" placeholder="Həcm (m³)" value="${v(d.volume_m3)}"></div>
+                <div class="col-6 col-md-3"><input type="number" step="1" min="0" class="form-control form-control-sm ci-pallets" placeholder="Palet sayı" value="${v(d.pallets)}"></div>
+            </div>
+            <details class="mt-2"${hasMore ? " open" : ""}>
+                <summary class="small text-primary" style="cursor:pointer;">Daha çox (ölçülər, HS kod, Incoterm, ADR, temperatur, qeyd)</summary>
+                <div class="row g-2 mt-1">
+                    <div class="col-12 col-md-4"><input type="text" class="form-control form-control-sm ci-dim" maxlength="100" placeholder="Ölçülər (UxEx H)" value="${v(d.dimensions)}"></div>
+                    <div class="col-6 col-md-4"><input type="text" class="form-control form-control-sm ci-hs" maxlength="60" placeholder="HS kod" value="${v(d.hs_code)}"></div>
+                    <div class="col-6 col-md-4"><select class="form-select form-select-sm ci-incoterm">${sel(String(d.incoterm || "").toUpperCase(), ["", "EXW", "FCA", "FAS", "FOB", "CFR", "CIF", "CPT", "CIP", "DAP", "DPU", "DDP"])}</select></div>
+                    <div class="col-6 col-md-4"><input type="text" class="form-control form-control-sm ci-adr" maxlength="100" placeholder="Təhlükəli yük (ADR/UN)" value="${v(d.adr)}"></div>
+                    <div class="col-6 col-md-4"><select class="form-select form-select-sm ci-stack">${sel(stack, ["", "Stackable", "Non-stackable"])}</select></div>
+                    <div class="col-12 col-md-4"><input type="text" class="form-control form-control-sm ci-temp" maxlength="60" placeholder="Temperatur (məs: +2…+8 °C)" value="${v(d.temperature)}"></div>
+                    <div class="col-12"><input type="text" class="form-control form-control-sm ci-notes" maxlength="500" placeholder="Bu yükə aid qeyd" value="${v(d.notes)}"></div>
+                </div>
+            </details>`;
+        el.addEventListener("input", updateCargoItemsTotal);
+        list.appendChild(el);
+        renumberCargoItems();
+    }
+
+    function removeCargoItem(btn) {
+        const list = document.getElementById("cargoItemsList");
+        const item = btn.closest(".cargo-item");
+        if (!item || !list) return;
+        if (list.querySelectorAll(".cargo-item").length <= 2) { alert("Bir neçə yük rejimində ən azı 2 yük olmalıdır. Tək yük üçün rejimi söndürün."); return; }
+        item.remove();
+        renumberCargoItems();
+    }
+
+    function renumberCargoItems() {
+        const items = document.querySelectorAll("#cargoItemsList .cargo-item");
+        items.forEach((el, i) => { el.querySelector(".ci-num").textContent = i + 1; });
+        const add = document.getElementById("addCargoItemBtn");
+        if (add) add.disabled = items.length >= MAX_CARGO_ITEMS;
+        updateCargoItemsTotal();
+    }
+
+    function collectCargoItems() {
+        const out = [];
+        document.querySelectorAll("#cargoItemsList .cargo-item").forEach(el => {
+            const q = (c) => (el.querySelector(c)?.value || "").trim();
+            const num = (c) => { const n = parseFloat(q(c)); return n > 0 ? n : undefined; };
+            const name = q(".ci-name");
+            if (!name) return;
+            const it = { name };
+            const w = num(".ci-weight"), vol = num(".ci-volume"), pal = num(".ci-pallets");
+            if (w) it.weight_kg = w; if (vol) it.volume_m3 = vol; if (pal) it.pallets = Math.round(pal);
+            const textMap = { dimensions: ".ci-dim", hs_code: ".ci-hs", incoterm: ".ci-incoterm", adr: ".ci-adr", temperature: ".ci-temp", notes: ".ci-notes" };
+            for (const [k, c] of Object.entries(textMap)) { const t = q(c); if (t) it[k] = t; }
+            const st = q(".ci-stack"); if (st) it.stackable = st;
+            out.push(it);
+        });
+        return out;
+    }
+
+    function cargoItemsTotals(items) {
+        const r2 = (x) => Math.round(x * 1000) / 1000;
+        return { weight: r2(items.reduce((a, i) => a + (i.weight_kg || 0), 0)), volume: r2(items.reduce((a, i) => a + (i.volume_m3 || 0), 0)), pallets: items.reduce((a, i) => a + (i.pallets || 0), 0) };
+    }
+
+    function updateCargoItemsTotal() {
+        const el = document.getElementById("cargoItemsTotal");
+        if (!el) return;
+        const t = cargoItemsTotals(collectCargoItems());
+        const parts = [];
+        if (t.weight) parts.push(`${t.weight} kq`); if (t.volume) parts.push(`${t.volume} m³`); if (t.pallets) parts.push(`${t.pallets} palet`);
+        el.textContent = parts.length ? "Cəmi: " + parts.join(" · ") : "";
+    }
+
+    function clearCargoItems() { const l = document.getElementById("cargoItemsList"); if (l) l.innerHTML = ""; }
+
+    function resetMultiCargo() {
+        const t = document.getElementById("multiCargoToggle");
+        if (t) t.checked = false;
+        clearCargoItems();
+        toggleMultiCargo(false);
+    }
+
+    // Aİ-nin tapdığı və ya kopyalanan RFQ-nun yükləri forma sətirlərinə yazılır
+    function applyAiCargoItems(items) {
+        const t = document.getElementById("multiCargoToggle");
+        if (!t) return;
+        clearCargoItems();
+        t.checked = true;
+        toggleMultiCargo(true);
+        clearCargoItems();
+        items.slice(0, MAX_CARGO_ITEMS).forEach(it => addCargoItem(it));
+    }
 
     // ===== Email şablonları =====
     let emailTemplates = [];
@@ -5964,6 +6150,8 @@ function copyPublicLinkText() {
             "Təklif üçün son tarix": "Offer deadline",
             "Təkrarla": "Duplicate",
             "Komanda": "Team",
+            "Bir neçə fərqli yük var": "There are several different cargo items",
+            "Yük əlavə et": "Add cargo",
             "Saxlanmış şablon:": "Saved template:",
             "— Saxlanmamış mətn —": "— Unsaved text —",
             "Yeni ad ilə saxla": "Save as new",
