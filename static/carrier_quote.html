@@ -263,7 +263,7 @@
                 cargo_type: "Cargo Type",
                 cargo_items_title: "Cargo items in this shipment",
                 cargo_items_hint: "All items ship together. Please give one total price for the whole shipment.",
-                ci_total: "Total",
+                ci_total: "Total", ci_items_word: "items",
                 ci_weight: "Weight", ci_volume: "Volume", ci_pallets: "pallets", ci_dimensions: "Dimensions", ci_hs: "HS code", ci_incoterm: "Incoterm",
                 ci_adr: "Dangerous goods", ci_stackable: "Stackable", ci_nonstackable: "Non-stackable", ci_temperature: "Temperature", ci_notes: "Notes",
                 customer_reqs: "Customer Requirements & Notes",
@@ -311,7 +311,7 @@
                 cargo_type: "Yükün Növü",
                 cargo_items_title: "Bu daşımadakı yüklər",
                 cargo_items_hint: "Bütün yüklər birlikdə daşınır. Zəhmət olmasa bütün daşıma üçün bir ümumi qiymət yazın.",
-                ci_total: "Cəmi",
+                ci_total: "Cəmi", ci_items_word: "yük",
                 ci_weight: "Çəki", ci_volume: "Həcm", ci_pallets: "palet", ci_dimensions: "Ölçülər", ci_hs: "HS kod", ci_incoterm: "Incoterm",
                 ci_adr: "Təhlükəli yük", ci_stackable: "Üst-üstə qoyula bilər", ci_nonstackable: "Üst-üstə qoyulmaz", ci_temperature: "Temperatur", ci_notes: "Qeyd",
                 customer_reqs: "Müştəri Tələbləri və Qeydləri",
@@ -396,6 +396,19 @@
             el.title = tr ? cargoOriginal : "";
         }
         let cargoItemsData = [];
+        // Hər ölçü yalnız onu yazan yüklərin cəmidir; hamısında yoxdursa hansı yüklərə aid olduğu göstərilir:
+        // "4000 kg · 43 m³ (items 2, 3) + 12 pallets (items 1)": m³ və palet ayrı yüklərdən gəlir.
+        function cargoTotalsText(items, kg, m3, pal, word) {
+            const part = (key, unit, whole) => {
+                const idx = items.map((it, i) => (Number(it[key]) > 0 ? i + 1 : 0)).filter(Boolean);
+                if (!idx.length) return "";
+                const total = items.reduce((a, it) => a + (Number(it[key]) || 0), 0);
+                const value = whole ? Math.round(total) : Math.round(total * 1000) / 1000;
+                return `${value} ${unit}${idx.length === items.length ? "" : ` (${word} ${idx.join(", ")})`}`;
+            };
+            const measures = [part("volume_m3", m3), part("pallets", pal, true)].filter(Boolean).join(" + ");
+            return [part("weight_kg", kg), measures].filter(Boolean).join(" · ");
+        }
         function renderCargoItems() {
             const box = document.getElementById("cargo_items_box");
             if (!box) return;
@@ -421,12 +434,8 @@
                 if (notes) chips.push(chip(L.ci_notes, notes));
                 return `<div class="border border-slate-200 rounded-xl p-4 bg-white"><p class="font-bold text-sm text-slate-800 mb-2">${i + 1}. ${escapeHTML(name)}</p><div>${chips.join("")}</div></div>`;
             }).join("");
-            const sum = (k) => cargoItemsData.reduce((a, it) => a + (Number(it[k]) || 0), 0);
-            const parts = [];
-            if (sum("weight_kg")) parts.push(`${Math.round(sum("weight_kg") * 1000) / 1000} kg`);
-            if (sum("volume_m3")) parts.push(`${Math.round(sum("volume_m3") * 1000) / 1000} m³`);
-            if (sum("pallets")) parts.push(`${sum("pallets")} ${L.ci_pallets}`);
-            document.getElementById("cargo_items_total").textContent = parts.length ? `${L.ci_total}: ${parts.join(" · ")}` : "";
+            const totalText = cargoTotalsText(cargoItemsData, "kg", "m³", L.ci_pallets, L.ci_items_word);
+            document.getElementById("cargo_items_total").textContent = totalText ? `${L.ci_total}: ${totalText}` : "";
             box.classList.remove("hidden");
         }
         function renderNote() {
