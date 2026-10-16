@@ -3844,7 +3844,7 @@ def create_request_public_link(request_id: int, current_user: dict = Depends(ver
 @app.get("/requests/customer/{customer_id}")
 def get_customer_requests(customer_id: int, current_user: dict = Depends(verify_token)):
     check_ownership(customer_id, current_user)
-    res = supabase.table("shipment_requests").select("*, quotes(id, price, extra_details, quote_history)").eq("customer_id", customer_id).order("id", desc=True).execute()
+    res = supabase.table("shipment_requests").select("*, quotes(id, price, extra_details)").eq("customer_id", customer_id).order("id", desc=True).execute()
     requests = res.data or []
     for req in requests:
         valid_quotes = [q for q in (req.get("quotes") or []) if q.get("price") is not None or (q.get("extra_details") and q.get("extra_details").get("submitted") == True)]
