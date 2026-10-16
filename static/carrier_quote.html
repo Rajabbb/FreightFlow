@@ -129,6 +129,14 @@
             </div>
         </div>
 
+        <!-- Bir neçə fərqli yük -->
+        <div id="cargo_items_box" class="mb-8 hidden">
+            <h4 class="font-medium mb-3 text-slate-800 flex items-center gap-2"><i data-lucide="package" class="text-blue-500 w-5 h-5"></i><span data-i18n="cargo_items_title">Cargo items in this shipment</span></h4>
+            <div id="cargo_items_list" class="space-y-3"></div>
+            <p id="cargo_items_total" class="mt-3 text-sm font-bold text-slate-800"></p>
+            <p class="mt-1 text-xs text-slate-500" data-i18n="cargo_items_hint">All items ship together. Please give one total price for the whole shipment.</p>
+        </div>
+
         <!-- Dynamic Customer Requirements -->
         <div id="dynamic_fields_container" class="mb-8 flex gap-3 border-b border-slate-100 pb-8">
             <i data-lucide="clipboard-list" class="text-blue-500 w-5 h-5 flex-shrink-0 mt-1"></i>
@@ -253,6 +261,11 @@
                 loading_date: "Loading Date",
                 deadline: "Deadline",
                 cargo_type: "Cargo Type",
+                cargo_items_title: "Cargo items in this shipment",
+                cargo_items_hint: "All items ship together. Please give one total price for the whole shipment.",
+                ci_total: "Total",
+                ci_weight: "Weight", ci_volume: "Volume", ci_pallets: "pallets", ci_dimensions: "Dimensions", ci_hs: "HS code", ci_incoterm: "Incoterm",
+                ci_adr: "Dangerous goods", ci_stackable: "Stackable", ci_nonstackable: "Non-stackable", ci_temperature: "Temperature", ci_notes: "Notes",
                 customer_reqs: "Customer Requirements & Notes",
                 show_original: "Show original text",
                 show_translated: "Show translation",
@@ -296,6 +309,11 @@
                 loading_date: "Yüklənmə Tarixi",
                 deadline: "Son Tarix",
                 cargo_type: "Yükün Növü",
+                cargo_items_title: "Bu daşımadakı yüklər",
+                cargo_items_hint: "Bütün yüklər birlikdə daşınır. Zəhmət olmasa bütün daşıma üçün bir ümumi qiymət yazın.",
+                ci_total: "Cəmi",
+                ci_weight: "Çəki", ci_volume: "Həcm", ci_pallets: "palet", ci_dimensions: "Ölçülər", ci_hs: "HS kod", ci_incoterm: "Incoterm",
+                ci_adr: "Təhlükəli yük", ci_stackable: "Üst-üstə qoyula bilər", ci_nonstackable: "Üst-üstə qoyulmaz", ci_temperature: "Temperatur", ci_notes: "Qeyd",
                 customer_reqs: "Müştəri Tələbləri və Qeydləri",
                 show_original: "Orijinal mətni göstər",
                 show_translated: "Tərcüməni göstər",
@@ -377,6 +395,40 @@
             el.textContent = tr && tr.cargo_type ? tr.cargo_type : cargoOriginal;
             el.title = tr ? cargoOriginal : "";
         }
+        let cargoItemsData = [];
+        function renderCargoItems() {
+            const box = document.getElementById("cargo_items_box");
+            if (!box) return;
+            if (!cargoItemsData || cargoItemsData.length < 2) { box.classList.add("hidden"); return; }
+            const L = translations[currentLang] || translations.en;
+            const tr = activeTr();
+            const trItems = tr && Array.isArray(tr.items) && tr.items.length === cargoItemsData.length ? tr.items : null;
+            const chip = (label, value) => `<span style="display:inline-block;background:#f1f5f9;color:#334155;border-radius:6px;padding:3px 8px;font-size:12px;margin:0 6px 6px 0;"><span style="color:#64748b;">${escapeHTML(label)}:</span> <strong>${escapeHTML(value)}</strong></span>`;
+            document.getElementById("cargo_items_list").innerHTML = cargoItemsData.map((it, i) => {
+                const name = trItems && trItems[i].name ? trItems[i].name : it.name;
+                const notes = trItems && it.notes ? (trItems[i].notes || it.notes) : it.notes;
+                const chips = [];
+                if (it.weight_kg) chips.push(chip(L.ci_weight, `${Number(it.weight_kg)} kg`));
+                if (it.volume_m3) chips.push(chip(L.ci_volume, `${Number(it.volume_m3)} m³`));
+                if (it.pallets) chips.push(chip(L.ci_pallets, String(it.pallets)));
+                if (it.dimensions) chips.push(chip(L.ci_dimensions, it.dimensions));
+                if (it.hs_code) chips.push(chip(L.ci_hs, it.hs_code));
+                if (it.incoterm) chips.push(chip(L.ci_incoterm, it.incoterm));
+                if (it.adr) chips.push(chip(L.ci_adr, it.adr));
+                if (it.stackable === true) chips.push(chip(L.ci_stackable, "✓"));
+                if (it.stackable === false) chips.push(chip(L.ci_nonstackable, "✓"));
+                if (it.temperature) chips.push(chip(L.ci_temperature, it.temperature));
+                if (notes) chips.push(chip(L.ci_notes, notes));
+                return `<div class="border border-slate-200 rounded-xl p-4 bg-white"><p class="font-bold text-sm text-slate-800 mb-2">${i + 1}. ${escapeHTML(name)}</p><div>${chips.join("")}</div></div>`;
+            }).join("");
+            const sum = (k) => cargoItemsData.reduce((a, it) => a + (Number(it[k]) || 0), 0);
+            const parts = [];
+            if (sum("weight_kg")) parts.push(`${Math.round(sum("weight_kg") * 1000) / 1000} kg`);
+            if (sum("volume_m3")) parts.push(`${Math.round(sum("volume_m3") * 1000) / 1000} m³`);
+            if (sum("pallets")) parts.push(`${sum("pallets")} ${L.ci_pallets}`);
+            document.getElementById("cargo_items_total").textContent = parts.length ? `${L.ci_total}: ${parts.join(" · ")}` : "";
+            box.classList.remove("hidden");
+        }
         function renderNote() {
             const el = document.getElementById("customer_note_text");
             if (!el) return;
@@ -393,6 +445,7 @@
         }
         function applyTranslations() {
             renderCargoName();
+            renderCargoItems();
             renderNote();
             refreshReqFields();
             renderToggle();
@@ -408,7 +461,7 @@
                 const r = await fetch(`/quotes/translate-request/${encodeURIComponent(token)}?lang=${lang}`);
                 if (r.ok) {
                     const d = await r.json();
-                    if (d && typeof d === "object") reqTr[lang] = { translated: !!d.translated, cargo_type: d.cargo_type || "", note: d.note || "", fields: d.fields || {} };
+                    if (d && typeof d === "object") reqTr[lang] = { translated: !!d.translated, cargo_type: d.cargo_type || "", note: d.note || "", fields: d.fields || {}, items: Array.isArray(d.items) ? d.items : [] };
                 }
             } catch (e) { /* tərcümə alınmadısa orijinal mətn qalır */ }
             applyTranslations();
@@ -623,7 +676,9 @@
                 if (weightVolEl) weightVolEl.innerText = `${escapeHTML(req.weight_kg || 0)} kg / ${escapeHTML(volumeText)}`;
 
                 cargoOriginal = String(req.cargo_type || "").trim();
+                cargoItemsData = Array.isArray(req.cargo_items) ? req.cargo_items.filter(it => it && typeof it === "object") : [];
                 renderCargoName();
+                renderCargoItems();
                 ensureTranslations();
 
                 let loadingDateVal = null;
