@@ -574,6 +574,27 @@ def _cargo_items_totals(items: List[Dict[str, Any]]) -> Tuple[float, float, int]
             sum(int(i.get("pallets") or 0) for i in items))
 
 
+def _cargo_items_total_text(items: List[Dict[str, Any]], kg: str = "kg", m3: str = "m3", pallets: str = "pallets", word: str = "Cargo") -> str:
+    """Yüklərin cəmi: hər ölçü yalnız onu yazan yüklərin cəmidir. Hamısında yoxdursa hansı yüklərə aid olduğu göstərilir:
+    "4000 kg · 43 m3 (Cargo 2, 3) + 12 pallets (Cargo 1)": m3 və palet ayrı yüklərdən gəlir, bir-birinə çevrilmir."""
+    def part(key: str, unit: str, integer: bool = False) -> str:
+        idx = [n for n, i in enumerate(items, 1) if i.get(key)]
+        if not idx: return ""
+        total = sum(float(items[n - 1][key]) for n in idx)
+        value = f"{int(round(total))}" if integer else f"{round(total, 3):g}"
+        suffix = "" if len(idx) == len(items) else f" ({word} {', '.join(str(n) for n in idx)})"
+        return f"{value} {unit}{suffix}"
+    weight, volume, pal = part("weight_kg", kg), part("volume_m3", m3), part("pallets", pallets, True)
+    measures = " + ".join(x for x in (volume, pal) if x)
+    return " · ".join(x for x in (weight, measures) if x)
+
+
+def _excel_items_text(items: List[Dict[str, Any]]) -> str:
+    if len(items) < 2: return "—"
+    lines = [f"{n}) {_cargo_item_line(i)}" for n, i in enumerate(items, 1)]
+    return "\n".join(lines + ["Cəmi: " + _cargo_items_total_text(items, "kq", "m³", "palet", "yük")])
+
+
 def _cargo_items_title(items: List[Dict[str, Any]]) -> str:
     """RFQ-nun ümumi yük adı: "A + B + C (+2)"; köhnə hesabat/axtarış bunu cargo_type kimi görür."""
     names = [str(i.get("name") or "") for i in items if i.get("name")]
@@ -617,9 +638,8 @@ def _rfq_detail_pairs(shipment: Dict[str, Any]) -> List[Tuple[str, str]]:
     if len(items) >= 2:
         for n, item in enumerate(items, 1):
             rows.append((f"Cargo {n}", _cargo_item_line(item)))
-        tw, tv, tp = _cargo_items_totals(items)
-        total = [x for x in (f"{tw:g} kg" if tw else "", f"{tv:g} m3" if tv else "", f"{tp} pallets" if tp else "") if x]
-        if total: rows.append(("Total", " · ".join(total)))
+        total = _cargo_items_total_text(items)
+        if total: rows.append(("Total", total))
     else:
         if shipment.get("cargo_type"):
             rows.append(("Cargo", str(shipment["cargo_type"])))
@@ -2210,7 +2230,7 @@ def generate_report_data(payload: ReportGenerateRequest, current_user: dict = De
                     "Sorğu ID": f"RFQ #{disp_id}",
                     "Marşrut": f"{r.get('origin') or ''} -> {r.get('destination') or ''}",
                     "Yük Növü": r.get("cargo_type") or "Qeyd edilməyib",
-                    "Yüklər (bir neçə yük varsa)": "\n".join(f"{n}) {_cargo_item_line(i)}" for n, i in enumerate(_clean_cargo_items(r.get("cargo_items")), 1)) or "—",
+                    "Yüklər (bir neçə yük varsa)": _excel_items_text(_clean_cargo_items(r.get("cargo_items"))),
                     "Çəki (kq)": r.get("weight_kg") if r.get("weight_kg") is not None else "Qeyd edilməyib",
                     "Həcm (CBM)": r.get("volume_m3") if r.get("volume_m3") is not None else "Qeyd edilməyib",
                     "Nəqliyyat Növü": r.get("transportation_mode") or opts["Mode"] or "Qeyd edilməyib",
