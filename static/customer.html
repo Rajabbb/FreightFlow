@@ -1591,10 +1591,10 @@ Best regards,
     <div class="mb-3 p-2 border rounded-3 bg-white">
         <div class="d-flex flex-wrap gap-2 align-items-center">
             <label class="small fw-bold mb-0" for="emailTemplateSelect"><i class="bi bi-bookmark-star me-1 text-primary"></i>Saxlanmış şablon:</label>
-            <select id="emailTemplateSelect" class="form-select form-select-sm w-auto" style="max-width: 220px;" onchange="applyEmailTemplate()">
+            <select id="emailTemplateSelect" class="form-select form-select-sm w-auto" style="max-width: 240px; padding-right: 2.4rem;" onchange="applyEmailTemplate()">
                 <option value="">— Saxlanmamış mətn —</option>
             </select>
-            <button type="button" class="btn btn-sm btn-primary fw-semibold" onclick="saveEmailTemplate(false)">Yadda saxla</button>
+            <button type="button" class="btn btn-sm btn-primary fw-semibold" style="width: auto; flex: 0 0 auto;" onclick="saveEmailTemplate(false)">Yadda saxla</button>
             <button type="button" class="btn btn-sm btn-outline-primary" onclick="saveEmailTemplate(true)">Yeni ad ilə saxla</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="setDefaultEmailTemplate()">Standart et</button>
             <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteEmailTemplate()">Sil</button>
@@ -1627,16 +1627,16 @@ Thank you.
 Best regards,
 {{sender_company}}</textarea>
         <div class="d-flex flex-wrap gap-1 mt-2" id="templatePlaceholderChips">
-            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('company_name')" title="Daşıyıcının şirkət adı">{{company_name}}</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('sender_company')" title="Sizin şirkətin adı">{{sender_company}}</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('origin')">{{origin}}</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('destination')">{{destination}}</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('cargo')" title="Yükün adı">{{cargo}}</button>
-            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('offer_due')" title="Təklif üçün son tarix">{{offer_due}}</button>
-            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="insertTemplateVar('rfq_details')" title="Sorğu detalları cədvəlinin yeri">{{rfq_details}}</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('company_name')" title="{{company_name}}">Daşıyıcının adı</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('sender_company')" title="{{sender_company}}">Sizin şirkət</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('origin')" title="{{origin}}">Yükləmə yeri</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('destination')" title="{{destination}}">Boşaltma yeri</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('cargo')" title="{{cargo}}">Yükün adı</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="insertTemplateVar('offer_due')" title="{{offer_due}}">Təklif son tarixi</button>
+            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" onclick="insertTemplateVar('rfq_details')" title="{{rfq_details}}">RFQ detalları</button>
         </div>
         <div class="form-text" style="font-size: 11px;">
-            Düymələrə basın, dəyişən kursorun yerinə yazılır. <code>{{rfq_details}}</code> detallar cədvəlinin yerini göstərir; yazmasanız cədvəl mətnin altına özü əlavə olunur. «Təklifi göndər» düyməsi həmişə sistem tərəfindən qoyulur.
+            Düymələrə basın, uyğun dəyişən kursorun yerinə yazılır. «RFQ detalları» detallar cədvəlinin yerini göstərir; yazmasanız cədvəl mətnin altına özü əlavə olunur. «Təklifi göndər» düyməsi həmişə sistem tərəfindən qoyulur.
         </div>
         <div class="d-flex gap-2 mt-3">
             <button type="button" class="btn btn-sm btn-outline-primary" onclick="previewEmailTemplate()"><i class="bi bi-eye me-1"></i>Önbaxış</button>
@@ -6188,6 +6188,12 @@ function copyPublicLinkText() {
             "Təklif üçün son tarix": "Offer deadline",
             "Təkrarla": "Duplicate",
             "Komanda": "Team",
+            "Daşıyıcının adı": "Carrier name",
+            "Sizin şirkət": "Your company",
+            "Yükün adı": "Cargo name",
+            "Təklif son tarixi": "Offer deadline",
+            "RFQ detalları": "RFQ details",
+            "Düymələrə basın, uyğun dəyişən kursorun yerinə yazılır. «RFQ detalları» detallar cədvəlinin yerini göstərir; yazmasanız cədvəl mətnin altına özü əlavə olunur. «Təklifi göndər» düyməsi həmişə sistem tərəfindən qoyulur.": "Click a button and the matching variable is inserted at the cursor. “RFQ details” marks where the details table goes; if you leave it out, the table is added under your text. The “Submit Your Proposal” button is always added by the system.",
             "Bir neçə fərqli yük var": "There are several different cargo items",
             "Yük əlavə et": "Add cargo",
             "Saxlanmış şablon:": "Saved template:",
