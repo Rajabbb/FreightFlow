@@ -335,7 +335,10 @@ _BACKGROUND_LOCKS: List[Any] = []
 @app.on_event("startup")
 async def start_bounce_check_background_task():
     if ENABLE_BOUNCE_CHECK and _is_background_leader("bounce"):
+        print("[bounce-check] Aktivdir (bu worker lider).")
         asyncio.create_task(_bounce_check_loop())
+    elif ENABLE_BOUNCE_CHECK:
+        print("[bounce-check] Bu worker-də işləmir: başqa worker lider kimi işləyir.")
     else:
         print("[bounce-check] Deaktivdir.")
 
@@ -1179,9 +1182,12 @@ async def resend_inbound_webhook(request: Request, background_tasks: BackgroundT
 @app.on_event("startup")
 async def start_inbound_reply_task():
     if ENABLE_INBOUND_REPLIES and IMAP_USERNAME and IMAP_PASSWORD and _is_background_leader("inbound"):
+        print("[inbound] IMAP rejimi aktivdir (bu worker lider).")
         asyncio.create_task(_inbound_reply_loop())
+    elif ENABLE_INBOUND_REPLIES and IMAP_USERNAME and IMAP_PASSWORD:
+        print("[inbound] Bu worker-də işləmir: başqa worker lider kimi işləyir.")
     else:
-        print("[inbound] Deaktivdir (ENABLE_INBOUND_REPLIES və IMAP_* lazımdır).")
+        print("[inbound] IMAP rejimi deaktivdir (Resend webhook rejimi bundan asılı deyil; IMAP üçün ENABLE_INBOUND_REPLIES və IMAP_* lazımdır).")
 
 
 # ---------------- panel üçün ----------------
@@ -4423,9 +4429,12 @@ async def _auto_reminder_loop():
 @app.on_event("startup")
 async def start_auto_reminder_task():
     if ENABLE_AUTO_REMINDERS and _is_background_leader("reminder"):
+        print("[auto-reminder] Aktivdir (bu worker lider).")
         asyncio.create_task(_auto_reminder_loop())
+    elif ENABLE_AUTO_REMINDERS:
+        print("[auto-reminder] Bu worker-də işləmir: başqa worker lider kimi işləyir.")
     else:
-        print("[auto-reminder] Deaktivdir.")
+        print("[auto-reminder] Deaktivdir (ENABLE_AUTO_REMINDERS=0).")
 
 
 # ---- Marşrut üzrə qiymət tarixçəsi ----
