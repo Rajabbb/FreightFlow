@@ -313,9 +313,28 @@ async def _bounce_check_loop():
             traceback.print_exc()
         await asyncio.sleep(BOUNCE_CHECK_INTERVAL_SECONDS)
 
+def _is_background_leader(name: str) -> bool:
+    """Bir neçə worker işləyəndə fon dövrələri (xatırlatma, bounce, gələn email) yalnız birində işləsin.
+    Fayl kilidi proses bitənə qədər saxlanılır; kilid mexanizmi olmayan mühitdə (Windows/test) həmişə True."""
+    try:
+        import fcntl
+    except ImportError:
+        return True
+    try:
+        handle = open(os.path.join(os.getenv("WORKER_LOCK_DIR", "/tmp"), f"arachi_{name}.lock"), "w")
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        _BACKGROUND_LOCKS.append(handle)
+        return True
+    except (OSError, IOError):
+        return False
+
+
+_BACKGROUND_LOCKS: List[Any] = []
+
+
 @app.on_event("startup")
 async def start_bounce_check_background_task():
-    if ENABLE_BOUNCE_CHECK:
+    if ENABLE_BOUNCE_CHECK and _is_background_leader("bounce"):
         asyncio.create_task(_bounce_check_loop())
     else:
         print("[bounce-check] Deaktivdir.")
@@ -1159,7 +1178,7 @@ async def resend_inbound_webhook(request: Request, background_tasks: BackgroundT
 
 @app.on_event("startup")
 async def start_inbound_reply_task():
-    if ENABLE_INBOUND_REPLIES and IMAP_USERNAME and IMAP_PASSWORD:
+    if ENABLE_INBOUND_REPLIES and IMAP_USERNAME and IMAP_PASSWORD and _is_background_leader("inbound"):
         asyncio.create_task(_inbound_reply_loop())
     else:
         print("[inbound] Deaktivdir (ENABLE_INBOUND_REPLIES və IMAP_* lazımdır).")
@@ -2393,7 +2412,7 @@ def discover_forwarders(q: str = "", service: str = "", limit: int = 24, offset:
     _require_importer(current_user)
     try:
         limit = max(1, min(int(limit), 50)); offset = max(0, int(offset))
-        query = supabase.table("forwarder_profiles").select(PROFILE_PUBLIC_COLUMNS).eq("is_public", True).neq("company_name", "")
+        query = supabase.table("forwarder_profiles").select(PROFILE_PUBLIC_COLUMNS).eq("is_public", True).neq("company_name", "").neq("contact_email", "")
         if service in FORWARDER_SERVICES:
             query = query.contains("services", [service])
         # axtarış sözündən PostgREST filtrini pozan simvollar təmizlənir
@@ -2839,12 +2858,14 @@ def _normalize_ai_datetime(value) -> Optional[str]:
     return d.strftime("%Y-%m-%dT%H:%M")
 
 
-_WEIGHT_UNITS_KG = {"ton": 1000.0, "tonna": 1000.0, "tona": 1000.0, "t": 1000.0, "kq": 1.0, "kg": 1.0, "кг": 1.0, "тонн": 1000.0, "тонна": 1000.0, "тонны": 1000.0, "т": 1000.0}
-_NUM = r"(\d{1,3}(?:[  ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
-_UNIT = r"(tonna|tona|ton|kq|kg|тонны|тонна|тонн|кг|т|t)\b"
+_WEIGHT_UNITS_KG = {"ton": 1000.0, "tonna": 1000.0, "tona": 1000.0, "t": 1000.0, "kq": 1.0, "kg": 1.0, "кг": 1.0, "тонн": 1000.0, "тонна": 1000.0, "тонны": 1000.0, "т": 1000.0, "lbs": 0.45359237, "lb": 0.45359237, "pounds": 0.45359237, "pound": 0.45359237}
+_NUM = r"(\d{1,3}(?:,\d{3})+(?![\d,])|\d{1,3}(?:[  ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
+_UNIT = r"(tonna|tona|ton|kq|kg|lbs|lb|pounds|pound|тонны|тонна|тонн|кг|т|t)\b"
 
 
 def _to_float(text: str) -> float:
+    if re.fullmatch(r"\d{1,3}(?:,\d{3})+", text.strip()):
+        return float(text.replace(",", ""))
     return float(text.replace(" ", "").replace(" ", "").replace(",", "."))
 
 
@@ -2869,6 +2890,41 @@ def _weights_in_text(raw: str) -> List[float]:
         if unit:
             values.add(round(_to_float(m.group(1)) * unit, 2))
     return sorted(values)
+
+
+# Nəqliyyat növü mətndə (az/en/ru) heç bir əsas olmadan yazılmır
+_MODE_EVIDENCE = {
+    "road": re.compile(r"(?<!\w)(?:quru|avtomobil|avto|t[ıi]r|f[uü]ra|yük\s*maşın|maşın|truck|road|lorry|ftl|ltl|tent|автомобил|авто|фур|грузовик|тент)", re.IGNORECASE),
+    "sea": re.compile(r"(?<!\w)(?:dəniz|deniz|gəmi|gemi|konteyner|container|sea|ship|vessel|liman|port|fcl|lcl|reefer|море|морск|контейнер)", re.IGNORECASE),
+    "air": re.compile(r"(?<!\w)(?:hava|təyyarə|tayyare|aviadaşıma|aviadasima|air|plane|flight|авиа|самол)", re.IGNORECASE),
+    "rail": re.compile(r"(?<!\w)(?:dəmiryol|dəmir\s*yol|qatar|vaqon|rail|train|wagon|жд|желез|поезд|вагон)", re.IGNORECASE),
+}
+
+
+def _mode_kind_of(mode_text: str) -> str:
+    t = (mode_text or "").lower()
+    for kind, words in (("road", ("quru", "road", "avtomobil")), ("sea", ("dəniz", "deniz", "sea")), ("air", ("hava", "air")), ("rail", ("dəmir", "demir", "rail"))):
+        if any(w in t for w in words): return kind
+    return ""
+
+
+_TOTAL_STATEMENT = re.compile(r"(?:ümumi|cəmi|cəm\b|total|итого|всего|общий)[^\d]{0,25}" + _NUM + r"\s*" + _UNIT, re.IGNORECASE)
+
+
+def _total_mismatch_warning(raw: str, parts_kg: Optional[float] = None) -> Optional[str]:
+    """"Ümumi çəki 10 ton" yazılıb, amma ayrı-ayrı yüklər/lotlar 11,5 tondur: fərq göstərilir (>2%)."""
+    m = _TOTAL_STATEMENT.search(raw or "")
+    if not m: return None
+    unit = _WEIGHT_UNITS_KG.get(m.group(2).lower())
+    if not unit: return None
+    total = round(_to_float(m.group(1)) * unit, 2)
+    if parts_kg is None:
+        others = [w for w in _weights_in_text(raw) if abs(w - total) > 1]
+        if len(others) < 2: return None
+        parts_kg = round(sum(others), 2)
+    if total <= 0 or parts_kg <= 0 or abs(total - parts_kg) / max(total, parts_kg) <= 0.02: return None
+    if not (0.75 <= parts_kg / total <= 1.35): return None  # çox fərqlidirsə cəmi başqa yüklərə də aid ola bilər: xəbərdarlıq verilmir
+    return f"Mətndə ümumi çəki {total:g} kq yazılıb, ayrı-ayrı yüklərin/lotların cəmi isə {parts_kg:g} kq. Hansının düzgün olduğunu yoxlayın."
 
 
 def _spreadsheet_text(contents: bytes, ext: str) -> str:
@@ -2930,6 +2986,22 @@ _DG_WORDS = re.compile(r"litium|lithium|li-?ion|battery|batter|\bUN\s?\d{4}\b|t�
 _DG_VERIFY = re.compile(r"yoxlan|yoxla\b|təsdiq\w*\s+edil\w*\s+(?:mə|mi)|ola\s+bilər|SDS|MSDS|UN\s?38\.3|must\s+be\s+(?:checked|verified|confirmed)|to\s+be\s+(?:checked|verified|confirmed)|may\s+be|need(?:s)?\s+to\s+be\s+checked", re.IGNORECASE)
 _OOG_WORDS = re.compile(r"\bOOG\b|out[- ]of[- ]gauge|flat[- ]?rack|break[- ]?bulk|heavy[- ]lift|qabarit\w*\s+kənar|open[- ]top", re.IGNORECASE)
 _DIMS = re.compile(r"(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*[x×*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|sm|m)?\b", re.IGNORECASE)
+_LABELED_DIM = re.compile(
+    r"(?:(\d+(?:[.,]\d+)?)\s*(mm|cm|sm|m)\s*(uzunluq|en|hündürlük|length|width|height|длина|ширина|высота)\b"
+    r"|\b(uzunluq|en|hündürlük|length|width|height|длина|ширина|высота)\s*[:=]?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|sm|m))", re.IGNORECASE)
+
+
+def _labeled_dims_oversize(raw: str) -> bool:
+    """"uzunluq 9.5 m, en 3.4 m, hündürlük 3.2 m" tipli yazılış standart qabariti (13,6 / 2,55 / 2,6 m) aşırmı."""
+    limits = {"uzunluq": 1360, "length": 1360, "длина": 1360, "en": 255, "width": 255, "ширина": 255, "hündürlük": 260, "height": 260, "высота": 260}
+    for m in _LABELED_DIM.finditer(raw or ""):
+        value, unit, label = (m.group(1), m.group(2), m.group(3)) if m.group(1) else (m.group(5), m.group(6), m.group(4))
+        cm = float(value.replace(",", ".")) * {"mm": 0.1, "cm": 1.0, "sm": 1.0, "m": 100.0}[unit.lower()]
+        if cm > limits[label.lower()]:
+            return True
+    return False
+
+
 _DETAILS_IN_FILE = re.compile(r"detallar\s+fayl|ətraflı\s+fayl|details?\s+(?:are\s+)?in\s+(?:the\s+)?(?:attached\s+)?file|see\s+(?:the\s+)?attach", re.IGNORECASE)
 _TOTAL_WORDS = re.compile(r"\bcəmi\b|\bcəm\b|toplam|ümumi\s+çəki|\btotal\b|итого|всего", re.IGNORECASE)
 _PARTIAL_STACK = re.compile(r"\b[A-Z]{1,3}-?\d{1,3}\b[^.\n;]{0,60}(?:üst-?üstə|stack|штабел)", re.IGNORECASE)
@@ -3097,6 +3169,14 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
         add_note("Multimodal daşıma: digər mərhələlər qeyddədir")
         warnings.append("Multimodal daşıma: əsas mərhələ seçildi, bütün zəncir qeyddədir.")
 
+    # --- Nəqliyyat növü mətndə yazılmayıbsa təxmin edilmir (məs. "Quru") ---
+    mode_now = str(data.get("transportation_mode") or "").strip()
+    if raw_text and mode_now and "multimodal" not in raw_mode.lower():
+        kind_now = _mode_kind_of(mode_now)
+        if kind_now and not _MODE_EVIDENCE[kind_now].search(raw_text):
+            data["transportation_mode"] = None
+            warnings.append(f"Daşınma növü ({mode_now}) mətndə yazılmayıb, boş saxlandı. Lazımdırsa özünüz seçin.")
+
     # --- Bir neçə fərqli yük: ayrı-ayrı yüklər, cəmi kodda hesablanır ---
     ai_items = _clean_cargo_items(data.get("cargo_items"))
     if len(ai_items) >= 2:
@@ -3191,6 +3271,8 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
             if length > 1360 or width > 255 or height > 260:
                 oog_hit = True
                 break
+    if not oog_hit and raw_text and _labeled_dims_oversize(raw_text):
+        oog_hit = True
     if oog_hit:
         add_note("Qabaritdən kənar yük (OOG) ola bilər: ölçülər qeyddədir")
         warnings.append("Qabaritdən kənar yük (OOG): icazə və müşayiət lazım ola bilər.")
@@ -3238,6 +3320,18 @@ def _apply_ai_guards(parsed: dict, today: Optional[datetime] = None, raw_text: s
                     data["additional_notes"] = (existing + " | " if existing else "") + note
                 warnings.append(f"Çəki aralıq kimi yazılıb ({original}), dəqiq rəqəm yazılmadı. Çəkini özünüz daxil edin.")
                 break
+
+    # Çəki sahəsi boşdursa və mətndə yalnız BİR çəki varsa (aralıq deyil), o götürülür ("18 тонн", "44 000 lbs")
+    if raw_text and len(ai_items) < 2 and not data.get("weight_kg") and not others and count <= 1 and not _weight_ranges(raw_text):
+        found_weights = _weights_in_text(raw_text)
+        if len(found_weights) == 1:
+            data["weight_kg"] = found_weights[0]
+            warnings.append(f"Çəki mətndən götürüldü: {found_weights[0]:g} kq. Yoxlayın.")
+
+    # Lotların/yüklərin cəmi ilə "ümumi" çəki yaxın, amma fərqlidirsə (10 t / 11,5 t) xəbərdarlıq (OOG yoxlaması aşağıda)
+    if raw_text:
+        mismatch = _total_mismatch_warning(raw_text, _cargo_items_totals(ai_items)[0] if len(ai_items) >= 2 else None)
+        if mismatch: warnings.append(mismatch)
 
     # Model bir yük deyibsə də, mətndə bir neçə fərqli çəki varsa (bir neçə yük ola bilər) xəbərdar et
     if raw_text and len(ai_items) < 2 and not others and count <= 1 and not _TOTAL_WORDS.search(raw_text) and not _CONSOLIDATION.search(raw_text):
@@ -3980,6 +4074,7 @@ async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks,
         quote = res.data[0]
         sender_company, customer_email = get_sender_info_from_shipment(quote.get("shipment_requests"))
         if not quote["carriers"].get("email"): raise HTTPException(status_code=400, detail="Daşıyıcı email ünvanı yoxdur.")
+        if _quote_answered(quote): raise HTTPException(status_code=400, detail="Bu daşıyıcı artıq təklif verib, xatırlatma göndərilmədi.")
         background_tasks.add_task(
             send_carrier_email_link, carrier_email=quote["carriers"]["email"], carrier_name=quote["carriers"].get("company_name", "Daşıyıcı"),
             origin=quote["shipment_requests"]["origin"], destination=quote["shipment_requests"]["destination"], token=quote["token"], sender_company=sender_company, is_reminder=True, reply_to_email=customer_email
@@ -3990,6 +4085,12 @@ async def send_single_reminder(quote_id: int, background_tasks: BackgroundTasks,
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+def _quote_answered(quote: Dict[str, Any]) -> bool:
+    """Daşıyıcı artıq qiymət göndərib: ona xatırlatma getmir."""
+    extra = quote.get("extra_details") or {}
+    return quote.get("price") is not None or bool(extra.get("submitted"))
+
+
 @app.post("/quotes/reminder-batch")
 async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(verify_token)):
     try:
@@ -3998,6 +4099,7 @@ async def send_batch_reminders(payload: BatchReminderRequest, background_tasks: 
         count = 0
         for quote in (res.data or []):
             if str((quote.get("shipment_requests") or {}).get("customer_id")) != str(current_user.get("sub")): continue
+            if _quote_answered(quote): continue
             if quote.get("carriers", {}).get("email"):
                 sender_company, customer_email = get_sender_info_from_shipment(quote.get("shipment_requests"))
                 background_tasks.add_task(
@@ -4320,7 +4422,7 @@ async def _auto_reminder_loop():
 
 @app.on_event("startup")
 async def start_auto_reminder_task():
-    if ENABLE_AUTO_REMINDERS:
+    if ENABLE_AUTO_REMINDERS and _is_background_leader("reminder"):
         asyncio.create_task(_auto_reminder_loop())
     else:
         print("[auto-reminder] Deaktivdir.")
