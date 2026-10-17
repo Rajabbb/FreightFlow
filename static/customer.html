@@ -6197,12 +6197,12 @@ function copyPublicLinkText() {
     }
 
     let plansModalInstance = null;
-    function openPlansModal(forceBlocking) {
+    function openPlansModal(forceBlocking, reasonText) {
         const el = document.getElementById("plansModal");
         if (!el) return;
         const blocking = !!forceBlocking;
-        document.getElementById("plansModalTitle").textContent = blocking ? "Ödəniş edin və davam edin" : "Planlar";
-        document.getElementById("plansModalSub").textContent = blocking ? "Demo müddətiniz bitib. Məlumatlarınız saxlanılır; plan seçdikdən sonra işə davam edə bilərsiniz." : "";
+        document.getElementById("plansModalTitle").textContent = (blocking || reasonText) ? "Ödəniş edin və davam edin" : "Planlar";
+        document.getElementById("plansModalSub").textContent = reasonText ? reasonText : (blocking ? "Demo müddətiniz bitib. Məlumatlarınız saxlanılır; plan seçdikdən sonra işə davam edə bilərsiniz." : "");
         document.getElementById("plansModalBody").innerHTML = renderPlansBody();
         document.getElementById("plansPayNote").textContent = "Onlayn ödəniş tezliklə aktivləşəcək. Hələlik planı seçib bizimlə əlaqə saxlayın (info@arachi.co), hesabınız əl ilə aktivləşdiriləcək.";
         const closeBtn = document.getElementById("plansModalClose");
@@ -6212,10 +6212,16 @@ function copyPublicLinkText() {
         plansModalInstance.show();
     }
 
-    function showPaymentRequired() {
-        if (activeSubscription) { activeSubscription.payment_required = true; activeSubscription.expired = true; }
+    function showPaymentRequired(detail) {
+        // Müddət bitməsi (bloklayır) ilə limit dolması (məlumatlar açıq qalır) fərqləndirilir
+        const isLimit = typeof detail === "string" && /limit|ən çox|sorğu yaratmaq/i.test(detail) && !/müddət/i.test(detail);
+        if (activeSubscription) {
+            activeSubscription.payment_required = true;
+            if (isLimit) { activeSubscription.limit_message = detail; }
+            else { activeSubscription.expired = true; }
+        }
         renderSubscriptionBanner();
-        openPlansModal(true);
+        openPlansModal(!isLimit, isLimit ? detail : undefined);
     }
 
     function renderSubscriptionBanner() {
@@ -6224,7 +6230,9 @@ function copyPublicLinkText() {
         const s = activeSubscription;
         if (!s || !s.is_demo) { box.classList.add("d-none"); box.innerHTML = ""; return; }
         let html;
-        if (s.expired || s.payment_required) {
+        if (s.limit_message && !s.expired) {
+            html = `<div class="alert alert-warning rounded-0 border-0 mb-0 d-flex flex-wrap align-items-center justify-content-between gap-2 small"><span><i class="bi bi-exclamation-triangle me-1"></i><strong>Demo limiti doldu.</strong> ${escapeHTML(s.limit_message)}</span><button class="btn btn-sm btn-warning rounded-pill px-3" onclick="openPlansModal(false)">Planlara bax</button></div>`;
+        } else if (s.expired || s.payment_required) {
             html = `<div class="alert alert-danger rounded-0 border-0 mb-0 d-flex flex-wrap align-items-center justify-content-between gap-2 small"><span><i class="bi bi-exclamation-octagon me-1"></i><strong>Demo müddəti bitib.</strong> Davam etmək üçün plan seçib ödəniş edin.</span><button class="btn btn-sm btn-danger rounded-pill px-3" onclick="openPlansModal(true)">Ödəniş edin və davam edin</button></div>`;
         } else {
             html = `<div class="alert alert-warning rounded-0 border-0 mb-0 d-flex flex-wrap align-items-center justify-content-between gap-2 small"><span><i class="bi bi-hourglass-split me-1"></i><strong>Demo hesab:</strong> <span>${s.trial_days_left}</span> <span>gün qalıb.</span> <span>Aİ sorğu limiti: 100.</span></span><button class="btn btn-sm btn-warning rounded-pill px-3" onclick="openPlansModal(false)">Planlara bax</button></div>`;
@@ -6261,7 +6269,7 @@ function copyPublicLinkText() {
             try {
                 if (r.status === 402) {
                     const body = await r.clone().json().catch(() => ({}));
-                    if (typeof body.detail === "string" && /demo/i.test(body.detail)) showPaymentRequired();
+                    if (typeof body.detail === "string" && /demo/i.test(body.detail)) showPaymentRequired(body.detail);
                 }
                 if (r.status === 423) {
                     // Komanda artıq var: hesab idarəçi rejiminə keçib (səhifə köhnə qalmışdı), panel dərhal yenilənir
