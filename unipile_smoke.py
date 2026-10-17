@@ -27,8 +27,10 @@ def load_env(path=".env"):
 
 
 def call(method, path, body=None):
-    dsn = os.environ.get("UNIPILE_DSN", "").rstrip("/")
-    key = os.environ.get("UNIPILE_API_KEY", "")
+    dsn = os.environ.get("UNIPILE_DSN", "").strip().strip('"').strip("'").rstrip("/")
+    if dsn and not dsn.lower().startswith(("http://", "https://")):
+        dsn = "https://" + dsn   # dashboard ünvanı bəzən protokolsuz göstərir
+    key = os.environ.get("UNIPILE_API_KEY", "").strip().strip('"').strip("'")
     if not dsn or not key:
         sys.exit("UNIPILE_DSN və UNIPILE_API_KEY .env faylında olmalıdır.")
     data = json.dumps(body).encode() if body is not None else None
