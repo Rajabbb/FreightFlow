@@ -1421,13 +1421,13 @@ def _render_carrier_email(carrier_name: str, origin: str, destination: str, toke
         "offer_due": _offer_due_text(shipment), "cargo": str(shipment.get("cargo_type") or ""),
     }
     if is_reminder:
-        subject_line = f"⏰ Reminder: Submit a Proposal: {origin} - {destination}"
+        subject_line = f"{'' if channel == 'mailbox' else '⏰ '}Reminder: Submit a Proposal: {origin} - {destination}"
         text_content = f"""Dear {carrier_name},\n\nThis is a gentle reminder regarding the shipment request from {origin} to {destination}. Please kindly submit your quotation using the link below if you haven't already.\n\nThank you.\n\nBest regards,\n{sender_company}"""
     else:
         if custom_subject and custom_subject.strip():
             subject_line = _fill_placeholders(custom_subject, values, keep_details_marker=False)
         else:
-            subject_line = f"📦 Submit a Proposal: {origin} - {destination}"
+            subject_line = f"{'' if channel == 'mailbox' else '📦 '}Submit a Proposal: {origin} - {destination}"
         if custom_body and custom_body.strip():
             text_content = _fill_placeholders(custom_body, values)
         else:
@@ -1454,7 +1454,7 @@ def _render_carrier_email(carrier_name: str, origin: str, destination: str, toke
             {after_route_details}
             {reply_html}
             <div style="text-align: center; margin: 30px 0;">
-                <a href="{quote_link}" style="background-color: #1a73e8; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">👉 Submit Your Proposal</a>
+                <a href="{quote_link}" style="background-color: #1a73e8; color: white; padding: 12px 24px; border-radius: 5px; text-decoration: none; font-weight: bold; display: inline-block;">{'' if channel == 'mailbox' else '👉 '}Submit Your Proposal</a>
             </div>
         </div>
         {tracking_pixel}
