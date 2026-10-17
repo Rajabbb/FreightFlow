@@ -263,7 +263,7 @@
                 cargo_type: "Cargo Type",
                 cargo_items_title: "Cargo items in this shipment",
                 cargo_items_hint: "All items ship together. Please give one total price for the whole shipment.",
-                ci_total: "Total", ci_items_word: "items",
+                ci_total: "Total", ci_items_word: "items", ci_file: "File",
                 ci_weight: "Weight", ci_volume: "Volume", ci_pallets: "pallets", ci_dimensions: "Dimensions", ci_hs: "HS code", ci_incoterm: "Incoterm",
                 ci_adr: "Dangerous goods", ci_stackable: "Stackable", ci_nonstackable: "Non-stackable", ci_temperature: "Temperature", ci_notes: "Notes",
                 customer_reqs: "Customer Requirements & Notes",
@@ -311,7 +311,7 @@
                 cargo_type: "Yükün Növü",
                 cargo_items_title: "Bu daşımadakı yüklər",
                 cargo_items_hint: "Bütün yüklər birlikdə daşınır. Zəhmət olmasa bütün daşıma üçün bir ümumi qiymət yazın.",
-                ci_total: "Cəmi", ci_items_word: "yük",
+                ci_total: "Cəmi", ci_items_word: "yük", ci_file: "Fayl",
                 ci_weight: "Çəki", ci_volume: "Həcm", ci_pallets: "palet", ci_dimensions: "Ölçülər", ci_hs: "HS kod", ci_incoterm: "Incoterm",
                 ci_adr: "Təhlükəli yük", ci_stackable: "Üst-üstə qoyula bilər", ci_nonstackable: "Üst-üstə qoyulmaz", ci_temperature: "Temperatur", ci_notes: "Qeyd",
                 customer_reqs: "Müştəri Tələbləri və Qeydləri",
@@ -432,6 +432,9 @@
                 if (it.stackable === false) chips.push(chip(L.ci_nonstackable, "✓"));
                 if (it.temperature) chips.push(chip(L.ci_temperature, it.temperature));
                 if (notes) chips.push(chip(L.ci_notes, notes));
+                if (it.file_url && /^\/uploads\//.test(String(it.file_url))) {
+                    chips.push(`<a href="${escapeHTML(it.file_url)}" target="_blank" rel="noopener" style="display:inline-block;background:#e0ecff;color:#1d4ed8;border-radius:6px;padding:3px 8px;font-size:12px;margin:0 6px 6px 0;text-decoration:none;font-weight:600;">📎 ${escapeHTML(L.ci_file)}: ${escapeHTML(it.file_name || "")}</a>`);
+                }
                 return `<div class="border border-slate-200 rounded-xl p-4 bg-white"><p class="font-bold text-sm text-slate-800 mb-2">${i + 1}. ${escapeHTML(name)}</p><div>${chips.join("")}</div></div>`;
             }).join("");
             const totalText = cargoTotalsText(cargoItemsData, "kg", "m³", L.ci_pallets, L.ci_items_word);
