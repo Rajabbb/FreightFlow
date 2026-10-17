@@ -1613,8 +1613,14 @@ async def test_send_email_template(request: Request, data: TemplatePreviewIn, cu
 # Müştəri Gmail/Outlook hesabını Unipile-in hazır səhifəsində qoşur. RFQ emailləri onun poçtundan gedir, cavablar onun poçtuna
 # düşür və Unipile webhook-u ilə Arachi-yə də çatır. Arachi poçtun qalanını OXUMUR: webhook-da gələn mesaj bizim göndərdiyimiz
 # məktubun cavabı deyilsə (Message-ID və ya mövzudakı RFQ kodu uyğun gəlmirsə) məzmun dərhal atılır, saxlanılmır, loqa yazılmır.
-UNIPILE_DSN = os.getenv("UNIPILE_DSN", "").strip().rstrip("/")
-UNIPILE_API_KEY = os.getenv("UNIPILE_API_KEY", "").strip()
+def _normalize_dsn(value: str) -> str:
+    """Dashboard ünvanı protokolsuz (api12.unipile.com:14234) göstərə bilər: https:// avtomatik əlavə olunur."""
+    v = (value or "").strip().strip('"').strip("'").rstrip("/")
+    return ("https://" + v) if v and not v.lower().startswith(("http://", "https://")) else v
+
+
+UNIPILE_DSN = _normalize_dsn(os.getenv("UNIPILE_DSN", ""))
+UNIPILE_API_KEY = os.getenv("UNIPILE_API_KEY", "").strip().strip('"').strip("'")
 UNIPILE_WEBHOOK_SECRET = os.getenv("UNIPILE_WEBHOOK_SECRET", "").strip()
 UNIPILE_PROVIDERS = [x.strip().upper() for x in os.getenv("UNIPILE_PROVIDERS", "GOOGLE,OUTLOOK").split(",") if x.strip()]
 MAILBOX_PILOT_IDS = {int(x) for x in re.findall(r"\d+", os.getenv("MAILBOX_PILOT_IDS", ""))}   # Custom paketdə olmayan pilot şirkətlər
@@ -2072,6 +2078,10 @@ async def unipile_setup(request: Request, secret: str = None):
             results[source] = {"ok": True, "id": (data or {}).get("webhook_id") or (data or {}).get("id")}
         except UnipileError as e:
             results[source] = {"ok": False, "status": e.status, "detail": e.detail}
+        except Exception as e:
+            traceback.print_exc()
+            # əlaqə/DSN xətası: səbəb admin üçün göstərilir (açar və ya gizli dəyər xəta mətninə düşmür)
+            results[source] = {"ok": False, "error": f"{type(e).__name__}: {str(e)[:160]}"}
     return {"status": "done", "webhooks": results}
 
 
