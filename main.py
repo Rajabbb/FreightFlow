@@ -1010,7 +1010,10 @@ async def _process_inbound_parsed(parsed: Dict[str, Any]) -> Dict[str, Any]:
         await _notify_inbound(customer, route[0], route[1], name, "applied", _extraction_summary(extraction))
         return {"status": "applied", "id": inbound_id, "offers": len(extraction["offers"])}
     reasons = []
-    if not trusted: reasons.append("göndərən daşıyıcının ünvanı ilə uyğun gəlmir" + (" və ya autentifikasiya uğursuzdur" if auth_failed else ""))
+    if not ((same_address or same_domain) and not auth_failed):
+        reasons.append("göndərən daşıyıcının ünvanı ilə uyğun gəlmir" + (" və ya autentifikasiya uğursuzdur" if auth_failed else ""))
+    if not parsed.get("strong", True):
+        reasons.append("cavab göndərilən məktuba birbaşa istinad etmir (yalnız mövzudakı RFQ koduna görə tapıldı)")
     if extraction["kind"] != "offer": reasons.append("cavabda təklif yoxdur (sual və ya digər)")
     if extraction["kind"] == "offer" and not complete: reasons.extend(extraction["problems"] or ["təklif natamamdır"])
     if extraction["confidence"] < INBOUND_MIN_CONFIDENCE: reasons.append("Aİ əmin deyil")
@@ -2009,6 +2012,9 @@ async def _handle_unipile_mail_received(payload: Dict[str, Any]) -> Dict[str, An
         rows = supabase.table("mail_messages").select("*").eq("account_id", acc["id"]).eq("ref", ref_match.group(1).lower()).execute().data or []
         if rows:
             token = rows[0]["token"]
+            # mövzudakı kodla tapılan cavab, onu məhz məktub göndərdiyimiz ünvandan gəlibsə (və spam/junk qovluğunda deyilsə) etibarlıdır
+            folders = " ".join(str(f) for f in (payload.get("folders") or [])).lower()
+            strong = any(str(r.get("to_addr") or "") == from_addr for r in rows) and not any(w in folders for w in ("spam", "junk", "trash"))
     body_html = str(payload.get("body") or "")
     plain = str(payload.get("body_plain") or "").strip() or _strip_html(body_html)
     if token is None and _bounce_like(from_addr, subject):
