@@ -4602,7 +4602,7 @@ function loadBulkSubCategories(categoryId) {
                 if (!box) return;
                 box.classList.toggle("d-none", items.length < 2);
                 box.innerHTML = items.length < 2 ? "" : `<div class="small fw-bold text-dark mb-1"><i class="bi bi-boxes me-1 text-primary"></i>Yüklər (${items.length})</div><div class="d-flex flex-column gap-1">` +
-                    items.map((it, i) => `<div class="small border rounded-3 bg-white px-2 py-1">${i + 1}. ${escapeHTML(cargoItemLine(it))}</div>`).join("") + `</div><div class="small fw-bold text-dark mt-1">Cəmi: ${escapeHTML(cargoTotalsText(items))}</div>`;
+                    items.map((it, i) => `<div class="small border rounded-3 bg-white px-2 py-1">${i + 1}. ${escapeHTML(cargoItemLine(it))}${it.file_url && String(it.file_url).startsWith("/uploads/") ? ` <a href="${escapeHTML(it.file_url)}" target="_blank" rel="noopener" class="ms-1"><i class="bi bi-paperclip"></i> ${escapeHTML(it.file_name || "Fayl")}</a>` : ""}</div>`).join("") + `</div><div class="small fw-bold text-dark mt-1">Cəmi: ${escapeHTML(cargoTotalsText(items))}</div>`;
             })();
 
             document.getElementById("detailDeadline").textContent = req.deadline ? formatDateTime(req.deadline, false, true) : "—";
@@ -5600,6 +5600,13 @@ function copyPublicLinkText() {
                 <div class="col-6 col-md-3"><input type="number" step="any" min="0" class="form-control form-control-sm ci-volume" placeholder="Həcm (m³)" value="${v(d.volume_m3)}"></div>
                 <div class="col-6 col-md-3"><input type="number" step="1" min="0" class="form-control form-control-sm ci-pallets" placeholder="Palet sayı" value="${v(d.pallets)}"></div>
             </div>
+            <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                <label class="btn btn-sm btn-outline-secondary mb-0"><i class="bi bi-paperclip me-1"></i>Bu yükə fayl əlavə et
+                    <input type="file" class="d-none ci-file" accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.csv,.txt" onchange="uploadCargoItemFile(this)">
+                </label>
+                <span class="small ci-file-name text-muted"></span>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0 d-none ci-file-remove" onclick="removeCargoItemFile(this)">Sil</button>
+            </div>
             <details class="mt-2"${hasMore ? " open" : ""}>
                 <summary class="small text-primary" style="cursor:pointer;">Daha çox (ölçülər, HS kod, Incoterm, ADR, temperatur, qeyd)</summary>
                 <div class="row g-2 mt-1">
@@ -5614,7 +5621,43 @@ function copyPublicLinkText() {
             </details>`;
         el.addEventListener("input", updateCargoItemsTotal);
         list.appendChild(el);
+        if (d.file_url) setCargoItemFile(el, String(d.file_url).split("?")[0], d.file_name || "");
         renumberCargoItems();
+    }
+
+
+    function setCargoItemFile(card, url, name) {
+        card.dataset.fileUrl = url || "";
+        card.dataset.fileName = name || "";
+        const label = card.querySelector(".ci-file-name"), rm = card.querySelector(".ci-file-remove");
+        if (label) { label.textContent = url ? "📎 " + (name || url.split("/").pop()) : ""; label.className = "small ci-file-name " + (url ? "text-success" : "text-muted"); }
+        if (rm) rm.classList.toggle("d-none", !url);
+    }
+
+    async function uploadCargoItemFile(input) {
+        const card = input.closest(".cargo-item");
+        const file = input.files && input.files[0];
+        if (!card || !file) return;
+        const label = card.querySelector(".ci-file-name");
+        if (file.size > 10 * 1024 * 1024) { alert("Fayl 10 MB-dan böyük ola bilməz."); input.value = ""; return; }
+        if (label) { label.className = "small ci-file-name text-muted"; label.textContent = "Yüklənir..."; }
+        const data = new FormData();
+        data.append("file", file);
+        try {
+            const res = await fetch("/requests/upload-attachment", { method: "POST", headers: getAuthHeaders(true), body: data });
+            if (res.status === 401 || res.status === 403) { logout(); return; }
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) { alert("Fayl yüklənmədi: " + formatErrorDetail(d.detail)); setCargoItemFile(card, "", ""); input.value = ""; return; }
+            setCargoItemFile(card, String(d.attachment_url || "").split("?")[0], d.filename || file.name);
+        } catch (e) {
+            alert("Faylı serverə yükləmək mümkün olmadı!"); setCargoItemFile(card, "", "");
+        }
+        input.value = "";
+    }
+
+    function removeCargoItemFile(btn) {
+        const card = btn.closest(".cargo-item");
+        if (card) setCargoItemFile(card, "", "");
     }
 
     function removeCargoItem(btn) {
@@ -5647,6 +5690,7 @@ function copyPublicLinkText() {
             const textMap = { dimensions: ".ci-dim", hs_code: ".ci-hs", incoterm: ".ci-incoterm", adr: ".ci-adr", temperature: ".ci-temp", notes: ".ci-notes" };
             for (const [k, c] of Object.entries(textMap)) { const t = q(c); if (t) it[k] = t; }
             const st = q(".ci-stack"); if (st) it.stackable = st;
+            if (el.dataset.fileUrl) { it.file_url = el.dataset.fileUrl; it.file_name = el.dataset.fileName || ""; }
             out.push(it);
         });
         return out;
@@ -6320,6 +6364,7 @@ function copyPublicLinkText() {
             "Təklif üçün son tarix": "Offer deadline",
             "Təkrarla": "Duplicate",
             "Komanda": "Team",
+            "Bu yükə fayl əlavə et": "Attach a file to this cargo",
             "Poçt hesabı": "Mailbox",
             "Gmail / Outlook qoş": "Connect Gmail / Outlook",
             "Ayır": "Disconnect",
