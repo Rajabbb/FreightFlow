@@ -561,6 +561,10 @@ def _clean_cargo_items(raw: Any) -> List[Dict[str, Any]]:
             if t: item[key] = t
         st = _item_stackable(it.get("stackable"))
         if st is not None: item["stackable"] = st
+        file_url = str(it.get("file_url") or "").split("?", 1)[0].strip()
+        if re.fullmatch(r"/uploads/[A-Za-z0-9][A-Za-z0-9._-]{0,150}", file_url):
+            item["file_url"] = file_url
+            item["file_name"] = _item_text(it.get("file_name"), 120) or file_url.rsplit("/", 1)[-1]
         name = _item_text(it.get("name") or it.get("cargo_type"), 200)
         if not name and not item: continue
         item["name"] = name or f"Yük {len(out) + 1}"
@@ -616,6 +620,7 @@ def _cargo_item_line(item: Dict[str, Any]) -> str:
     if item.get("stackable") is False: parts.append("non-stackable")
     if item.get("temperature"): parts.append(str(item["temperature"]))
     if item.get("notes"): parts.append(str(item["notes"]))
+    if item.get("file_name"): parts.append(f"file: {item['file_name']}")
     return f"{item.get('name') or ''}" + (" — " + " · ".join(parts) if parts else "")
 
 
@@ -641,6 +646,8 @@ def _rfq_detail_pairs(shipment: Dict[str, Any]) -> List[Tuple[str, str]]:
             rows.append((f"Cargo {n}", _cargo_item_line(item)))
         total = _cargo_items_total_text(items)
         if total: rows.append(("Total", total))
+        if any(i.get("file_url") for i in items):
+            rows.append(("Files", "a file is attached to some cargo items: open them on the quote page (button below)"))
     else:
         if shipment.get("cargo_type"):
             rows.append(("Cargo", str(shipment["cargo_type"])))
