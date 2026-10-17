@@ -4095,7 +4095,7 @@ async def create_shipment_request(payload: ShipmentRequestCreate, background_tas
         cargo_val, weight_val, volume_val, hs_val = payload.cargo_type, payload.weight_kg, payload.volume_m3, payload.hs_code
         if len(cargo_items) >= 2:
             tw, tv, _tp = _cargo_items_totals(cargo_items)
-            cargo_val, weight_val, volume_val = _cargo_items_title(cargo_items), tw or None, tv or None
+            cargo_val, weight_val, volume_val = _cargo_items_title(cargo_items), tw or 0.0, tv or 0.0
             hs_val = ", ".join(dict.fromkeys(i["hs_code"] for i in cargo_items if i.get("hs_code")))[:200]
         else:
             cargo_items = []
