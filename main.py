@@ -3035,7 +3035,6 @@ def add_forwarder_to_base(request: Request, profile_id: int, current_user: dict 
 # PLANLAR, DEMO VƏ ABUNƏLİK
 # ==========================================
 DEMO_DAYS = 14
-DEMO_MAX_RFQS = int(os.getenv("DEMO_MAX_RFQS", "10"))   # demo hesab saxta kütləvi göndərişə yol açmasın
 # ai_limit: Aİ botun sorğu limiti (None = limitsiz), ai_period: "month" (hər ay sıfırlanır) | "total" (demo boyu)
 PLANS: Dict[str, Dict[str, Any]] = {
     "demo":           {"label": "Demo",           "account_types": ("importer_exporter", "forwarder"), "users": 2,    "ai": True,  "ai_limit": 100,  "ai_period": "total", "price_azn": 0},
@@ -3097,15 +3096,12 @@ PAYMENT_REQUIRED_MESSAGE = "Demo müddətiniz bitib. Davam etmək üçün plan s
 
 
 def _require_active_subscription(customer_id: int, creating_rfq: bool = False) -> Dict[str, Any]:
-    """Demo müddəti bitibsə yazma əməliyyatlarını dayandırır (məlumatlara baxmaq açıq qalır). Demo-da sorğu sayı məhduddur."""
+    """Demo müddəti bitibsə yazma əməliyyatlarını dayandırır (məlumatlara baxmaq açıq qalır). Planda yalnız Aİ sorğu limiti var:
+    RFQ sayı məhdud deyil (creating_rfq parametri uyğunluq üçün saxlanılır)."""
     user = _load_customer_row(customer_id)
     state = _subscription_state(user)
     if state["payment_required"]:
         raise HTTPException(status_code=402, detail=PAYMENT_REQUIRED_MESSAGE)
-    if creating_rfq and state["is_demo"]:
-        cnt = supabase.table("shipment_requests").select("id").eq("customer_id", customer_id).execute()
-        if len(cnt.data or []) >= DEMO_MAX_RFQS:
-            raise HTTPException(status_code=402, detail=f"Demo hesabda ən çox {DEMO_MAX_RFQS} sorğu yaratmaq olar. Davam etmək üçün plan seçin.")
     return user
 
 
