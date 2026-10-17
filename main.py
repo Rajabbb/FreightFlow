@@ -1961,16 +1961,29 @@ async def _handle_unipile_mail_sent(payload: Dict[str, Any]) -> Dict[str, Any]:
     if not acc or str(payload.get("origin") or "") != "unipile":
         return {"status": "ignored"}
     m = _RFQ_REF.search(str(payload.get("subject") or ""))
-    message_id = str(payload.get("message_id") or "").strip()
-    if not m or not message_id:
+    ids = [str(payload.get(k) or "").strip() for k in ("message_id", "provider_id", "email_id", "id")]
+    ids = [i[:300] for i in dict.fromkeys(ids) if i]
+    if not m or not ids:
         return {"status": "ignored"}
     recipients = {str((a or {}).get("identifier") or "").lower() for a in (payload.get("to_attendees") or [])}
     rows = supabase.table("mail_messages").select("*").eq("account_id", acc["id"]).eq("ref", m.group(1).lower()).execute().data or []
-    for r in rows:
-        if not r.get("message_id") and (not recipients or str(r.get("to_addr") or "") in recipients):
-            supabase.table("mail_messages").update({"message_id": message_id[:300]}).eq("id", r["id"]).execute()
-            return {"status": "stored"}
-    return {"status": "ignored"}
+    base = next((r for r in rows if r.get("kind") != "alias" and (not recipients or str(r.get("to_addr") or "") in recipients)), None)
+    if not base:
+        return {"status": "ignored"}
+    known = {str(r.get("message_id") or "") for r in rows}
+    stored = 0
+    for i in ids:
+        if i in known:
+            continue
+        if not base.get("message_id") and stored == 0:
+            supabase.table("mail_messages").update({"message_id": i}).eq("id", base["id"]).execute()
+        else:
+            # cavab bu identifikatorlardan birinə istinad edə bilər: hamısı eyni sorğuya bağlanır (bütçəyə sayılmır: ok=False)
+            supabase.table("mail_messages").insert({
+                "account_id": acc["id"], "customer_id": base["customer_id"], "token": base["token"], "ref": base["ref"], "to_addr": base.get("to_addr"),
+                "message_id": i, "kind": "alias", "ok": False, "created_at": datetime.utcnow().isoformat()}).execute()
+        stored += 1
+    return {"status": "stored" if stored else "ignored"}
 
 
 async def _handle_unipile_mail_received(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -1983,12 +1996,14 @@ async def _handle_unipile_mail_received(payload: Dict[str, Any]) -> Dict[str, An
     if not from_addr or from_addr == str(acc.get("email") or "").lower():
         return {"status": "ignored"}
     subject = str(payload.get("subject") or "")
-    reply_to_mid = str((payload.get("in_reply_to") or {}).get("message_id") or "").strip()
+    reply_ref = payload.get("in_reply_to") if isinstance(payload.get("in_reply_to"), dict) else {}
+    reply_ids = [str(reply_ref.get(k) or "").strip() for k in ("message_id", "id", "provider_id")]
     token, strong = None, False
-    if reply_to_mid:
-        rows = supabase.table("mail_messages").select("*").eq("account_id", acc["id"]).eq("message_id", reply_to_mid).execute().data or []
+    for rid in dict.fromkeys(i for i in reply_ids if i):
+        rows = supabase.table("mail_messages").select("*").eq("account_id", acc["id"]).eq("message_id", rid).execute().data or []
         if rows:
             token, strong = rows[0]["token"], True
+            break
     ref_match = _RFQ_REF.search(subject)
     if token is None and ref_match:
         rows = supabase.table("mail_messages").select("*").eq("account_id", acc["id"]).eq("ref", ref_match.group(1).lower()).execute().data or []
@@ -2017,19 +2032,37 @@ async def _handle_unipile_mail_received(payload: Dict[str, Any]) -> Dict[str, An
     return await _process_inbound_parsed(parsed)
 
 
+_UNIPILE_RECENT: List[Dict[str, Any]] = []   # yalnız hadisə növü və nəticə: ünvan, mövzu və məzmun saxlanılmır
+
+
+def _note_unipile_event(event: str, payload: Dict[str, Any], result: str) -> None:
+    info: Dict[str, Any] = {"t": datetime.utcnow().strftime("%H:%M:%S"), "event": event or "status", "result": result}
+    if event in ("mail_received", "mail_sent"):
+        info["origin"] = str(payload.get("origin") or "")
+        info["has_in_reply_to"] = isinstance(payload.get("in_reply_to"), dict) and bool(payload.get("in_reply_to"))
+        info["ref_in_subject"] = bool(_RFQ_REF.search(str(payload.get("subject") or "")))
+        info["id_fields"] = [k for k in ("message_id", "provider_id", "email_id", "id") if payload.get(k)]
+    _UNIPILE_RECENT.append(info)
+    del _UNIPILE_RECENT[:-30]
+
+
 async def _handle_unipile_event(payload: Any) -> None:
     try:
         if not isinstance(payload, dict):
             return
         event = str(payload.get("event") or "")
+        result: Any = None
         if event == "mail_received":
-            await _handle_unipile_mail_received(payload)
+            result = await _handle_unipile_mail_received(payload)
         elif event == "mail_sent":
-            await _handle_unipile_mail_sent(payload)
+            result = await _handle_unipile_mail_sent(payload)
         elif "AccountStatus" in payload or payload.get("message") or (payload.get("account_id") and payload.get("status") and not event):
             await _handle_unipile_account_status(payload)
+            result = {"status": "account_status"}
+        _note_unipile_event(event, payload, str((result or {}).get("status") or "ignored"))
     except Exception:
         traceback.print_exc()   # mesajın məzmunu loqa yazılmır
+        _note_unipile_event(str((payload or {}).get("event") if isinstance(payload, dict) else ""), payload if isinstance(payload, dict) else {}, "error")
 
 
 @app.post("/api/unipile/webhook")
@@ -2057,7 +2090,7 @@ def unipile_status(request: Request, secret: str = None):
         raise HTTPException(status_code=403, detail="Giriş qadağandır.")
     return {"dsn_set": bool(UNIPILE_DSN), "api_key_set": bool(UNIPILE_API_KEY), "webhook_secret_set": bool(UNIPILE_WEBHOOK_SECRET),
             "providers": UNIPILE_PROVIDERS, "pilot_ids": sorted(MAILBOX_PILOT_IDS), "webhook_url": f"{BASE_URL}/api/unipile/webhook",
-            "default_daily_limit": MAILBOX_DEFAULT_DAILY_LIMIT}
+            "default_daily_limit": MAILBOX_DEFAULT_DAILY_LIMIT, "recent_events": list(_UNIPILE_RECENT)}
 
 
 @app.post("/admin/unipile-setup")
