@@ -7,6 +7,7 @@ import hashlib
 import hmac
 import time
 import secrets
+import random
 from html import escape as _html_escape
 import re
 import csv
@@ -917,6 +918,20 @@ async def process_inbound_raw(raw: bytes) -> Dict[str, Any]:
     tokens = _inbound_tokens(msg)
     if not tokens:
         return {"status": "nomatch"}
+    parsed = {
+        "message_id": message_id, "tokens": tokens, "from_header": _decode_mime_str(msg.get("From") or ""),
+        "subject": _decode_mime_str(msg.get("Subject") or ""), "auth": (msg.get("Authentication-Results") or "").lower(),
+        "get_body": lambda: _clean_reply_text(_reply_body(msg)), "get_attachments": lambda: _attachment_texts(msg),
+        "is_bounce": _is_bounce_message(msg), "is_auto": _is_auto_reply(msg), "strong": True,
+    }
+    return await _process_inbound_parsed(parsed)
+
+
+async def _process_inbound_parsed(parsed: Dict[str, Any]) -> Dict[str, Any]:
+    """Artıq oxunmuş gələn mesajı emal edir (mənbə: IMAP, Resend, Unipile). "strong" = mesaj bizim göndərdiyimiz məktubun
+    birbaşa cavabıdır (Message-ID/tokenli ünvan); yalnız mövzudakı kodla tapılıbsa avtomatik tətbiq edilmir, yoxlamaya düşür."""
+    message_id = parsed["message_id"]
+    tokens = parsed["tokens"]
     if (supabase.table("inbound_emails").select("id").eq("message_id", message_id).execute().data or []):
         return {"status": "duplicate"}
     quote = None
@@ -931,17 +946,17 @@ async def process_inbound_raw(raw: bytes) -> Dict[str, Any]:
     customer_id = shipment.get("customer_id")
     customer = (supabase.table("customers").select("id, email, name").eq("id", customer_id).execute().data or [{}])[0]
     carrier = (supabase.table("carriers").select("id, company_name, email").eq("id", quote.get("carrier_id")).execute().data or [{}])[0]
-    from_header = _decode_mime_str(msg.get("From") or "")
+    from_header = parsed["from_header"]
     from_addr = _addr_of(from_header)
     carrier_addr = _addr_of(str(carrier.get("email") or ""))
     same_address = bool(from_addr) and from_addr == carrier_addr
     same_domain = bool(from_addr) and bool(carrier_addr) and _domain_of(from_addr) == _domain_of(carrier_addr) and _domain_of(from_addr) not in _FREEMAIL_DOMAINS
-    auth = (msg.get("Authentication-Results") or "").lower()
+    auth = parsed["auth"]
     auth_failed = bool(auth) and ("dkim=fail" in auth or "spf=fail" in auth or "dmarc=fail" in auth)
-    trusted = (same_address or same_domain) and not auth_failed
-    subject = _decode_mime_str(msg.get("Subject") or "")[:300]
-    body = _clean_reply_text(_reply_body(msg))
-    attachments, attachment_text = _attachment_texts(msg)
+    trusted = (same_address or same_domain) and not auth_failed and bool(parsed.get("strong", True))
+    subject = parsed["subject"][:300]
+    body = parsed["get_body"]()
+    attachments, attachment_text = parsed["get_attachments"]()
     base_row = {
         "quote_id": quote["id"], "request_id": shipment.get("id") or quote.get("request_id"), "customer_id": customer_id,
         "message_id": message_id[:300], "from_addr": from_addr[:200], "from_name": from_header[:200], "subject": subject,
@@ -957,9 +972,9 @@ async def process_inbound_raw(raw: bytes) -> Dict[str, Any]:
             traceback.print_exc()
             return None
 
-    if _is_bounce_message(msg):
+    if parsed["is_bounce"]:
         return {"status": "ignored", "reason": "bounce"}
-    if _is_auto_reply(msg):
+    if parsed["is_auto"]:
         store("ignored", "avtomatik cavab")
         return {"status": "ignored", "reason": "autoreply"}
     if not body and not attachment_text:
@@ -1395,11 +1410,12 @@ def _template_unknown_placeholders(*texts: str) -> List[str]:
 
 def _render_carrier_email(carrier_name: str, origin: str, destination: str, token: str, custom_body: Optional[str],
                           custom_subject: Optional[str], sender_company: str, is_reminder: bool,
-                          shipment: Optional[Dict[str, Any]], preview: bool = False) -> Tuple[str, str]:
+                          shipment: Optional[Dict[str, Any]], preview: bool = False, channel: str = "resend") -> Tuple[str, str]:
     """Daşıyıcıya gedən emailin mövzusu və HTML-i. Göndərmə və önbaxış eyni funksiyadan keçir."""
     shipment = shipment or {}
     quote_link = "#" if preview else f"{BASE_URL}/carrier_quote/quote?token={token}"
-    tracking_pixel = "" if preview else f'<img src="{BASE_URL}/quotes/track/{token}" width="1" height="1" style="display:none;" />'
+    # müştərinin öz poçtundan gedəndə izləmə pikseli qoyulmur (spam siqnalı ola bilər)
+    tracking_pixel = "" if (preview or channel == "mailbox") else f'<img src="{BASE_URL}/quotes/track/{token}" width="1" height="1" style="display:none;" />'
     values = {
         "company_name": carrier_name, "sender_company": sender_company, "origin": origin, "destination": destination,
         "offer_due": _offer_due_text(shipment), "cargo": str(shipment.get("cargo_type") or ""),
@@ -1427,7 +1443,7 @@ def _render_carrier_email(carrier_name: str, origin: str, destination: str, toke
         formatted_text = formatted_text.replace(_DETAILS_MARK, details_html)
     after_route_details = "" if inline_details else details_html
     reply_address = None if preview else _inbound_address(token)
-    reply_html = _reply_template_html() if (reply_address or preview and ENABLE_INBOUND_REPLIES) else ""
+    reply_html = _reply_template_html() if (reply_address or preview and ENABLE_INBOUND_REPLIES or channel == "mailbox") else ""
     html_content = f"""
     <div style="font-family: Arial, sans-serif; background-color: #f4f6f8; padding: 20px;">
         <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 8px; padding: 30px; border: 1px solid #e0e0e0;">
@@ -1593,6 +1609,472 @@ async def test_send_email_template(request: Request, data: TemplatePreviewIn, cu
     return {"status": "success", "sent_to": to}
 
 
+# ---------------- Poçt hesabı (Unipile): RFQ emailləri müştərinin öz poçtundan gedir (Custom paket) ----------------
+# Müştəri Gmail/Outlook hesabını Unipile-in hazır səhifəsində qoşur. RFQ emailləri onun poçtundan gedir, cavablar onun poçtuna
+# düşür və Unipile webhook-u ilə Arachi-yə də çatır. Arachi poçtun qalanını OXUMUR: webhook-da gələn mesaj bizim göndərdiyimiz
+# məktubun cavabı deyilsə (Message-ID və ya mövzudakı RFQ kodu uyğun gəlmirsə) məzmun dərhal atılır, saxlanılmır, loqa yazılmır.
+UNIPILE_DSN = os.getenv("UNIPILE_DSN", "").strip().rstrip("/")
+UNIPILE_API_KEY = os.getenv("UNIPILE_API_KEY", "").strip()
+UNIPILE_WEBHOOK_SECRET = os.getenv("UNIPILE_WEBHOOK_SECRET", "").strip()
+UNIPILE_PROVIDERS = [x.strip().upper() for x in os.getenv("UNIPILE_PROVIDERS", "GOOGLE,OUTLOOK").split(",") if x.strip()]
+MAILBOX_PILOT_IDS = {int(x) for x in re.findall(r"\d+", os.getenv("MAILBOX_PILOT_IDS", ""))}   # Custom paketdə olmayan pilot şirkətlər
+MAILBOX_DEFAULT_DAILY_LIMIT = int(os.getenv("MAILBOX_DEFAULT_DAILY_LIMIT", "100"))
+MAILBOX_MAX_DAILY_LIMIT = int(os.getenv("MAILBOX_MAX_DAILY_LIMIT", "300"))
+MAILBOX_GAP_MIN_SECONDS = float(os.getenv("MAILBOX_GAP_MIN_SECONDS", "2"))
+MAILBOX_GAP_MAX_SECONDS = float(os.getenv("MAILBOX_GAP_MAX_SECONDS", "5"))
+_RFQ_REF = re.compile(r"\[RFQ-([0-9a-f]{8})\]", re.IGNORECASE)
+_MAILBOX_LOCKS: Dict[int, "asyncio.Lock"] = {}
+
+
+def _unipile_enabled() -> bool:
+    return bool(UNIPILE_DSN and UNIPILE_API_KEY)
+
+
+class UnipileError(Exception):
+    def __init__(self, status: int, detail: str = ""):
+        super().__init__(f"Unipile {status}")
+        self.status, self.detail = status, detail
+
+
+async def _unipile_http(method: str, url: str, headers: Dict[str, str], json_body: Optional[Dict[str, Any]] = None) -> Tuple[int, Any]:
+    """Unipile ilə yeganə HTTP nöqtəsi (testlərdə əvəz olunur)."""
+    import httpx
+    async with httpx.AsyncClient(timeout=30) as cx:
+        r = await cx.request(method, url, headers=headers, json=json_body)
+    try:
+        data = r.json()
+    except Exception:
+        data = {}
+    return r.status_code, data
+
+
+async def _unipile(method: str, path: str, body: Optional[Dict[str, Any]] = None, extra_headers: Optional[Dict[str, str]] = None) -> Any:
+    if not _unipile_enabled():
+        raise UnipileError(503, "not_configured")
+    headers = {"X-API-KEY": UNIPILE_API_KEY, "accept": "application/json", "content-type": "application/json"}
+    headers.update(extra_headers or {})
+    status, data = await _unipile_http(method, f"{UNIPILE_DSN}{path}", headers, body)
+    if status >= 400:
+        raise UnipileError(status, str((data or {}).get("detail") or (data or {}).get("title") or "")[:200] if isinstance(data, dict) else "")
+    return data
+
+
+def _mailbox_allowed(customer_id: int) -> bool:
+    """Poçt qoşma xüsusiyyəti Custom paketdədir (və ya MAILBOX_PILOT_IDS siyahısındakı pilot şirkətlərdə)."""
+    if int(customer_id) in MAILBOX_PILOT_IDS:
+        return True
+    try:
+        return (_load_customer_row(int(customer_id)).get("plan") or "") == "custom"
+    except Exception:
+        return False
+
+
+def _mail_account(customer_id: int) -> Optional[Dict[str, Any]]:
+    try:
+        rows = supabase.table("mail_accounts").select("*").eq("customer_id", int(customer_id)).execute().data or []
+    except Exception:
+        return None
+    return rows[0] if rows else None
+
+
+def _mail_account_by_unipile(unipile_id: str) -> Optional[Dict[str, Any]]:
+    if not unipile_id:
+        return None
+    try:
+        rows = supabase.table("mail_accounts").select("*").eq("unipile_account_id", unipile_id).execute().data or []
+    except Exception:
+        return None
+    return rows[0] if rows else None
+
+
+def _mailbox_ready(customer_id: int) -> bool:
+    if not _unipile_enabled():
+        return False
+    acc = _mail_account(customer_id)
+    return bool(acc and acc.get("status") == "ok" and _mailbox_allowed(customer_id))
+
+
+def _mailbox_limit(acc: Dict[str, Any], now: Optional[datetime] = None) -> int:
+    """Gündəlik göndərmə həddi. Yeni qoşulan hesab üçün tədricən artır (30 → 60 → seçilmiş hədd)."""
+    limit = max(1, min(int(acc.get("daily_limit") or MAILBOX_DEFAULT_DAILY_LIMIT), MAILBOX_MAX_DAILY_LIMIT))
+    connected = _parse_ts(acc.get("connected_at"))
+    if connected is not None:
+        age = ((now or datetime.utcnow()) - connected).total_seconds() / 86400
+        if age < 3: limit = min(limit, 30)
+        elif age < 7: limit = min(limit, 60)
+    return limit
+
+
+def _mailbox_used_24h(account_id: Any, now: Optional[datetime] = None) -> int:
+    now = now or datetime.utcnow()
+    try:
+        rows = supabase.table("mail_messages").select("created_at, ok").eq("account_id", account_id).order("id", desc=True).range(0, 999).execute().data or []
+    except Exception:
+        return 0
+    n = 0
+    for r in rows:
+        created = _parse_ts(r.get("created_at"))
+        if r.get("ok") is not False and created is not None and (now - created).total_seconds() < 86400:
+            n += 1
+    return n
+
+
+def _mailbox_set_status(acc: Dict[str, Any], status: str, error: str = "") -> None:
+    try:
+        supabase.table("mail_accounts").update({"status": status, "last_error": error[:200]}).eq("id", acc["id"]).execute()
+    except Exception:
+        pass
+
+
+async def _send_via_mailbox(customer_id: int, to_email: str, to_name: str, subject: str, html: str, token: str, kind: str) -> bool:
+    """Emaili müştərinin poçtundan göndərir. True = göndərildi. False = istifadə olunmadı (hesab yoxdur/qopub, gündəlik hədd
+    dolub, xəta): çağıran Resend-ə keçir. Məktublar arasında fasilə qoyulur (poçt provayderi toplu göndərişi spam saymasın)."""
+    acc = _mail_account(customer_id)
+    if not acc or acc.get("status") != "ok" or not _unipile_enabled():
+        return False
+    lock = _MAILBOX_LOCKS.setdefault(int(acc["id"]), asyncio.Lock())
+    async with lock:
+        if _mailbox_used_24h(acc["id"]) >= _mailbox_limit(acc):
+            return False
+        ref = token[:8].lower()
+        payload = {
+            "account_id": acc["unipile_account_id"],
+            "subject": f"{subject} [RFQ-{ref}]"[:250],
+            "body": html,
+            "to": [{"display_name": (to_name or "")[:100], "identifier": to_email}],
+        }
+        idem = f"arachi-{token}-{kind}-{datetime.utcnow().strftime('%Y%m%d%H')}"
+        try:
+            data = await _unipile("POST", "/api/v1/emails", payload, {"Idempotency-Key": idem})
+        except UnipileError as e:
+            _mailbox_set_status(acc, "credentials" if e.status in (401, 403) else "ok", f"Göndərmə xətası ({e.status})")
+            return False
+        except Exception:
+            traceback.print_exc()
+            return False
+        data = data if isinstance(data, dict) else {}
+        try:
+            supabase.table("mail_messages").insert({
+                "account_id": acc["id"], "customer_id": int(customer_id), "token": token, "ref": ref, "to_addr": to_email.lower()[:200],
+                "message_id": str(data.get("message_id") or data.get("provider_id") or "") or None, "kind": kind, "ok": True,
+                "created_at": datetime.utcnow().isoformat(),
+            }).execute()
+        except Exception:
+            traceback.print_exc()
+        gap = random.uniform(MAILBOX_GAP_MIN_SECONDS, max(MAILBOX_GAP_MIN_SECONDS, MAILBOX_GAP_MAX_SECONDS))
+        if gap > 0:
+            await asyncio.sleep(gap)
+    return True
+
+
+def _connect_sig(name: str) -> str:
+    return hmac.new(JWT_SECRET.encode(), f"unipile:{name}".encode(), "sha256").hexdigest()[:32]
+
+
+def _find_email_in(obj: Any, depth: int = 0) -> str:
+    """Unipile hesab cavabından e-poçt ünvanını tapır (cavabın dəqiq forması provayderə görə fərqlənə bilər)."""
+    if depth > 4:
+        return ""
+    if isinstance(obj, dict):
+        for key in ("email", "username", "name", "identifier", "address"):
+            v = obj.get(key)
+            if isinstance(v, str) and re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", v.strip()):
+                return v.strip().lower()
+        for v in obj.values():
+            found = _find_email_in(v, depth + 1)
+            if found: return found
+    elif isinstance(obj, list):
+        for v in obj:
+            found = _find_email_in(v, depth + 1)
+            if found: return found
+    return ""
+
+
+def _mailbox_public(acc: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    if not acc:
+        return None
+    return {"email": acc.get("email") or "", "provider": acc.get("provider") or "", "status": acc.get("status") or "ok",
+            "daily_limit": int(acc.get("daily_limit") or MAILBOX_DEFAULT_DAILY_LIMIT), "effective_limit": _mailbox_limit(acc),
+            "used_24h": _mailbox_used_24h(acc["id"]), "connected_at": acc.get("connected_at"), "last_error": acc.get("last_error") or ""}
+
+
+def _require_mailbox_plan(company_id: int) -> None:
+    if not _mailbox_allowed(company_id):
+        raise HTTPException(status_code=403, detail="Öz poçtunuzdan göndərmə Custom paketə daxildir. Əlavə məlumat üçün bizimlə əlaqə saxlayın.")
+
+
+class MailSettingsIn(BaseModel):
+    daily_limit: Optional[int] = None
+
+
+@app.get("/api/mail/status")
+def mail_status(current_user: dict = Depends(verify_token)):
+    cid = int(current_user["sub"])
+    return {"status": "success", "configured": _unipile_enabled(), "allowed": _mailbox_allowed(cid), "account": _mailbox_public(_mail_account(cid)),
+            "max_daily_limit": MAILBOX_MAX_DAILY_LIMIT}
+
+
+@app.post("/api/mail/connect")
+@limiter.limit("10/hour")
+async def mail_connect(request: Request, current_user: dict = Depends(verify_token)):
+    _require_owner(current_user)
+    cid = int(current_user["sub"])
+    _require_mailbox_plan(cid)
+    if not _unipile_enabled():
+        raise HTTPException(status_code=503, detail="Poçt qoşma xidməti hələ qurulmayıb.")
+    name = f"{cid}.{secrets.token_hex(6)}"
+    body = {
+        "type": "create", "providers": UNIPILE_PROVIDERS, "api_url": UNIPILE_DSN,
+        "expiresOn": (datetime.utcnow() + timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "success_redirect_url": f"{BASE_URL}/customer?mail=connected", "failure_redirect_url": f"{BASE_URL}/customer?mail=failed",
+        "notify_url": f"{BASE_URL}/api/unipile/account-notify?s={_connect_sig(name)}", "name": name,
+    }
+    try:
+        data = await _unipile("POST", "/api/v1/hosted/accounts/link", body)
+    except Exception:
+        traceback.print_exc()
+        raise HTTPException(status_code=502, detail="Poçt qoşma səhifəsi hazırlanmadı. Bir azdan yenidən cəhd edin.")
+    url = str((data or {}).get("url") or "")
+    if not url.startswith("https://"):
+        raise HTTPException(status_code=502, detail="Poçt qoşma səhifəsi hazırlanmadı.")
+    return {"status": "success", "url": url}
+
+
+@app.post("/api/unipile/account-notify")
+async def unipile_account_notify(request: Request, s: str = ""):
+    """Unipile hosted-auth bitəndə çağırır: qoşulan hesabın ID-si bizim verdiyimiz ad ilə şirkətə bağlanır."""
+    try:
+        data = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Yanlış sorğu.")
+    name = str((data or {}).get("name") or "")
+    if not hmac.compare_digest(_connect_sig(name).encode(), str(s or "").encode()):
+        raise HTTPException(status_code=403, detail="Giriş qadağandır.")
+    if str(data.get("status") or "") not in ("CREATION_SUCCESS", "RECONNECTED"):
+        return {"status": "ignored"}
+    account_id = str(data.get("account_id") or "").strip()
+    try:
+        cid = int(name.split(".")[0])
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Yanlış ad.")
+    if not account_id or not _mailbox_allowed(cid):
+        return {"status": "ignored"}
+    email_addr, provider = "", ""
+    try:
+        info = await _unipile("GET", f"/api/v1/accounts/{account_id}")
+        email_addr = _find_email_in(info)
+        provider = str((info or {}).get("type") or "")[:30]
+    except Exception:
+        traceback.print_exc()
+    now = datetime.utcnow().isoformat()
+    existing = _mail_account(cid)
+    row = {"customer_id": cid, "unipile_account_id": account_id, "email": email_addr, "provider": provider, "status": "ok", "last_error": "",
+           "connected_at": now, "consent_at": now}
+    if existing:
+        old = existing.get("unipile_account_id")
+        supabase.table("mail_accounts").update(row).eq("id", existing["id"]).execute()
+        if old and old != account_id:
+            try: await _unipile("DELETE", f"/api/v1/accounts/{old}")
+            except Exception: pass
+    else:
+        row["daily_limit"] = MAILBOX_DEFAULT_DAILY_LIMIT
+        supabase.table("mail_accounts").insert(row).execute()
+    _log_activity({"sub": cid, "uname": "Poçt qoşma"}, "mail_connected", "mail_account", None, email_addr)
+    return {"status": "success"}
+
+
+@app.put("/api/mail/settings")
+def mail_settings(data: MailSettingsIn, current_user: dict = Depends(verify_token)):
+    _require_owner(current_user)
+    cid = int(current_user["sub"])
+    acc = _mail_account(cid)
+    if not acc:
+        raise HTTPException(status_code=404, detail="Poçt hesabı qoşulmayıb.")
+    if data.daily_limit is not None:
+        limit = int(data.daily_limit)
+        if limit < 10 or limit > MAILBOX_MAX_DAILY_LIMIT:
+            raise HTTPException(status_code=400, detail=f"Gündəlik hədd 10 ilə {MAILBOX_MAX_DAILY_LIMIT} arasında olmalıdır.")
+        supabase.table("mail_accounts").update({"daily_limit": limit}).eq("id", acc["id"]).execute()
+    return {"status": "success", "account": _mailbox_public(_mail_account(cid))}
+
+
+@app.post("/api/mail/disconnect")
+async def mail_disconnect(current_user: dict = Depends(verify_token)):
+    _require_owner(current_user)
+    cid = int(current_user["sub"])
+    acc = _mail_account(cid)
+    if not acc:
+        return {"status": "success"}
+    try:
+        await _unipile("DELETE", f"/api/v1/accounts/{acc['unipile_account_id']}")
+    except Exception:
+        traceback.print_exc()   # Unipile-də artıq silinibsə də yerli qeyd silinir
+    supabase.table("mail_accounts").delete().eq("id", acc["id"]).execute()
+    _log_activity(current_user, "mail_disconnected", "mail_account", None, str(acc.get("email") or ""))
+    return {"status": "success"}
+
+
+@app.post("/api/mail/test-send")
+@limiter.limit("10/hour")
+async def mail_test_send(request: Request, current_user: dict = Depends(verify_token)):
+    """Qoşulmuş poçtdan həmin poçtun özünə test məktubu: göndərmənin işlədiyini göstərir."""
+    cid = int(current_user["sub"])
+    acc = _mail_account(cid)
+    if not acc or acc.get("status") != "ok" or not acc.get("email"):
+        raise HTTPException(status_code=400, detail="Poçt hesabı qoşulmayıb və ya yenidən qoşulmalıdır.")
+    ok = await _send_via_mailbox(cid, str(acc["email"]), "", "Arachi: test məktubu",
+                                 "<p>Bu, Arachi-dən poçtunuzla göndərmənin işlədiyini yoxlayan test məktubudur. Cavab verməyə ehtiyac yoxdur.</p>",
+                                 secrets.token_hex(16), "test")
+    if not ok:
+        raise HTTPException(status_code=502, detail="Test məktubu göndərilmədi. Poçt hesabının vəziyyətinə baxın.")
+    return {"status": "success", "sent_to": acc["email"]}
+
+
+def _bounce_like(from_addr: str, subject: str) -> bool:
+    f, sj = from_addr.lower(), subject.lower()
+    return any(x in f for x in ("mailer-daemon", "postmaster", "mail delivery subsystem")) or any(
+        x in sj for x in ("delivery status notification", "undeliverable", "delivery failure", "undelivered"))
+
+
+async def _handle_unipile_account_status(payload: Dict[str, Any]) -> None:
+    info = payload.get("AccountStatus") if isinstance(payload.get("AccountStatus"), dict) else payload
+    account_id = str(info.get("account_id") or "")
+    state = str(info.get("message") or info.get("status") or "").upper()
+    acc = _mail_account_by_unipile(account_id)
+    if not acc or not state:
+        return
+    if state in ("OK", "SYNC_SUCCESS", "RECONNECTED", "CREATION_SUCCESS"):
+        _mailbox_set_status(acc, "ok", "")
+    elif state in ("CREDENTIALS", "ERROR", "STOPPED"):
+        _mailbox_set_status(acc, "credentials" if state == "CREDENTIALS" else "error", f"Unipile: {state}")
+
+
+async def _handle_unipile_mail_sent(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Arachi-nin göndərdiyi məktubun Message-ID-sini yadda saxlayır (cavab bununla tapılır). Müştərinin öz məktublarına toxunulmur."""
+    acc = _mail_account_by_unipile(str(payload.get("account_id") or ""))
+    if not acc or str(payload.get("origin") or "") != "unipile":
+        return {"status": "ignored"}
+    m = _RFQ_REF.search(str(payload.get("subject") or ""))
+    message_id = str(payload.get("message_id") or "").strip()
+    if not m or not message_id:
+        return {"status": "ignored"}
+    recipients = {str((a or {}).get("identifier") or "").lower() for a in (payload.get("to_attendees") or [])}
+    rows = supabase.table("mail_messages").select("*").eq("account_id", acc["id"]).eq("ref", m.group(1).lower()).execute().data or []
+    for r in rows:
+        if not r.get("message_id") and (not recipients or str(r.get("to_addr") or "") in recipients):
+            supabase.table("mail_messages").update({"message_id": message_id[:300]}).eq("id", r["id"]).execute()
+            return {"status": "stored"}
+    return {"status": "ignored"}
+
+
+async def _handle_unipile_mail_received(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Gələn məktub: yalnız bizim göndərdiyimiz RFQ məktubunun cavabıdırsa emal olunur. Qalan hər şey (müştərinin şəxsi və iş
+    poçtu) dərhal atılır: saxlanılmır, loqa yazılmır."""
+    acc = _mail_account_by_unipile(str(payload.get("account_id") or ""))
+    if not acc or acc.get("status") not in ("ok",):
+        return {"status": "ignored"}
+    from_addr = str((payload.get("from_attendee") or {}).get("identifier") or "").lower()
+    if not from_addr or from_addr == str(acc.get("email") or "").lower():
+        return {"status": "ignored"}
+    subject = str(payload.get("subject") or "")
+    reply_to_mid = str((payload.get("in_reply_to") or {}).get("message_id") or "").strip()
+    token, strong = None, False
+    if reply_to_mid:
+        rows = supabase.table("mail_messages").select("*").eq("account_id", acc["id"]).eq("message_id", reply_to_mid).execute().data or []
+        if rows:
+            token, strong = rows[0]["token"], True
+    ref_match = _RFQ_REF.search(subject)
+    if token is None and ref_match:
+        rows = supabase.table("mail_messages").select("*").eq("account_id", acc["id"]).eq("ref", ref_match.group(1).lower()).execute().data or []
+        if rows:
+            token = rows[0]["token"]
+    body_html = str(payload.get("body") or "")
+    plain = str(payload.get("body_plain") or "").strip() or _strip_html(body_html)
+    if token is None and _bounce_like(from_addr, subject):
+        # geri qayıdan məktub: orijinal mövzudakı RFQ kodu mətndə olur
+        bm = _RFQ_REF.search(plain)
+        if bm:
+            rows = supabase.table("mail_messages").select("*").eq("account_id", acc["id"]).eq("ref", bm.group(1).lower()).execute().data or []
+            if rows:
+                supabase.table("quotes").update({"mail_status": "failed"}).eq("token", rows[0]["token"]).execute()
+                return {"status": "bounce"}
+        return {"status": "ignored"}
+    if token is None:
+        return {"status": "nomatch"}
+    attachments = [{"name": str((a or {}).get("name") or "")[:120], "size": (a or {}).get("size")} for a in (payload.get("attachments") or [])[:10]]
+    parsed = {
+        "message_id": str(payload.get("message_id") or payload.get("email_id") or "")[:300] or hashlib.sha256(plain.encode()).hexdigest(),
+        "tokens": [token], "from_header": from_addr, "subject": subject, "auth": "",
+        "get_body": lambda: _clean_reply_text(plain), "get_attachments": lambda: (attachments, ""),
+        "is_bounce": _bounce_like(from_addr, subject), "is_auto": bool(_AUTO_SUBJECT.match(subject)), "strong": strong,
+    }
+    return await _process_inbound_parsed(parsed)
+
+
+async def _handle_unipile_event(payload: Any) -> None:
+    try:
+        if not isinstance(payload, dict):
+            return
+        event = str(payload.get("event") or "")
+        if event == "mail_received":
+            await _handle_unipile_mail_received(payload)
+        elif event == "mail_sent":
+            await _handle_unipile_mail_sent(payload)
+        elif "AccountStatus" in payload or payload.get("message") or (payload.get("account_id") and payload.get("status") and not event):
+            await _handle_unipile_account_status(payload)
+    except Exception:
+        traceback.print_exc()   # mesajın məzmunu loqa yazılmır
+
+
+@app.post("/api/unipile/webhook")
+async def unipile_webhook(request: Request, background_tasks: BackgroundTasks):
+    secret = request.headers.get("Unipile-Auth", "")
+    if not UNIPILE_WEBHOOK_SECRET or not hmac.compare_digest(secret.encode(), UNIPILE_WEBHOOK_SECRET.encode()):
+        raise HTTPException(status_code=403, detail="Giriş qadağandır.")
+    raw = await request.body()
+    if len(raw) > 5_000_000:
+        return {"status": "ignored"}
+    try:
+        payload = json.loads(raw)
+    except Exception:
+        return {"status": "ignored"}
+    background_tasks.add_task(_handle_unipile_event, payload)   # Unipile 30 saniyədə cavab gözləyir; emal arxa planda gedir
+    return {"status": "accepted"}
+
+
+@app.get("/admin/unipile-status")
+@limiter.limit("20/minute")
+def unipile_status(request: Request, secret: str = None):
+    admin_key = os.getenv("ADMIN_SECRET_KEY")
+    provided = request.headers.get("x-admin-secret") or secret or ""
+    if not admin_key or not hmac.compare_digest(provided.encode(), admin_key.encode()):
+        raise HTTPException(status_code=403, detail="Giriş qadağandır.")
+    return {"dsn_set": bool(UNIPILE_DSN), "api_key_set": bool(UNIPILE_API_KEY), "webhook_secret_set": bool(UNIPILE_WEBHOOK_SECRET),
+            "providers": UNIPILE_PROVIDERS, "pilot_ids": sorted(MAILBOX_PILOT_IDS), "webhook_url": f"{BASE_URL}/api/unipile/webhook",
+            "default_daily_limit": MAILBOX_DEFAULT_DAILY_LIMIT}
+
+
+@app.post("/admin/unipile-setup")
+@limiter.limit("5/minute")
+async def unipile_setup(request: Request, secret: str = None):
+    """Unipile-də email və hesab-vəziyyət webhook-larını yaradır (bir dəfə işlədilir)."""
+    admin_key = os.getenv("ADMIN_SECRET_KEY")
+    provided = request.headers.get("x-admin-secret") or secret or ""
+    if not admin_key or not hmac.compare_digest(provided.encode(), admin_key.encode()):
+        raise HTTPException(status_code=403, detail="Giriş qadağandır.")
+    if not _unipile_enabled() or not UNIPILE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=400, detail="UNIPILE_DSN, UNIPILE_API_KEY və UNIPILE_WEBHOOK_SECRET .env-də olmalıdır.")
+    headers = [{"key": "Content-Type", "value": "application/json"}, {"key": "Unipile-Auth", "value": UNIPILE_WEBHOOK_SECRET}]
+    results = {}
+    for source in ("email", "account_status"):
+        try:
+            data = await _unipile("POST", "/api/v1/webhooks", {"request_url": f"{BASE_URL}/api/unipile/webhook", "source": source, "headers": headers})
+            results[source] = {"ok": True, "id": (data or {}).get("webhook_id") or (data or {}).get("id")}
+        except UnipileError as e:
+            results[source] = {"ok": False, "status": e.status, "detail": e.detail}
+    return {"status": "done", "webhooks": results}
+
+
 async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin: str, destination: str, token: str, custom_body: Optional[str] = None, custom_subject: Optional[str] = None, sender_company: str = "Arachi", is_reminder: bool = False, reply_to_email: Optional[str] = None):
     # RFQ-nun bütün detalları emailin özündə yazılır: daşıyıcı linkə basmadan oxuya və cavab yaza bilsin
     shipment: Dict[str, Any] = {}
@@ -1602,6 +2084,18 @@ async def send_carrier_email_link(carrier_email: str, carrier_name: str, origin:
             shipment = rows[0]["shipment_requests"]
     except Exception:
         shipment = {}
+    customer_id = shipment.get("customer_id")
+    if customer_id and _mailbox_ready(int(customer_id)):
+        mb_subject, mb_html = _render_carrier_email(carrier_name, origin, destination, token, custom_body, custom_subject,
+                                                    sender_company, is_reminder, shipment, channel="mailbox")
+        if await _send_via_mailbox(int(customer_id), carrier_email, carrier_name, mb_subject, mb_html, token,
+                                   "reminder" if is_reminder else "rfq"):
+            try:
+                supabase.table("quotes").update({"mail_status": "delivered"}).eq("token", token).execute()
+            except Exception:
+                pass
+            return
+        # poçt qutusu işləmədi (limit, qopma, xəta): iş dayanmasın, Arachi-nin öz göndərmə yoluna keçilir
     subject_line, html_content = _render_carrier_email(carrier_name, origin, destination, token, custom_body, custom_subject,
                                                        sender_company, is_reminder, shipment)
     reply_address = _inbound_address(token)
@@ -2562,7 +3056,9 @@ def _require_active_subscription(customer_id: int, creating_rfq: bool = False) -
 @app.get("/api/subscription")
 def get_subscription(current_user: dict = Depends(verify_token)):
     user = _load_customer_row(int(current_user["sub"]))
-    return {"status": "success", "subscription": _subscription_state(user)}
+    sub = _subscription_state(user)
+    sub["mailbox_allowed"] = _mailbox_allowed(int(current_user["sub"]))
+    return {"status": "success", "subscription": sub}
 
 
 @app.get("/api/branding")
@@ -4916,7 +5412,7 @@ async def _send_invite_email(invite: Dict[str, Any], company_name: str, inviter_
 MANAGER_LOCK_MESSAGE = "Komandanız olduğu üçün hesabınız idarəçi rejimindədir: prosesləri izləyə və komandanı idarə edə bilərsiniz. Sorğuları komanda üzvləri yaradır və idarə edir."
 _MGR_ALLOWED_PREFIXES = (
     "/api/team", "/api/change-password", "/api/change-email", "/api/delete-account", "/reports/generate",
-    "/quotes/check-bounces", "/quotes/submit/", "/forwarder/profile", "/auth/", "/api/register", "/api/ai/exchange",
+    "/quotes/check-bounces", "/quotes/submit/", "/forwarder/profile", "/auth/", "/api/register", "/api/ai/exchange", "/api/mail",
 )
 _MGR_CACHE: Dict[int, Any] = {}   # şirkət id -> (bitmə vaxtı, üzv var?)
 _MGR_TTL_SECONDS = 10
